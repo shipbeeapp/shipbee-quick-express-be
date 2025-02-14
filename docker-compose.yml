@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .   # Uses the Dockerfile in the current directory
+      dockerfile: Dockerfile
+    container_name: shipbee_backend
+    ports:
+      - "3000:3000"  # Change this based on your app's port

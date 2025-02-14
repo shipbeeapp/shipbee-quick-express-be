@@ -1,0 +1,15 @@
+export enum itemType {
+    CLOTHING_ACCESSORIES = "Clothing & Accessories",
+    PERSONAL_ELECTRONICS = "Personal Electronics",
+    BOOKS_DOCUMENTS = "Books & Documents",
+    GIFTS = "Gifts",
+    HOBBY_ITEMS = "Hobby Items",
+    FOOD_ITEMS = "Food Items",
+    ElECTRONICS = "Electronics",
+    APPAREL = "Apparel",
+    FURNITURE= "Furniture",
+    PACKAGED_GOODS = "Packaged Goods",
+    COSMETICS = "Cosmetics",
+    STATIONERY = "Stationery",
+    HOUSEHOLD_APPPLIANCES = "Household Appliances",
+}
