@@ -93,6 +93,11 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                         isNullable: false
                     },
                     {
+                        name: "zone",
+                        type: "text",
+                        isNullable: false
+                    },
+                    {
                         name: "landmarks",
                         type: "text",
                         isNullable: true

@@ -26,6 +26,9 @@ export class Address extends BaseEntity {
   @Column({type: "text"})
   apartmentNumber: string;
 
+  @Column({ type: "text" })
+  zone: string;
+
   @Column({ nullable: true, type: "text" })
   landmarks: string;
 

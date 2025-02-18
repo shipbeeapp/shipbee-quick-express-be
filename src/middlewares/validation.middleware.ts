@@ -14,16 +14,15 @@ const validateDto = (dtoClass: any, skipMissingProperties = false) => {
 
     // Only log errors for unexpected properties if needed, but don't return a response
     if (errors.length > 0) {
-      console.log(JSON.stringify(errors, null, 2)); // Log the validation errors if you want to debug
-      const errorMessages = errors
-        .map(error => Object.values(error.constraints || {}))
-        .flat();
-
+      console.log("errors:" ,JSON.stringify(errors, null, 2)); // Log the validation errors if you want to debug
+      const e = errors.map(error => Object.values(error.constraints || {})).flat();
+      const errorMessages = e.length ? e : errors.map(error => error.property + ' ' + error.children.map(child => Object.values(child.constraints))).flat();
+    
+        console.log("errorMessages: ", errorMessages);
         return next(new HttpException(400, errorMessages.join(', ')));
 
     }
     // Strip non-existing fields by reassigning only the valid fields
-    console.log("dtoInstance", dtoInstance);
     req.body = dtoInstance;
     next();
   };

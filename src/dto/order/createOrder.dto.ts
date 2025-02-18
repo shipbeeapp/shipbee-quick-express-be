@@ -19,6 +19,9 @@ class AddressDto {
 
     @IsString()
     apartmentNumber: string;
+
+    @IsString()
+    zone: string;
 }
 
 export class CreateOrderDto {
