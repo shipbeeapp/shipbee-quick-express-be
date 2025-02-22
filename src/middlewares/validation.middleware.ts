@@ -6,7 +6,6 @@ import HttpException from '../exceptions/http-exception.js';
 
 const validateDto = (dtoClass: any, skipMissingProperties = false) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    console.log("req.body", req.body);
     const dtoInstance = plainToInstance(dtoClass, req.body);
 
     // Validate and strip out non-existing fields without raising an error
