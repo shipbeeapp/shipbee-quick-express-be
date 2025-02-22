@@ -12,4 +12,13 @@ export enum itemType {
     COSMETICS = "Cosmetics",
     STATIONERY = "Stationery",
     HOUSEHOLD_APPPLIANCES = "Household Appliances",
+    APARTMENT = "Apartment",
+    STAFF_ACCOMODATION = "Staff Accomodation",
+    TOWNHOUSE = "Townhouse",
+    VILLA = "Villa",
+    PENTHOUSE = "Penthouse",
+    BULK_UNIT = "Bulk Unit",
+    DUPLEX = "Duplex",
+    COMPOUND = "Compound",
+    HOTEL_APARTMENT = "Hotel Apartment",
 }

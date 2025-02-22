@@ -21,7 +21,7 @@ export class Order extends BaseEntity {
   @Column("timestamp")
   pickUpDate: Date;
 
-  @Column({type: "enum", enum: itemType})
+  @Column({type: "enum", enum: itemType, nullable: true})
   itemType: itemType;
 
   @ManyToOne(() => Address, address => address.sentOrders)
@@ -38,7 +38,7 @@ export class Order extends BaseEntity {
   @Column({ nullable: true, type: "int" })
   lifters: number;
 
-  @Column("decimal", { precision: 10, scale: 2 })
+  @Column("decimal", { precision: 10, scale: 2, nullable: true })
   totalCost: number;
 
   @Column({type: "enum", enum: OrderStatus})

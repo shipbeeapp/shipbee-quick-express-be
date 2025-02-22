@@ -2,6 +2,7 @@ import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, Validate
 import { Type, Transform } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
+import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
 
 
 class AddressDto {
@@ -21,6 +22,7 @@ class AddressDto {
     apartmentNumber: string;
 
     @IsString()
+    @IsOptional()
     zone: string;
 }
 
@@ -28,16 +30,22 @@ export class CreateOrderDto {
   @IsEnum(ServiceSubcategoryName)
   serviceSubcategory: ServiceSubcategoryName;
 
+  @IsEnum(furnitureRequests)
+  @IsOptional()
+  type: furnitureRequests;
+
   @IsEnum(itemType)
+  @IsOptional()
   itemType: itemType;
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
   fromAddress: AddressDto  
 
+  @IsOptional()
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
-  toAddress: AddressDto
+  toAddress?: AddressDto
 
   @IsOptional()
   @IsString()

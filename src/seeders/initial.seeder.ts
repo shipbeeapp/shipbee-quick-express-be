@@ -4,6 +4,7 @@ import { ServiceSubcategory } from "../models/serviceSubcategory.model.js";
 import { ServiceCategoryName } from "../utils/enums/serviceCategory.enum.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 import { env } from "../config/environment.js";
+import { furnitureRequests } from "../utils/enums/furnitureRequests.enum.js";
 
 export const seedDatabase = async () => {
   const queryRunner = AppDataSource.createQueryRunner();
@@ -11,6 +12,7 @@ export const seedDatabase = async () => {
   await queryRunner.startTransaction();
 
   try {
+    console.log("🌱 Seeding Categories and Subcategories...");
     const categoryRepo = queryRunner.manager.getRepository(ServiceCategory);
     const subcategoryRepo = queryRunner.manager.getRepository(ServiceSubcategory);
 
@@ -36,8 +38,16 @@ export const seedDatabase = async () => {
         const existingSubcategory = await subcategoryRepo.findOne({ where: { name: subcategory } });
 
         if (!existingSubcategory) {
+          if (subcategory === ServiceSubcategoryName.FURNITURE_MOVING) {
+            for (const request of Object.values(furnitureRequests)) {
+              const newSubcategory = subcategoryRepo.create({ type: request, name: subcategory, serviceCategory: existingCategory});
+              await subcategoryRepo.save(newSubcategory);
+            }
+          }
+          else {
           const newSubcategory = subcategoryRepo.create({ name: subcategory, serviceCategory: existingCategory, baseCost: Number(env.BASE_COST), perLifterCost: Number(env.PER_LIFTER_COST) });
           await subcategoryRepo.save(newSubcategory);
+          }
         }
       }
     }

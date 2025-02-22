@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table, TableForeignKey } from "typeorm";
+import { MigrationInterface, QueryRunner, Table, TableForeignKey, TableUnique } from "typeorm";
 
 export class InitialMigration1739286971657 implements MigrationInterface {
 
@@ -95,7 +95,7 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                     {
                         name: "zone",
                         type: "text",
-                        isNullable: false
+                        isNullable: true
                     },
                     {
                         name: "landmarks",
@@ -170,6 +170,14 @@ export class InitialMigration1739286971657 implements MigrationInterface {
           'International'
         )
       `);
+
+      await queryRunner.query(`
+        CREATE TYPE "furnitureRequests" AS ENUM (
+            'Move Your Home', 
+            'Move Specific Furniture', 
+            'Request Visit'
+        )
+    `);
   
       // Create the `service_subcategories` table
       await queryRunner.createTable(
@@ -187,7 +195,12 @@ export class InitialMigration1739286971657 implements MigrationInterface {
               name: "name",
               type: "enum",
               enumName: "service_subcategory_name",
-              isUnique: true,
+            },
+            {
+              name: "type",
+              type: "enum",
+              enumName: "furnitureRequests",
+              isNullable: true,
             },
             {
               name: "serviceCategoryId",
@@ -199,6 +212,7 @@ export class InitialMigration1739286971657 implements MigrationInterface {
               type: "decimal",
               precision: 10,
               scale: 2,
+              isNullable: true,
             },
             {
               name: "perLifterCost",
@@ -221,7 +235,14 @@ export class InitialMigration1739286971657 implements MigrationInterface {
           ],
         })
       );
-  
+
+      await queryRunner.createUniqueConstraint(
+        "service_subcategories",
+        new TableUnique({
+          name: "UQ_service_subcategories_name_type",
+          columnNames: ["name", "type"],
+        })
+      );
       // Add foreign key constraint for `serviceCategoryId`
       await queryRunner.createForeignKey(
         "service_subcategories",
@@ -240,7 +261,23 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                 'Books & Documents',
                 'Gifts',
                 'Hobby Items',
-                'Food Items'
+                'Food Items',
+                'Electronics',
+                'Apparel',
+                'Furniture',
+                'Packaged Goods',
+                'Cosmetics',
+                'Stationery',
+                'Household Appliances',
+                'Apartment',
+                'Staff Accomodation',
+                'Townhouse',
+                'Villa',
+                'Penthouse',
+                'Bulk Unit',
+                'Duplex',
+                'Compound',
+                'Hotel Apartment'
             )
         `);
 
@@ -288,7 +325,7 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                     {
                         name: "toAddressId",
                         type: "uuid",
-                        isNullable: false
+                        isNullable: true
                     },
                     {
                         name: "pickUpDate",
@@ -299,7 +336,7 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                         name: "itemType",
                         type: "enum",
                         enumName: "itemType",
-                        isNullable: false
+                        isNullable: true
                     },
                     {
                         name: "itemDescription",
@@ -316,7 +353,7 @@ export class InitialMigration1739286971657 implements MigrationInterface {
                         type: "decimal",
                         precision: 10,
                         scale: 2,
-                        isNullable: false
+                        isNullable: true
                     },
                     {
                         name: "status",
@@ -709,8 +746,10 @@ export class InitialMigration1739286971657 implements MigrationInterface {
         await queryRunner.dropTable("user_promo_codes");
         await queryRunner.dropTable("promo_codes");
         
+        await queryRunner.dropUniqueConstraint("service_subcategories", "UQ_service_subcategories_name_type");
         await queryRunner.dropTable("service_subcategories");
         await queryRunner.query(`DROP TYPE "service_subcategory_name"`);
+        await queryRunner.query(`DROP TYPE "furnitureRequests"`);
         
         await queryRunner.dropTable("service_categories");
         await queryRunner.query(`DROP TYPE "service_category_name"`);

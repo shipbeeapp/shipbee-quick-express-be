@@ -10,6 +10,7 @@ import { ServiceCategory } from "../models/serviceCategory.model.js";
 import { ServiceSubcategory } from "../models/serviceSubcategory.model.js";
 import { Address } from "../models/address.model.js";
 import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
+import { InitialMigration1739286971657 } from "../migrations/1739286971657-InitialMigration.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -30,7 +31,9 @@ export const AppDataSource = new DataSource({
     Payment,
     PaymentStatusHistory,
   ],
-  migrations: ["dist/migrations/**/*.js"], // ✅ Path to migrations
+  migrations: [
+    InitialMigration1739286971657,
+  ], // ✅ Path to migrations
   ssl: env.APP_ENV === 'production', // Use SSL in production environment
   synchronize: false, // Always false in production!
   logging: false,

@@ -8,9 +8,10 @@ export class AddressService {
   async createAddresses(fromAddr: any, toAddr: any, queryRunner: any): Promise<{ fromAddress: Address; toAddress: Address }> {
     try {
         const fromAddress = queryRunner.manager.create(Address, { ...fromAddr });
-        const toAddress = queryRunner.manager.create(Address, { ...toAddr });
+        const toAddress = toAddr ? queryRunner.manager.create(Address, { ...toAddr }): null;
 
-        await queryRunner.manager.save([fromAddress, toAddress]);
+        if (toAddress) await queryRunner.manager.save([fromAddress, toAddress]);
+        else await queryRunner.manager.save(fromAddress);
 
         return { fromAddress, toAddress };
     } catch (error) {
