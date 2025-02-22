@@ -19,10 +19,12 @@ export class OrderController {
     const storage = new CloudinaryStorage({
       cloudinary: cloudinary,
       params: async (req, file) => {
+        const originalExt = file.originalname.split(".").pop(); // Get original file extension
+
         return {
-          folder: "uploads", // Folder in Cloudinary
-          format: file.mimetype.split("/")[1], // Extract file format dynamically
-          public_id: Date.now() + "-" + file.originalname.replace(/\s+/g, "_"), // Unique filename
+          folder: "uploads",
+          format: originalExt, // Use original extension
+          public_id: Date.now() + "-" + file.originalname.replace(/\s+/g, "_").replace(`.${originalExt}`, ""), // Remove original extension from name
         };
       },
     });
@@ -42,7 +44,7 @@ export class OrderController {
       const orderData = req.body;
       console.log("orderData", orderData);
       console.log("req.files", req.files);
-      const imageUrls = Array.isArray(req.files) ? req.files?.map(file => `/uploads/${file.filename}`) : [];      
+      const imageUrls = Array.isArray(req.files) ? req.files?.map(file => `${file.path.split("/upload/")[1]}`) : [];      
       if (orderData.itemDescription || imageUrls.length) {
         orderData.itemDescription = JSON.stringify({
             text: orderData.itemDescription || "",
