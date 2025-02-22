@@ -35,7 +35,10 @@ export const AppDataSource = new DataSource({
   migrations: [
     InitialMigration1739286971657,
   ], // ✅ Path to migrations
-  ssl: env.APP_ENV === 'production', // Use SSL in production environment
+  // ssl: env.APP_ENV === 'production', // Use SSL in production environment
+  ssl: {
+    rejectUnauthorized: false,
+  },
   synchronize: false, // Always false in production!
   logging: false,
 });
