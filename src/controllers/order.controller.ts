@@ -4,6 +4,8 @@ import OrderService  from "../services/order.service.js";
 import {Container} from "typedi";
 import validateDto from "../middlewares/validation.middleware.js";
 import {CreateOrderDto} from "../dto/order/createOrder.dto.js";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../utils/cloudinary.js";
 
 export class OrderController {
   public router: Router = Router();
@@ -14,9 +16,15 @@ export class OrderController {
   }
 
   private initializeRoutes() {
-    const storage = multer.diskStorage({
-      destination: (req, file, cb) => cb(null, "uploads/"), // Save images to 'uploads'
-      filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+    const storage = new CloudinaryStorage({
+      cloudinary: cloudinary,
+      params: async (req, file) => {
+        return {
+          folder: "uploads", // Folder in Cloudinary
+          format: file.mimetype.split("/")[1], // Extract file format dynamically
+          public_id: Date.now() + "-" + file.originalname.replace(/\s+/g, "_"), // Unique filename
+        };
+      },
     });
     const upload = multer({ storage });
 
