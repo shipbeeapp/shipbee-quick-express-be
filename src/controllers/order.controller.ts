@@ -42,7 +42,6 @@ export class OrderController {
     try {
       console.log("req.body in create order", req.body);
       const orderData = req.body;
-      console.log("orderData", orderData);
       console.log("req.files", req.files);
       const imageUrls = Array.isArray(req.files) ? req.files?.map(file => `${file.path.split("/upload/")[1]}`) : [];      
       if (orderData.itemDescription || imageUrls.length) {
