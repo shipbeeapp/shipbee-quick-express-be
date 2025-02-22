@@ -14,11 +14,12 @@ import { InitialMigration1739286971657 } from "../migrations/1739286971657-Initi
 
 export const AppDataSource = new DataSource({
   type: "postgres",
-  host: env.DB.HOST,
-  port: Number(env.DB.PORT),
-  username: env.DB.USERNAME,
-  password: env.DB.PASSWORD,
-  database: env.DB.DATABASE,
+  url: env.DB.URL,
+  // host: env.DB.HOST,
+  // port: Number(env.DB.PORT),
+  // username: env.DB.USERNAME,
+  // password: env.DB.PASSWORD,
+  // database: env.DB.DATABASE,
   entities: [
     User,
     Address,

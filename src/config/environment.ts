@@ -11,6 +11,7 @@ export const env = {
     USERNAME: process.env.DB_USERNAME,
     PASSWORD: process.env.DB_PASSWORD,
     DATABASE: process.env.DB_NAME,
+    URL: process.env.DATABASE_URL,
   },
   BASE_COST: process.env.BASE_COST || 360.80,
   PER_LIFTER_COST: process.env.PER_LIFTER_COST || 360.80,
