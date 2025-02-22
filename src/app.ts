@@ -26,6 +26,8 @@ class App {
 
   private initializeDataSource(): void {
     // Initialize the database connection
+    console.log(`Initializing Data Source...`);
+    console.log(process.env.DATABASE_URL);
     AppDataSource
       .initialize()
       .then(async () => {
