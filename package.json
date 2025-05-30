@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "vercel-build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --ext ts --exec tsx src/server.ts",
     "clean": "rm -rf dist",

@@ -14,12 +14,12 @@ import { InitialMigration1739286971657 } from "../migrations/1739286971657-Initi
 
 export const AppDataSource = new DataSource({
   type: "postgres",
-  url: env.DB.URL,
-  // host: env.DB.HOST,
-  // port: Number(env.DB.PORT),
-  // username: env.DB.USERNAME,
-  // password: env.DB.PASSWORD,
-  // database: env.DB.DATABASE,
+  // url: env.DATABASE_URL,
+  host: env.DB.HOST,
+  port: Number(env.DB.PORT),
+  username: env.DB.USERNAME,
+  password: env.DB.PASSWORD,
+  database: env.DB.DATABASE,
   entities: [
     User,
     Address,
@@ -35,10 +35,7 @@ export const AppDataSource = new DataSource({
   migrations: [
     InitialMigration1739286971657,
   ], // ✅ Path to migrations
-  // ssl: env.APP_ENV === 'production', // Use SSL in production environment
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: env.APP_ENV === 'production', // Use SSL in production environment
   synchronize: false, // Always false in production!
   logging: false,
 });
