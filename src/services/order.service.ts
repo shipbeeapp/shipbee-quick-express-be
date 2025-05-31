@@ -9,6 +9,7 @@ import {User} from "../models/user.model.js";
 import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
+import { toOrderResponseDto } from "../resource/orders/order.resource.js";
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -105,7 +106,7 @@ export default class OrderService {
         createdAt: "DESC",
       },
     });
-    return orders;
+    return orders.map(toOrderResponseDto);
   }
 }
 
