@@ -12,10 +12,4 @@ const app = new App(
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
-app.initialize()
-  .then(() => {
-    app.listen();
-  })
-  .catch((error) => {
-    console.error("Failed to start app:", error);
-  });
+app.listen();
