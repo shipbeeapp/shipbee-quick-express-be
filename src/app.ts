@@ -43,6 +43,10 @@ class App {
   }
 
   private initializeControllers(controllers: any): void {
+    // this.app.get('/test', (req, res) => {
+    //   res.send('Welcome to the API! 🌟');
+    // }
+    // );
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
