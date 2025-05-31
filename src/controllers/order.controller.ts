@@ -36,6 +36,8 @@ export class OrderController {
        validateDto(CreateOrderDto), 
        this.createOrder.bind(this)
     );
+
+    this.router.get("/orders", this.getOrders.bind(this));
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -55,6 +57,16 @@ export class OrderController {
       res.status(201).json({ success: true, data: order });
     } catch (error) {
       console.error("Error in order controller creating order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async getOrders(req: Request, res: Response) {
+    try {
+      const orders = await this.orderService.getOrders();
+      res.status(200).json({ success: true, orders: orders });
+    } catch (error) {
+      console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

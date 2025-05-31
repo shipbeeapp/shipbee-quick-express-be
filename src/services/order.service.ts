@@ -92,5 +92,20 @@ export default class OrderService {
     const user = await this.userRepo.findOne({ where: { id: userId }, relations: ["orders"] });
     console.log(user.orders)
   }
+
+  async getOrders() {
+    if (!AppDataSource.isInitialized) {
+      console.log("wasnt initialized, initializing now...");
+      await AppDataSource.initialize();
+      console.log("Data Source has been initialized! in OrderService");
+    }
+    const orders = await this.orderRepository.find({
+      relations: ["user", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      order: {
+        createdAt: "DESC",
+      },
+    });
+    return orders;
+  }
 }
 
