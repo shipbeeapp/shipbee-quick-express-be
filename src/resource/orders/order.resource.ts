@@ -1,4 +1,5 @@
 import { Order } from '../../models/order.model.js';
+import { env } from '../../config/environment.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -53,11 +54,17 @@ export class OrderResponseDto {
   }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
+    const itemDescription = JSON.parse(order.itemDescription) || null;
+    if (itemDescription?.images?.length) {
+        itemDescription.images = itemDescription.images.map(
+          (img: string) => `${env.CLOUDINARY_BASE_URL}${img}`
+        );
+    }
     return {
       id: order.id,
       pickUpDate: order.pickUpDate,
       itemType: order.itemType,
-      itemDescription: order.itemDescription,
+      itemDescription: itemDescription,
       lifters: order.lifters,
       totalCost: Number(order.totalCost),
       currentStatus: order.status,
