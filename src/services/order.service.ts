@@ -21,9 +21,13 @@ export default class OrderService {
   constructor() {}
   
   async createOrder(orderData: CreateOrderDto) {
+    console.log("Creating order with data:", orderData);
     const queryRunner = AppDataSource.createQueryRunner();
+    console.log("QueryRunner created:");
     await queryRunner.connect();
+    console.log("QueryRunner connected:");  
     await queryRunner.startTransaction();
+    console.log("Transaction started:");
 
     try {
       // 🔹 Step 1: Get or Create User
