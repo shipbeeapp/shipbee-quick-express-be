@@ -2,7 +2,6 @@ import App from "./app.js";
 import "reflect-metadata";
 import { OrderController } from "./controllers/order.controller.js";
 import { CitiesController } from "./controllers/cities.controller.js";
-import {VercelRequest, VercelResponse} from "@vercel/node";
 
 const app = new App(
     [
