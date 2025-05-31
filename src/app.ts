@@ -30,6 +30,10 @@ class App {
 
   public async initializeDataSource(): Promise<void> {
     try {
+      if (AppDataSource.isInitialized) {
+        console.log("Data Source already initialized, skipping initialization.");
+        return;
+      }
       console.log("Initializing data source...");
       await AppDataSource.initialize();
       await AppDataSource.runMigrations();
@@ -57,11 +61,11 @@ class App {
     this.app.use(errorMiddleware);
   }
 
-  public listen(): void {
-    this.app.listen(this.PORT, () => {
-      console.log(`🚀 Server running on port: ${this.PORT}`);
-    });
-  }
+  // public listen(): void {
+  //   this.app.listen(this.PORT, () => {
+  //     console.log(`🚀 Server running on port: ${this.PORT}`);
+  //   });
+  // }
 }
 
 export default App;

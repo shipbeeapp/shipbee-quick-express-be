@@ -15,7 +15,6 @@ app.app.get('/test', (req: any, res: any): void => {
 app.initializeDataSource()
 .then(() => {
   console.log("Data Source initialized successfully!");
-  app.listen();
   console.log("Server is listening for requests...");
 })
 .catch((err) => {
