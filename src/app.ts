@@ -3,6 +3,7 @@ import { AppDataSource } from "./config/data-source.js";
 import {env} from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
+import cors from "cors";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -21,6 +22,8 @@ class App {
   private initializeMiddlewares(): void {
     this.app.use(express.json()); // Example middleware for handling JSON data
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
+    this.app.use(cors({ origin: "*" }));
+
 
   }
 
@@ -48,10 +51,6 @@ class App {
   }
 
   private initializeControllers(controllers: any): void {
-    // this.app.get('/test', (req, res) => {
-    //   res.send('Welcome to the API! 🌟');
-    // }
-    // );
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
@@ -61,11 +60,11 @@ class App {
     this.app.use(errorMiddleware);
   }
 
-  // public listen(): void {
-  //   this.app.listen(this.PORT, () => {
-  //     console.log(`🚀 Server running on port: ${this.PORT}`);
-  //   });
-  // }
+  public listen(): void {
+    this.app.listen(this.PORT, () => {
+      console.log(`🚀 Server running on port: ${this.PORT}`);
+    });
+  }
 }
 
 export default App;
