@@ -29,11 +29,18 @@ class App {
   // }
 
   public async initializeDataSource(): Promise<void> {
-    console.log(`Initializing Data Source....`);
-    await AppDataSource.initialize();
-    await AppDataSource.runMigrations();
-    await seedDatabase();
-    console.log(`Data Source has been initialized!!`);
+    try {
+      console.log("Initializing data source...");
+      await AppDataSource.initialize();
+      await AppDataSource.runMigrations();
+      await seedDatabase();
+    } catch (error) {
+      console.error("Failed during initialization", error);
+      // If you're manually managing transactions, rollback here
+      // Or close data source so next run starts fresh
+      if (AppDataSource.isInitialized) await AppDataSource.destroy();
+      throw error;
+    }
   }
 
   private initializeControllers(controllers: any): void {
