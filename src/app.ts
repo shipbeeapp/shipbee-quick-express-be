@@ -12,7 +12,7 @@ class App {
   // private orderService: OrderService = Container.get(OrderService);
   constructor(controllers: any) {
     this.app = express();
-    this.initializeDataSource();
+    // this.initializeDataSource();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
@@ -24,22 +24,22 @@ class App {
 
   }
 
-  private initializeDataSource(): void {
-    // Initialize the database connection
-    console.log(`Initializing Data Source....`);
-    AppDataSource
-      .initialize()
-      .then(async () => {
-        AppDataSource.runMigrations().then(async () => {
-          console.log(`Data Source has been initialized!!`);
-          await seedDatabase();
-          // await this.orderService.getOrdersbyUser('feb24ee6-1d57-4b46-a718-62c24951c086');
-        });
-      })
-      .catch((err) => {
-        console.error('Error during Data Source initialization:', err);
-      });
+  public async initialize(): Promise<void> {
+    await this.initializeDataSource();
+  }
 
+  private async initializeDataSource() {
+    console.log("Initializing Data Source...");
+    try {
+      await AppDataSource.initialize();
+      console.log("Data Source has been initialized!");
+      await AppDataSource.runMigrations();
+      console.log("Data Source initialized! with migrations run.");
+      await seedDatabase();
+    } catch (err) {
+      console.error("Error during Data Source initialization:", err);
+      throw err;
+    }
   }
 
   private initializeControllers(controllers: any): void {
