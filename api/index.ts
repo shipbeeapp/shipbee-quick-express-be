@@ -21,3 +21,5 @@ app.initializeDataSource()
 .catch((err) => {
   console.error("Failed to initialize app:", err);
 });
+
+export default app; // Export the app instance for testing or further use
