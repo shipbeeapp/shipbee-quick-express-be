@@ -12,7 +12,7 @@ class App {
   // private orderService: OrderService = Container.get(OrderService);
   constructor(controllers: any) {
     this.app = express();
-    this.initializeDataSource();
+    // this.initializeDataSource();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
@@ -28,23 +28,12 @@ class App {
   //   await this.initializeDataSource();
   // }
 
-  private initializeDataSource(): void {
-    // Initialize the database connection
+  public async initializeDataSource(): Promise<void> {
     console.log(`Initializing Data Source....`);
-    AppDataSource
-      .initialize()
-      .then(async () => {
-        AppDataSource.runMigrations().then(async () => {
-          console.log(`Data Source has been initialized!!`);
-          await seedDatabase();
-          console.log(`Database seeded successfully!`);
-          // await this.orderService.getOrdersbyUser('feb24ee6-1d57-4b46-a718-62c24951c086');
-        });
-      })
-      .catch((err) => {
-        console.error('Error during Data Source initialization:', err);
-      });
-
+    await AppDataSource.initialize();
+    await AppDataSource.runMigrations();
+    await seedDatabase();
+    console.log(`Data Source has been initialized!!`);
   }
 
   private initializeControllers(controllers: any): void {

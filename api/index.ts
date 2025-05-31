@@ -12,5 +12,12 @@ const app = new App(
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
-
-app.listen();
+app.initializeDataSource()
+.then(() => {
+  console.log("Data Source initialized successfully!");
+  app.listen();
+  console.log("Server is listening for requests...");
+})
+.catch((err) => {
+  console.error("Failed to initialize app:", err);
+});
