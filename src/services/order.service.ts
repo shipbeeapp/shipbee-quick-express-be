@@ -22,6 +22,11 @@ export default class OrderService {
   
   async createOrder(orderData: CreateOrderDto) {
     console.log("Creating order with data:", orderData);
+    if (!AppDataSource.isInitialized) {
+      console.log("wasnt initialized, initializing now...");
+      await AppDataSource.initialize();
+      console.log("Data Source has been initialized! in OrderService");
+    }
     const queryRunner = AppDataSource.createQueryRunner();
     console.log("QueryRunner created:");
     await queryRunner.connect();
