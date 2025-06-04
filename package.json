@@ -7,7 +7,7 @@
     "build": "tsc",
     "vercel-build": "tsc",
     "start": "node dist/server.js",
-    "dev": "nodemon --ext ts --exec tsx src/server.ts",
+    "dev": "nodemon --ext ts --exec tsx src/index.ts",
     "clean": "rm -rf dist",
     "typeorm": "ts-node ./node_modules/typeorm/cli",
     "revert": "npx tsx node_modules/typeorm/cli migration:revert -d src/config/data-source.ts"
@@ -38,6 +38,7 @@
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
     "pg": "^8.13.3",
+    "pnpm": "^10.11.1",
     "reflect-metadata": "^0.2.2",
     "typedi": "^0.10.0",
     "typeorm": "^0.3.20"
