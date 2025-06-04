@@ -35,9 +35,7 @@ export const AppDataSource = new DataSource({
   migrations: [
     InitialMigration1739286971657,
   ], // ✅ Path to migrations
-  ssl: {
-    rejectUnauthorized: false, // 👈 Add this line
-  },
+  ssl: false,
   synchronize: false, // Always false in production!
   logging: false,
 });

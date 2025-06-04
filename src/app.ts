@@ -3,8 +3,7 @@ import { AppDataSource } from "./config/data-source.js";
 import {env} from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
-import cors from "cors";
-import { adminJs, adminRouter } from "./admin.js";
+// import cors from "cors";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -21,9 +20,9 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    this.app.use(express.json()); // Example middleware for handling JSON data
-    this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
-    this.app.use(cors({ origin: "*" }));
+    // this.app.use(express.json()); // Example middleware for handling JSON data
+    // this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
+    // this.app.use(cors({ origin: "*" }));
 
 
   }
@@ -39,6 +38,7 @@ class App {
         return;
       }
       console.log("Initializing data source...");
+      // console.log(AppDataSource.options);
       await AppDataSource.initialize();
       await AppDataSource.runMigrations();
       await seedDatabase();
@@ -55,7 +55,7 @@ class App {
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
-    this.app.use(adminJs.options.rootPath, adminRouter);
+    // this.app.use(adminJs.options.rootPath, adminRouter);
   }
 
   private initializeErrorHandling() {

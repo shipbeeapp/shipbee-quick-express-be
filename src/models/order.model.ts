@@ -1,14 +1,30 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, Relation } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, Relation, BaseEntity, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { User } from "./user.model.js";
 import { ServiceSubcategory } from "./serviceSubcategory.model.js";
 import { Address } from "./address.model.js";
 import { itemType } from "../utils/enums/itemType.enum.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import BaseEntity from "./baseEntity.js";
+// import BaseEntity from "./baseEntity.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
+
+  @PrimaryGeneratedColumn("uuid")
+  public id: string;
+
+  @CreateDateColumn({
+      type: 'timestamp',
+      default: () => 'CURRENT_TIMESTAMP',
+    })
+  public createdAt: Date;
+  
+    @UpdateDateColumn({
+      type: 'timestamp',
+      default: () => 'CURRENT_TIMESTAMP',
+      onUpdate: 'CURRENT_TIMESTAMP',
+    })
+  public updatedAt: Date;
 
   @ManyToOne(() => User , user => user.orders)
   @JoinColumn({ name: "userId" })

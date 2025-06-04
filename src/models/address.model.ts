@@ -1,10 +1,25 @@
-import { Entity, Column, OneToMany } from "typeorm";
-import BaseEntity from "./baseEntity.js";
+import { Entity, Column, OneToMany, BaseEntity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+// import BaseEntity from "./baseEntity.js";
 import { Order } from "./order.model.js";
 
 @Entity("addresses")
 export class Address extends BaseEntity {
 
+   @PrimaryGeneratedColumn("uuid")
+    public id: string;
+  
+    @CreateDateColumn({
+        type: 'timestamp',
+        default: () => 'CURRENT_TIMESTAMP',
+      })
+    public createdAt: Date;
+    
+      @UpdateDateColumn({
+        type: 'timestamp',
+        default: () => 'CURRENT_TIMESTAMP',
+        onUpdate: 'CURRENT_TIMESTAMP',
+      })
+    public updatedAt: Date;
   @Column({type: "text"})
   country: string;
 
