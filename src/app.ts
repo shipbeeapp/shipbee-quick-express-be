@@ -4,6 +4,7 @@ import {env} from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
+import { adminJs, adminRouter } from "./admin.js";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -54,6 +55,7 @@ class App {
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
+    this.app.use(adminJs.options.rootPath, adminRouter);
   }
 
   private initializeErrorHandling() {
