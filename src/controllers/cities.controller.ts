@@ -10,7 +10,7 @@ export class CitiesController {
     private initializeRoutes() {
         // Define your routes here
         // Example: this.router.get('/orders', this.getOrders.bind(this));
-        // You can add more routes as needed
+        // You can add more routes as neededd
         this.router.get('/cities', this.getAllCities);
     }
 
