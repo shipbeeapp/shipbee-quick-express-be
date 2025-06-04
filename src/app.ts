@@ -37,7 +37,7 @@ class App {
         console.log("Data Source already initializedd, skipping initialization.");
         return;
       }
-      console.log("Initializing data source...");
+      console.log("Initializing data source.....");
       await AppDataSource.initialize();
       await AppDataSource.runMigrations();
       await seedDatabase();
