@@ -34,7 +34,7 @@ class App {
   public async initializeDataSource(): Promise<void> {
     try {
       if (AppDataSource.isInitialized) {
-        console.log("Data Source already initialized, skipping initialization.");
+        console.log("Data Source already initializedd, skipping initialization.");
         return;
       }
       console.log("Initializing data source...");
