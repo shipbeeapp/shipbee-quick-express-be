@@ -10,6 +10,8 @@ import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
+import { getTripCost } from "../utils/trip-cost.js";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -51,8 +53,7 @@ export default class OrderService {
         }
         
       //🔹 Step 3: Calculate total cost
-      console.log(serviceSubcategory.baseCost, orderData?.lifters, serviceSubcategory.perLifterCost)
-      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : serviceSubcategory.baseCost;
+      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCost(orderData.fromAddress.city, orderData.toAddress.city);
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository
@@ -66,7 +67,8 @@ export default class OrderService {
         toAddress,
         totalCost,
         serviceSubcategory,
-        status: OrderStatus.PENDING_PAYMENT,
+        status: OrderStatus.CONFIRMED, // Default status
+        paymentMethod: PaymentMethod.CASH_ON_DELIVERY, // Default payment method
       });
 
      await queryRunner.manager.save(order);

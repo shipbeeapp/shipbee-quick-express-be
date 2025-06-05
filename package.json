@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc",
     "vercel-build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "nodemon --ext ts --exec tsx src/server.ts",
+    "start": "node dist/index.js",
+    "dev": "nodemon --ext ts --exec tsx src/index.ts",
     "clean": "rm -rf dist",
     "typeorm": "ts-node ./node_modules/typeorm/cli",
     "revert": "npx tsx node_modules/typeorm/cli migration:revert -d src/config/data-source.ts"

@@ -6,6 +6,7 @@ import { itemType } from "../utils/enums/itemType.enum.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import BaseEntity from "./baseEntity.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
@@ -43,6 +44,9 @@ export class Order extends BaseEntity {
 
   @Column({type: "enum", enum: OrderStatus})
   status: OrderStatus; // current status of order
+
+  @Column({type: "enum", enum: PaymentMethod})
+  paymentMethod: PaymentMethod; // payment method used for the order
 
   @OneToMany(() => OrderStatusHistory, history => history.order)
   orderStatusHistory: OrderStatusHistory[];
