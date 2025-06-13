@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Confirmation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        margin: 0;
+        padding: 0;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      .header {
+        text-align: center;
+        background-color: #2a6ef2;
+        color: #fff;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+      }
+      .section {
+        margin-top: 20px;
+      }
+      .section-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+      .info {
+        margin-bottom: 10px;
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 12px;
+        color: #999;
+        text-align: center;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #2a6ef2;
+        color: white;
+        padding: 10px 20px;
+        margin-top: 20px;
+        text-decoration: none;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; background-color: #f8f9fa; margin: 0; padding: 0;">
+    <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:8px;">
+      <div style="text-align:center; background:#2a6ef2; color:#fff; padding:20px; border-radius:8px 8px 0 0;">
+        <h2 style="margin:0;">🚚 New Order Received</h2>
+      </div>
+  
+      <div style="margin-top:20px;">
+        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Customer Info</div>
+        <div style="margin-bottom:10px;"><strong>Name:</strong> {{name}}</div>
+        <div style="margin-bottom:10px;"><strong>Email:</strong> {{email}}</div>
+        <div style="margin-bottom:10px;"><strong>Phone:</strong> {{phoneNumber}}</div>
+      </div>
+  
+      <div style="margin-top:20px;">
+        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Order Details</div>
+        <div style="margin-bottom:10px;"><strong>Service Category:</strong> {{serviceSubcategory}}</div>
+        {{#if itemType}}
+        <div style="margin-bottom:10px;"><strong>Item Type:</strong> {{itemType}}</div>
+        {{/if}}
+        <div style="margin-bottom:10px;"><strong>Pick-up Date:</strong> {{pickUpDate}}</div>
+        {{#if lifters}}
+        <div style="margin-bottom:10px;"><strong>Lifters:</strong> {{lifters}}</div>
+        {{/if}}
+        <div style="margin-bottom:10px;"><strong>Total Cost:</strong> {{totalCost}} QAR</div>
+        {{#if itemDescription}}
+        <div style="margin-bottom:10px;"><strong>Description:</strong> {{itemDescription}}</div>
+        {{/if}}
+        <div style="margin-bottom:10px;"><strong>Order Status:</strong> {{status}}</div>
+        <div style="margin-bottom:10px;"><strong>Payment Method:</strong> {{paymentMethod}}</div>
+      </div>
+  
+      <div style="margin-top:20px;">
+        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Addresses</div>
+        <div style="margin-bottom:10px;">
+            <div style="font-weight: bold; font-size: 16px; color: #2a6ef2; margin-bottom: 4px;">From:</div>
+            {{{fromAddress}}}
+          </div>
+        
+          <div style="margin-bottom:10px;">
+            <div style="font-weight: bold; font-size: 16px; color: #2a6ef2; margin-bottom: 4px;">To:</div>
+            {{{toAddress}}}
+          </div>
+      </div>
+  
+      <div style="margin-top:30px; font-size:12px; color:#999; text-align:center;">
+        Shipbee Logistics — This is an automated email. Please do not reply.
+      </div>
+    </div>
+  </body>  
+</html>

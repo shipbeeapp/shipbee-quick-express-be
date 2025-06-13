@@ -13,6 +13,12 @@ export const env = {
     DATABASE: process.env.DB_NAME,
     URL: process.env.DATABASE_URL,
   },
+  SMTP: {
+    HOST: process.env.SMTP_HOST,
+    PORT: Number(process.env.SMTP_PORT) || 587,
+    USER: process.env.SMTP_USER,
+    PASS: process.env.SMTP_PASS,
+  },
   CLOUDINARY_BASE_URL: process.env.CLOUDINARY_BASE_URL || "https://res.cloudinary.com/demo/image/upload",
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
