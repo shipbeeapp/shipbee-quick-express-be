@@ -23,7 +23,7 @@ export default class MailService {
     console.log('sending mail')
     await this.transporter.sendMail({
       from: 'ship@shipbee.io',
-      to: 'basselhalabi17@aucegypt.edu',
+      to: 'ship@shipbee.io',
       subject: 'Your Order Confirmation',
       html: html,
     });
