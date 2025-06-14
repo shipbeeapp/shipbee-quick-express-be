@@ -3,103 +3,100 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <title>Order Confirmation</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f8f9fa;
-        margin: 0;
-        padding: 0;
-        color: #333;
-      }
-      .container {
-        max-width: 600px;
-        margin: auto;
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 8px;
-      }
-      .header {
-        text-align: center;
-        background-color: #2a6ef2;
-        color: #fff;
-        padding: 20px;
-        border-radius: 8px 8px 0 0;
-      }
-      .section {
-        margin-top: 20px;
-      }
-      .section-title {
-        font-weight: bold;
-        margin-bottom: 8px;
-      }
-      .info {
-        margin-bottom: 10px;
-      }
-      .footer {
-        margin-top: 30px;
-        font-size: 12px;
-        color: #999;
-        text-align: center;
-      }
-      .btn {
-        display: inline-block;
-        background-color: #2a6ef2;
-        color: white;
-        padding: 10px 20px;
-        margin-top: 20px;
-        text-decoration: none;
-        border-radius: 6px;
-      }
-    </style>
-  </head>
-  <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; background-color: #f8f9fa; margin: 0; padding: 0;">
-    <div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:8px;">
-      <div style="text-align:center; background:#2a6ef2; color:#fff; padding:20px; border-radius:8px 8px 0 0;">
-        <h2 style="margin:0;">🚚 New Order Received</h2>
-      </div>
-  
-      <div style="margin-top:20px;">
-        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Customer Info</div>
-        <div style="margin-bottom:10px;"><strong>Name:</strong> {{name}}</div>
-        <div style="margin-bottom:10px;"><strong>Email:</strong> {{email}}</div>
-        <div style="margin-bottom:10px;"><strong>Phone:</strong> {{phoneNumber}}</div>
-      </div>
-  
-      <div style="margin-top:20px;">
-        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Order Details</div>
-        <div style="margin-bottom:10px;"><strong>Service Category:</strong> {{serviceSubcategory}}</div>
-        {{#if itemType}}
-        <div style="margin-bottom:10px;"><strong>Item Type:</strong> {{itemType}}</div>
-        {{/if}}
-        <div style="margin-bottom:10px;"><strong>Pick-up Date:</strong> {{pickUpDate}}</div>
-        {{#if lifters}}
-        <div style="margin-bottom:10px;"><strong>Lifters:</strong> {{lifters}}</div>
-        {{/if}}
-        <div style="margin-bottom:10px;"><strong>Total Cost:</strong> {{totalCost}} QAR</div>
-        {{#if itemDescription}}
-        <div style="margin-bottom:10px;"><strong>Description:</strong> {{itemDescription}}</div>
-        {{/if}}
-        <div style="margin-bottom:10px;"><strong>Order Status:</strong> {{status}}</div>
-        <div style="margin-bottom:10px;"><strong>Payment Method:</strong> {{paymentMethod}}</div>
-      </div>
-  
-      <div style="margin-top:20px;">
-        <div style="font-size: 18px; color: #2a6ef2; font-weight: bold; margin-bottom: 8px;">Addresses</div>
-        <div style="margin-bottom:10px;">
-            <div style="font-weight: bold; font-size: 16px; color: #2a6ef2; margin-bottom: 4px;">From:</div>
-            {{{fromAddress}}}
+  <body style="font-family: 'Poppins', sans-serif;">
+    <div style="max-width:600px;margin:0 auto;background:#f6f6f6;padding:20px;color:#333;font-weight:400;">
+        <div style="background:#fff;padding:30px;border-radius:6px;">
+          <div>
+            <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749930629/shipbee-logo_qvyaru.png" alt="ShipBee" style="max-width:150px;">
           </div>
-        
-          <div style="margin-bottom:10px;">
-            <div style="font-weight: bold; font-size: 16px; color: #2a6ef2; margin-bottom: 4px;">To:</div>
-            {{{toAddress}}}
+          <p style="font-size: 18px; line-height: 32px; letter-spacing: 0;color:#000000">Hi {{recipient}},</p>
+          <p style="font-size: 18px; line-height: 32px; letter-spacing: 0;color:#000000">{{{heading}}}</p>
+      
+          <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">
+      
+          <div style="color:#342E2E;font-size:16px;font-weight:400">
+            <h3 style="padding-bottom:10px;color:#000000">Request Details</h3>
+            <p style="margin:0 0 16px;color:#000000">From:<br>
+            {{fromAddress}}</p>
+            <p style="margin:0 0 16px;color:#000000">To:<br>
+            {{toAddress}}</p>
+            <p style="margin:0 0 16px;color:#000000">Date &amp; time:<br>
+            {{pickUpDate}}</p>
           </div>
-      </div>
-  
-      <div style="margin-top:30px; font-size:12px; color:#999; text-align:center;">
-        Shipbee Logistics — This is an automated email. Please do not reply.
-      </div>
-    </div>
+      
+          <div style="margin-top:20px;color:#000000;font-size:16px;font-weight:400">
+            <h3 style="padding-bottom:10px;color:#000000">User details</h3>
+            <p style="margin:0 0 16px;color:#000000">Customer name:<br>{{name}}</p>
+            <p style="margin:0 0 16px; color:#000000">Phone number:<br>{{phoneNumber}}</p>
+            <p style="margin:0 0 16px;color:#000000">Email:<br>{{email}}</p>
+          </div>
+      
+          <div style="margin-top:40px;color:#000000;font-size:16px;font-weight:400">
+            <h3 style="font-size:16px;margin-bottom:8px;">Service Details</h3>
+            <table width="100%" cellspacing="0" cellpadding="8" style="border-collapse:collapse;">
+              <thead>
+                <tr style="background:#f0f0f0;text-align:left;">
+                  <th style="padding:8px;">Service name</th>
+                  <th style="padding:8px;">RATE</th>
+                  <th style="padding:8px;">QTY</th>
+                  <th style="padding:8px;">SUBTOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{serviceSubcategory}}</td>
+                  <td>QAR {{totalCost}}</td>
+                  <td>{{quantity}}</td>
+                  <td>QAR {{totalCost}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="text-align:right;font-weight:500;font-size:14px;color:#999999">TOTAL</p>
+            <p style="text-align:right;font-size:24px;font-weight:bold;margin-top:10px;color:#000000">QAR {{totalCost}}</p>
+            <p style="text-align:right;font-size:14px;color:#939393;">VAT included</p>
+          </div>
+        </div>
+      
+        <div style="text-align:center;color:#999999;font-size:12px;background-color:#000000;font-weight:400">
+            <div>
+                <div style="text-align:center;padding-top:16px;margin-bottom:16px;">
+                    <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749936528/Shipbee_white_vbj4if.png" alt="ShipBee" style="max-width:150px;">
+                </div>
+              <p style="color:#ACACAC;font-size:13px">Effortless shipping at your fingertips, experience convenience like never before!</p>
+
+                <!-- Email section -->
+                <div style="display: inline-block; margin: 10px;">
+                  <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749938629/inbox_tymj6s.png" alt="Inbox" style="width: 23px; height: 23px; vertical-align: middle; margin-right: 10px;">
+                  <a href="mailto:info@shipbee.io" style="text-decoration: none; color: #FFFFFF;">info@shipbee.io</a>
+                </div>
+            
+                <!-- Phone (WhatsApp) section -->
+                <div style="display: inline-block; margin: 10px;">
+                  <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749938629/phone_qavuk1.png" alt="Phone" style="width: 23px; height: 23px; vertical-align: middle; margin-right: 10px;">
+                  <a href="https://wa.me/97450507461" target="_blank" style="text-decoration: none; color: #FFFFFF;">+974 5050 7461</a>
+                </div>
+            
+                <!-- Location section -->
+                <div style="display: inline-block; margin: 10px;">
+                  <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749938629/location_bc8nkh.png" alt="Location" style="width: 23px; height: 23px; vertical-align: middle; margin-right: 10px;">
+                  <span style="color:#FFFFFF">Doha, Qatar</span>
+                </div>
+            
+              <hr style="border:none;border-top:1px solid #282828;margin:16px 0;">
+              <div style="margin-top:16px;margin-bottom:16px;">
+                <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749935888/instagram_uld0ed.png" alt="Instagram" style="height:33px;margin-right:5px;">
+                <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749935888/twitter_f17x4m.png" alt="Twitter" style="height:33px;margin-right:5px;">
+                <img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749935887/facebook_uq3hdw.png" alt="Facebook" style="height:33px;margin-right:5px;">
+              </div>
+              <a href="#"><img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749936663/app_store_1_o3vmgx.png" alt="App Store" style="height:30px;margin-right:5px;"></a>
+              <a href="#"><img src="https://res.cloudinary.com/dgzd4faca/image/upload/v1749936663/app_store_2_vban5a.png" alt="Google Play" style="height:30px;"></a><br><br>
+              <p style="color:#999999">Copyright &copy; 2025</p> 
+              <p style="color:#999999">&copy; 2025 by ShipBee. Proudly Created by Codereels.</p>
+              <p style="padding-bottom:16px; color:#999999">Easily request a reliable shipping service for your needs</p>
+            </div>
+          </div>
+      </div>      
   </body>  
 </html>

@@ -13,6 +13,7 @@ import { toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { getTripCost } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import MailService from "./email.service.js";
+import { env } from "../config/environment.js";
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -78,7 +79,12 @@ export default class OrderService {
      //Step 5: Add Order Status History
      await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
 
-     await this.mailService.sendOrderConfirmation(orderData, totalCost);
+     await this.mailService.sendOrderConfirmation(orderData, totalCost, env.SMTP.USER, 'admin');
+     console.log('sent mail to admin: ', env.SMTP.USER);
+     if (orderData.email) {
+      await this.mailService.sendOrderConfirmation(orderData, totalCost, orderData.email);
+      console.log('sent mail to user: ', orderData.email);
+     }
 
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);

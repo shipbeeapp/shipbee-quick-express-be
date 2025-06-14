@@ -18,12 +18,11 @@ export default class MailService {
     },
   });
 
-  async sendOrderConfirmation(orderDetails: any, totalCost: number): Promise<void> {
-    const html = this.generateOrderHtml(orderDetails, totalCost);
-    console.log('sending mail')
+  async sendOrderConfirmation(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin'): Promise<void> {
+    const html = this.generateOrderHtml(orderDetails, totalCost, userType);
     await this.transporter.sendMail({
       from: 'ship@shipbee.io',
-      to: 'ship@shipbee.io',
+      to: recipientMail,
       subject: 'Your Order Confirmation',
       html: html,
     });
@@ -33,32 +32,35 @@ export default class MailService {
     if (!address) return '';
   
     const parts = [
-        address.country && `<div style="margin-bottom: 4px;"><strong>Country:</strong> ${address.country}</div>`,
-        address.city && `<div style="margin-bottom: 4px;"><strong>City:</strong> ${address.city}</div>`,
-        address.district && `<div style="margin-bottom: 4px;"><strong>District:</strong> ${address.district}</div>`,
-        address.street && `<div style="margin-bottom: 4px;"><strong>Street:</strong> ${address.street}</div>`,
-        address.buildingNumber && `<div style="margin-bottom: 4px;"><strong>Building Number:</strong> ${address.buildingNumber}</div>`,
-        address.floor && `<div style="margin-bottom: 4px;"><strong>Floor:</strong> ${address.floor}</div>`,
-        address.apartmentNumber && `<div style="margin-bottom: 4px;"><strong>Apartment:</strong> ${address.apartmentNumber}</div>`,
-        address.zone && `<div style="margin-bottom: 4px;"><strong>Zone:</strong> ${address.zone}</div>`,
-        address.landmarks && `<div style="margin-bottom: 4px;"><strong>Landmarks:</strong> ${address.landmarks}</div>`,
+        address.country && `${address.country}`,
+        address.city && `${address.city}`,
+        address.district && `${address.district}`,
+        address.street && `${address.street}`,
+        address.buildingNumber && `${address.buildingNumber}`,
+        address.floor && `${address.floor}`,
+        address.apartmentNumber && `${address.apartmentNumber}`,
+        address.zone && `${address.zone}`,
+        address.landmarks && `${address.landmarks}`,
       ].filter(Boolean);
 
-    return parts.join(''); // joins with line breaks for HTML formatting
+    return parts.join(', '); // joins with comma breaks for HTML formatting
   }
 
 
-private generateOrderHtml(order: CreateOrderDto, totalCost: number): string {
+private generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', 'order-confirmation.html');
     const html = fs.readFileSync(templatePath, 'utf8');
   
     const template = Handlebars.compile(html);
     const orderDescription = JSON.parse(order.itemDescription);
     const replacements = {
+      recipient: userType === 'admin' ? 'admin' : order.name,
+      heading: userType === 'admin' ? 'New Request Received – <strong>Quick shipBee!</strong>' : 'Your Service request has been submitted!',
       name: order.name,
       email: order.email,
       phoneNumber: order.phoneNumber,
       serviceSubcategory: order.serviceSubcategory,
+      quantity: '01', // Assuming quantity is always 1 for now
       itemType: order.itemType,
       pickUpDate: new Date(order.pickUpDate).toLocaleString(),
       lifters: order.lifters ?? null,
