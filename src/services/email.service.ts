@@ -8,7 +8,7 @@ import fs from 'fs';
 
 export const sendOrderConfirmation = async (orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
     const html = generateOrderHtml(orderDetails, totalCost, userType);
-    console.log(env.SMTP.HOST, env.SMTP.PORT, env.SMTP.USER, env.SMTP.PASS);
+    return new Promise((resolve, reject) => {
     const transporter = nodemailer.createTransport({
         host: env.SMTP.HOST,
         port: env.SMTP.PORT,
@@ -18,18 +18,6 @@ export const sendOrderConfirmation = async (orderDetails: any, totalCost: number
           pass: env.SMTP.PASS,
         },
       });
-    await new Promise((resolve, reject) => {
-        // verify connection configuration
-        transporter.verify(function (error, success) {
-            if (error) {
-                console.log(error);
-                reject(error);
-            } else {
-                console.log("Server is ready to take our messages");
-                resolve(success);
-            }
-        });
-    });
     console.log("Sending order confirmation email to:", recipientMail);
     const mailData = {
       from: 'ship@shipbee.io',
@@ -37,8 +25,6 @@ export const sendOrderConfirmation = async (orderDetails: any, totalCost: number
       subject: 'Your Order Confirmation',
       html: html,
     }
-    await new Promise((resolve, reject) => {
-        // send mail
         transporter.sendMail(mailData, (err, info) => {
             if (err) {
                 console.error("Error sending email:", err);
@@ -58,7 +44,6 @@ export const sendOrderConfirmation = async (orderDetails: any, totalCost: number
     //   subject: 'Your Order Confirmation',
     //   html: html,
     // });
-    console.log("Order confirmation email sent successfully.");
   }
 
 function formatAddress(address: any): string {
