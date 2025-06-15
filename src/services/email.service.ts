@@ -32,12 +32,33 @@ export const sendOrderConfirmation = async (orderDetails: any, totalCost: number
         });
     });
     console.log("Sending order confirmation email to:", recipientMail);
-    await transporter.sendMail({
+    const mailData = {
       from: 'ship@shipbee.io',
       to: recipientMail,
       subject: 'Your Order Confirmation',
       html: html,
+    }
+    await new Promise((resolve, reject) => {
+        // send mail
+        transporter.sendMail(mailData, (err, info) => {
+            if (err) {
+                console.error("Error sending email:", err);
+                console.error(err);
+                reject(err);
+            } else {
+                console.log("Email sent successfully:", info.response);
+                // Log the full info object for debugging
+                console.log(info);
+                resolve(info);
+            }
+        });
     });
+    // await transporter.sendMail({
+    //   from: 'ship@shipbee.io',
+    //   to: recipientMail,
+    //   subject: 'Your Order Confirmation',
+    //   html: html,
+    // });
     console.log("Order confirmation email sent successfully.");
   }
 
