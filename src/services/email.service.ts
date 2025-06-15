@@ -6,45 +6,7 @@ import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
 
-export const sendOrderConfirmation = async (orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
-    const html = generateOrderHtml(orderDetails, totalCost, userType);
-    return new Promise((resolve, reject) => {
-    const transporter = nodemailer.createTransport({
-        host: env.SMTP.HOST,
-        port: env.SMTP.PORT,
-        secure: true, // true for 465, false for other ports
-        auth: {
-          user: env.SMTP.USER,
-          pass: env.SMTP.PASS,
-        },
-      });
-    console.log("Sending order confirmation email to:", recipientMail);
-    const mailData = {
-      from: 'ship@shipbee.io',
-      to: recipientMail,
-      subject: 'Your Order Confirmation',
-      html: html,
-    }
-        transporter.sendMail(mailData, (err, info) => {
-            if (err) {
-                console.error("Error sending email:", err);
-                console.error(err);
-                reject(err);
-            } else {
-                console.log("Email sent successfully:", info.response);
-                // Log the full info object for debugging
-                console.log(info);
-                resolve(info);
-            }
-        });
-    });
-    // await transporter.sendMail({
-    //   from: 'ship@shipbee.io',
-    //   to: recipientMail,
-    //   subject: 'Your Order Confirmation',
-    //   html: html,
-    // });
-  }
+
 
 function formatAddress(address: any): string {
     if (!address) return '';
@@ -65,7 +27,7 @@ function formatAddress(address: any): string {
   }
 
 
-function generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
+export function generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', 'order-confirmation.html');
     const html = fs.readFileSync(templatePath, 'utf8');
   
