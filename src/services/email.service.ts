@@ -1,18 +1,26 @@
+import nodemailer from 'nodemailer';
 import Handlebars from "handlebars";
 import { Service } from 'typedi';
 import { env } from '../config/environment.js';
 import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
-import { Resend } from 'resend';
 
 @Service()
 export default class MailService {
-    private resend = new Resend(env.RESEND.API_KEY);
+  private transporter = nodemailer.createTransport({
+    host: env.SMTP.HOST,
+    port: env.SMTP.PORT,
+    secure: true, // true for 465, false for other ports
+    auth: {
+      user: env.SMTP.USER,
+      pass: env.SMTP.PASS,
+    },
+  });
 
-  async sendOrderConfirmation(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin'): Promise<void> {
+    sendOrderConfirmation = async(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
     const html = this.generateOrderHtml(orderDetails, totalCost, userType);
-    await this.resend.emails.send({
+    await this.transporter.sendMail({
       from: 'ship@shipbee.io',
       to: recipientMail,
       subject: 'Your Order Confirmation',
