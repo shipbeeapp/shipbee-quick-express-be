@@ -6,29 +6,42 @@ import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
 
-@Service()
-export default class MailService {
-  private transporter = nodemailer.createTransport({
-    host: env.SMTP.HOST,
-    port: env.SMTP.PORT,
-    secure: true, // true for 465, false for other ports
-    auth: {
-      user: env.SMTP.USER,
-      pass: env.SMTP.PASS,
-    },
-  });
+const transporter = nodemailer.createTransport({
+  host: env.SMTP.HOST,
+  port: env.SMTP.PORT,
+  secure: true, // true for 465, false for other ports
+  auth: {
+    user: env.SMTP.USER,
+    pass: env.SMTP.PASS,
+  },
+});
 
-    sendOrderConfirmation = async(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
-    const html = this.generateOrderHtml(orderDetails, totalCost, userType);
-    await this.transporter.sendMail({
+export const sendOrderConfirmation = async (orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
+    const html = generateOrderHtml(orderDetails, totalCost, userType);
+    console.log(env.SMTP.HOST, env.SMTP.PORT, env.SMTP.USER, env.SMTP.PASS);
+    await new Promise((resolve, reject) => {
+        // verify connection configuration
+        transporter.verify(function (error, success) {
+            if (error) {
+                console.log(error);
+                reject(error);
+            } else {
+                console.log("Server is ready to take our messages");
+                resolve(success);
+            }
+        });
+    });
+    console.log("Sending order confirmation email to:", recipientMail);
+    await transporter.sendMail({
       from: 'ship@shipbee.io',
       to: recipientMail,
       subject: 'Your Order Confirmation',
       html: html,
     });
+    console.log("Order confirmation email sent successfully.");
   }
 
-  private formatAddress(address: any): string {
+function formatAddress(address: any): string {
     if (!address) return '';
   
     const parts = [
@@ -47,7 +60,7 @@ export default class MailService {
   }
 
 
-private generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
+function generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', 'order-confirmation.html');
     const html = fs.readFileSync(templatePath, 'utf8');
   
@@ -66,12 +79,11 @@ private generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: st
       lifters: order.lifters ?? null,
       totalCost: Number(totalCost).toFixed(2),
       itemDescription: orderDescription.text || '',
-      fromAddress: this.formatAddress(order.fromAddress),
-      toAddress: this.formatAddress(order.toAddress),
+      fromAddress: formatAddress(order.fromAddress),
+      toAddress: formatAddress(order.toAddress),
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
     };
   
     return template(replacements);
   }
-}
