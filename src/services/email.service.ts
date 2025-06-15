@@ -6,19 +6,18 @@ import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
 
-const transporter = nodemailer.createTransport({
-  host: env.SMTP.HOST,
-  port: env.SMTP.PORT,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: env.SMTP.USER,
-    pass: env.SMTP.PASS,
-  },
-});
-
 export const sendOrderConfirmation = async (orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') => {
     const html = generateOrderHtml(orderDetails, totalCost, userType);
     console.log(env.SMTP.HOST, env.SMTP.PORT, env.SMTP.USER, env.SMTP.PASS);
+    const transporter = nodemailer.createTransport({
+        host: env.SMTP.HOST,
+        port: env.SMTP.PORT,
+        secure: true, // true for 465, false for other ports
+        auth: {
+          user: env.SMTP.USER,
+          pass: env.SMTP.PASS,
+        },
+      });
     await new Promise((resolve, reject) => {
         // verify connection configuration
         transporter.verify(function (error, success) {
