@@ -13,7 +13,7 @@ export async function sendOrderConfirmation(orderDetails: any, totalCost: number
   const html = generateOrderHtml(orderDetails, totalCost, userType);
   console.log("sending order confirmation email to:", recipientMail);
   await resend.emails.send({
-    from: `Shipbee <${env.SMTP.USER}`,
+    from: `Shipbee <${env.SMTP.USER}>`,
     to: recipientMail,
     subject: 'Your Order Confirmation',
     html: html,
