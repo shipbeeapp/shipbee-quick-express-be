@@ -14,10 +14,10 @@ export const env = {
     URL: process.env.DATABASE_URL,
   },
   SMTP: {
-    HOST: process.env.SMTP_HOST,
-    PORT: Number(process.env.SMTP_PORT) || 587,
+    // HOST: process.env.SMTP_HOST,
+    // PORT: Number(process.env.SMTP_PORT) || 587,
     USER: process.env.SMTP_USER,
-    PASS: process.env.SMTP_PASS,
+    // PASS: process.env.SMTP_PASS,
   },
   RESEND: {
     API_KEY: process.env.RESEND_API_KEY,
