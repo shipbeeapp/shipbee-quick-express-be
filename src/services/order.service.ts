@@ -12,7 +12,7 @@ import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { getTripCost } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import {sendOrderConfirmation} from "../../api/index.js";
+import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 @Service()
 export default class OrderService {

@@ -5,8 +5,21 @@ import { env } from '../config/environment.js';
 import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
+import { Resend } from 'resend';
 
+const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
 
+export async function sendOrderConfirmation(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') {
+  const html = generateOrderHtml(orderDetails, totalCost, userType);
+  console.log("sending order confirmation email to:", recipientMail);
+  await resend.emails.send({
+    from: env.SMTP.USER,
+    to: recipientMail,
+    subject: 'Your Order Confirmation',
+    html: html,
+  });
+    console.log("Order confirmation email sent to:", recipientMail);
+}
 
 function formatAddress(address: any): string {
     if (!address) return '';
