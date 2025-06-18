@@ -10,6 +10,8 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
+  @Column({ type: 'int', nullable: true, unique: true })
+  orderNo: number;
 
   @ManyToOne(() => User , user => user.orders)
   @JoinColumn({ name: "userId" })

@@ -5,10 +5,10 @@ import { Order } from "./order.model.js";
 @Entity("addresses")
 export class Address extends BaseEntity {
 
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   country: string;
 
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   city: string;
 
   @Column({ nullable: true, type: "text" })
@@ -17,13 +17,13 @@ export class Address extends BaseEntity {
   @Column({ nullable: true, type: "text" })
   street: string;
 
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   buildingNumber: string;
 
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   floor: number;
 
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   apartmentNumber: string;
 
   @Column({ type: "text", nullable: true })

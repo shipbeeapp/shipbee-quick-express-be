@@ -12,7 +12,7 @@ export class User extends BaseEntity {
   @Column({ nullable: true, unique: true, type: "text" })
   phoneNumber: string;
 
-  @Column({ unique: true, type: "text" })
+  @Column({ unique: true, type: "text", nullable: true })
   email: string;
 
   @OneToMany(() => Order, (order) => order.user)

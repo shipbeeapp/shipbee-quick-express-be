@@ -13,6 +13,7 @@ import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { InitialMigration1739286971657 } from "../migrations/1739286971657-InitialMigration.js";
 import {AddPaymentMethodInOrder1749152821888} from "../migrations/1749152821888-AddPaymentMethodInOrder.js";
 import {AddDistanceInOrder1750237696460} from "../migrations/1750237696460-AddDistanceInOrder.js";
+import {ModifyMandatoryFieldsAndAddOrderNumber1750280063917} from "../migrations/1750280063917-ModifyMandatoryFieldsAndAddOrderNumber.js"
 
 
 export const AppDataSource = new DataSource({
@@ -39,6 +40,7 @@ export const AppDataSource = new DataSource({
     InitialMigration1739286971657,
     AddPaymentMethodInOrder1749152821888,
     AddDistanceInOrder1750237696460,
+    ModifyMandatoryFieldsAndAddOrderNumber1750280063917,
   ], // ✅ Path to migrations
   ssl: {
     rejectUnauthorized: false, // 👈 Add this line
