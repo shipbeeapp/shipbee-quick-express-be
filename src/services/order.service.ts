@@ -10,7 +10,7 @@ import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
-import { getTripCost } from "../utils/trip-cost.js";
+import { getTripCostBasedOnKm } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
@@ -56,7 +56,7 @@ export default class OrderService {
         }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCost(orderData.fromAddress.city, orderData.toAddress.city);
+      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance);
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository
@@ -68,6 +68,7 @@ export default class OrderService {
         user,
         fromAddress,
         toAddress,
+        distance: orderData.distance,
         totalCost,
         serviceSubcategory,
         status: OrderStatus.CONFIRMED, // Default status

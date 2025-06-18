@@ -100,4 +100,19 @@ export function getTripCost(fromCity: string, toCity: string): number {
   }
   return tripRates[fromCity][toCity];
 }
+
+export function getTripCostBasedOnKm(distance: number): number {
+  if (typeof distance !== 'number' || distance < 0) {
+    throw new Error('Distance must be a positive number');
+  }
+  if (distance > 0 && distance <= 10) {
+    return 13; // Base cost for short trips
+  } else if (distance > 10 && distance <= 20) {
+    return 15; // Cost for medium trips
+  } else if (distance > 20 && distance <= 30) {
+    return 25; // Cost for longer trips
+  } else {
+    return 25 + (distance - 30); // Cost for very long trips
+  }
+}
   

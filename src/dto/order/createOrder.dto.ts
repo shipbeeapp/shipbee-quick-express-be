@@ -59,6 +59,10 @@ export class CreateOrderDto {
   @Transform(({ value }) => (value ? Number(value) : value))
   lifters?: number;
 
+  @IsNumber()
+  @Type(() => Number)
+  distance: number;
+
   @IsString()
   name: string;
 
