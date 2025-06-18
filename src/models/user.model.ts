@@ -6,6 +6,7 @@ import { UserPromoCode } from "./userPromoCode.model.js";
 @Entity("users")
 export class User extends BaseEntity {
 
+  
   @Column({type: "text"})
   name: string;
 
