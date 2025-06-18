@@ -45,7 +45,7 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
     const html = fs.readFileSync(templatePath, 'utf8');
   
     const template = Handlebars.compile(html);
-    const orderDescription = JSON.parse(order.itemDescription);
+    const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
     const replacements = {
       recipient: userType === 'admin' ? 'admin' : order.name,
       heading: userType === 'admin' ? 'New Request Received – <strong>Quick shipBee!</strong>' : 'Your Service request has been submitted!',
@@ -58,7 +58,7 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
       pickUpDate: new Date(order.pickUpDate).toLocaleString(),
       lifters: order.lifters ?? null,
       totalCost: Number(totalCost).toFixed(2),
-      itemDescription: orderDescription.text || '',
+      itemDescription: orderDescription?.text || '',
       fromAddress: formatAddress(order.fromAddress),
       toAddress: formatAddress(order.toAddress),
       status: "CONFIRMED",
