@@ -18,7 +18,7 @@ export async function sendOrderConfirmation(orderDetails: any, totalCost: number
     subject: 'Your Order Confirmation',
     html: html,
   });
-    console.log("Order confirmation email sent to:", recipientMail);
+    console.log("Order confirmation email sentt to:", recipientMail);
 }
 
 function formatAddress(address: any): string {
