@@ -13,7 +13,8 @@ import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { InitialMigration1739286971657 } from "../migrations/1739286971657-InitialMigration.js";
 import {AddPaymentMethodInOrder1749152821888} from "../migrations/1749152821888-AddPaymentMethodInOrder.js";
 import {AddDistanceInOrder1750237696460} from "../migrations/1750237696460-AddDistanceInOrder.js";
-
+import {AddVehiclesTable1751188463677} from "../migrations/1751188463677-AddVehiclesTable.js";
+import { Vehicle } from "../models/vehicle.model.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -34,11 +35,13 @@ export const AppDataSource = new DataSource({
     OrderStatusHistory,
     Payment,
     PaymentStatusHistory,
+    Vehicle, // ✅ Add Vehicle entity
   ],
   migrations: [
     InitialMigration1739286971657,
     AddPaymentMethodInOrder1749152821888,
     AddDistanceInOrder1750237696460,
+    AddVehiclesTable1751188463677,
   ], // ✅ Path to migrations
   ssl: {
     rejectUnauthorized: false, // 👈 Add this line

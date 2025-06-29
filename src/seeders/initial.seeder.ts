@@ -5,6 +5,8 @@ import { ServiceCategoryName } from "../utils/enums/serviceCategory.enum.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 import { env } from "../config/environment.js";
 import { furnitureRequests } from "../utils/enums/furnitureRequests.enum.js";
+import { Vehicle } from "../models/vehicle.model.js";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 
 export const seedDatabase = async () => {
   const queryRunner = AppDataSource.createQueryRunner();
@@ -52,8 +54,22 @@ export const seedDatabase = async () => {
       }
     }
 
+    console.log("🌱 Seeding Vehicle Types...");
+    const vehicleRepo = queryRunner.manager.getRepository(Vehicle);
+    const vehicleTypes = Object.values(VehicleType);
+
+    for (const vehicleType of vehicleTypes) {
+      const existingVehicle = await vehicleRepo.findOne({ where: { type: vehicleType } });
+
+      if (!existingVehicle) {
+      const newVehicle = vehicleRepo.create({ type: vehicleType });
+      await vehicleRepo.save(newVehicle);
+      }
+    }
+    console.log("🌱 Vehicle Seeding Completed");
+
     await queryRunner.commitTransaction();
-    console.log("✅ Categories and Subcategories Seeded Successfully");
+    console.log("✅ Categories, Subcategories, and Vehicles Seeded Successfully");
   } catch (error) {
     console.error("❌ Error Seeding Database:", error);
     await queryRunner.rollbackTransaction();

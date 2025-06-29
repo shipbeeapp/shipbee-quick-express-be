@@ -112,7 +112,7 @@ export function getTripCostBasedOnKm(distance: number): number {
   } else if (distance > 20 && distance <= 30) {
     return 25; // Cost for longer trips
   } else {
-    return 25 + (distance - 30); // Cost for very long trips
+    return Math.ceil(distance); // Cost for very long trips
   }
 }
   

@@ -27,6 +27,9 @@ class AddressDto {
 }
 
 export class CreateOrderDto {
+  @IsOptional()
+  vehicleId?: string;
+
   @IsEnum(ServiceSubcategoryName)
   serviceSubcategory: ServiceSubcategoryName;
 

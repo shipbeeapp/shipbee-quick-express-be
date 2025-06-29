@@ -2,9 +2,7 @@ import "reflect-metadata";
 import App from "../src/app.js";
 import { OrderController } from "../src/controllers/order.controller.js";
 import { CitiesController } from "../src/controllers/cities.controller.js";
-import { env } from "../src/config/environment.js";
-import nodemailer from "nodemailer";
-import { generateOrderHtml } from "../src/services/email.service.js"; // Adjust the import path as needed
+import { VehicleController } from "../src/controllers/vehicle.controller.js";
 
 let appInstance: App | null = null;
 
@@ -13,6 +11,7 @@ async function ensureAppInitialized() {
     appInstance = new App([
       new OrderController(),
       new CitiesController(),
+      new VehicleController(),
     ]);
 
     // Optional: a test route

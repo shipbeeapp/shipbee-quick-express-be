@@ -14,6 +14,8 @@ import { getTripCostBasedOnKm } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
+import VehicleService from "./vehicle.service.js";
+
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -22,6 +24,7 @@ export default class OrderService {
   private addressService = Container.get(AddressService);
   private serviceSubcategoryService = Container.get(ServiceSubcategoryService);
   private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
+  private vehicleService = Container.get(VehicleService);
   // private mailService = Container.get(MailService);  
   
   constructor() {}
@@ -54,6 +57,10 @@ export default class OrderService {
       if (!serviceSubcategory) {
           throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
         }
+      if (orderData.vehicleId) {
+        // If vehicleId is provided, fetch the vehicle and associate it with the order
+        await this.vehicleService.getVehicleById(orderData.vehicleId, queryRunner);
+      }
         
       //🔹 Step 3: Calculate total cost
       const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance);
@@ -61,6 +68,7 @@ export default class OrderService {
 
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
+        vehicle: orderData.vehicleId ? { id: orderData.vehicleId } : null, // If vehicleId is provided, associate it with the order
         pickUpDate: orderData.pickUpDate,
         itemType: orderData.itemType,
         itemDescription: orderData.itemDescription ?? null,
