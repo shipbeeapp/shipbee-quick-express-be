@@ -1,6 +1,5 @@
 import { Service } from "typedi";
 import { Address } from "../models/address.model.js";
-import { AppDataSource } from "../config/data-source.js";
 @Service()
 export class AddressService {
 //   private addressRepository = AppDataSource.getRepository(Address);

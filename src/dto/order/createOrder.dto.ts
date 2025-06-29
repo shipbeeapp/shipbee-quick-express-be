@@ -7,18 +7,23 @@ import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
 
 class AddressDto {
     @IsString()
+    @IsOptional()
     country: string;
 
     @IsString()
+    @IsOptional()
     city: string;
 
     @IsString()
+    @IsOptional()
     buildingNumber: string;
 
     @IsString()
+    @IsOptional()
     floor: string;
 
     @IsString()
+    @IsOptional()
     apartmentNumber: string;
 
     @IsString()
@@ -73,5 +78,6 @@ export class CreateOrderDto {
   phoneNumber: string;
 
   @IsEmail()
+  @IsOptional()
   email: string;
 }

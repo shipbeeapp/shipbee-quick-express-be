@@ -11,6 +11,8 @@ import { Vehicle } from "./vehicle.model.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
+  @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('order_no_seq')", })
+  orderNo: number;
 
   @ManyToOne(() => User , user => user.orders)
   @JoinColumn({ name: "userId" })
