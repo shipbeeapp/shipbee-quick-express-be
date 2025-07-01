@@ -44,9 +44,22 @@ export default class OrderService {
     console.log("Transaction started:");
 
     try {
-      // 🔹 Step 1: Get or Create User
-      const userData = { email: orderData.email, name: orderData.name, phoneNumber: orderData.phoneNumber };
-      const user = await this.userService.findOrCreateUser(userData, queryRunner);
+      // 🔹 Step 1: Get or Create Users
+      const senderData = {
+        email: orderData.senderEmail,
+        name: orderData.senderName,
+        phoneNumber: orderData.senderPhoneNumber
+      };
+      
+      const receiverData = {
+        email: orderData.receiverEmail,
+        name: orderData.receiverName,
+        phoneNumber: orderData.receiverPhoneNumber
+      };
+      
+      // Create or find both users
+      const sender = await this.userService.findOrCreateUser(senderData, queryRunner);
+      const receiver = await this.userService.findOrCreateUser(receiverData, queryRunner);
 
       // 🔹 Step 2: Create Addresses
       const { fromAddress, toAddress } = await this.addressService.createAddresses(orderData.fromAddress, orderData.toAddress, queryRunner);
@@ -73,7 +86,8 @@ export default class OrderService {
         itemType: orderData.itemType,
         itemDescription: orderData.itemDescription ?? null,
         lifters: orderData.lifters ?? 0,   
-        user,
+        sender,
+        receiver,
         fromAddress,
         toAddress,
         distance: orderData.distance,
@@ -92,12 +106,12 @@ export default class OrderService {
        console.error("Error sending email to admin:", err);
       });
      console.log('sent mail to admin: ', env.SMTP.USER);
-     if (orderData.email) {
-      await sendOrderConfirmation(orderData, totalCost, orderData.email).catch((err) => {
+     if (orderData.senderEmail) {
+      await sendOrderConfirmation(orderData, totalCost, orderData.senderEmail).catch((err) => {
         console.error("Error sending email to user:", err);
       }
       );
-      console.log('sent mail to user: ', orderData.email);
+      console.log('sent mail to user: ', orderData.senderEmail);
      }
 
      //🔹 Step 5: Create Payment

@@ -14,9 +14,13 @@ export class Order extends BaseEntity {
   @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('order_no_seq')", })
   orderNo: number;
 
-  @ManyToOne(() => User , user => user.orders)
-  @JoinColumn({ name: "userId" })
-  user: Relation<User>;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "senderUserId" })
+  sender: Relation<User>;
+  
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "receiverUserId" })
+  receiver: Relation<User>;
 
   @ManyToOne(() => ServiceSubcategory, subcategory => subcategory.orders)
   @JoinColumn({ name: "serviceSubcategoryId" })

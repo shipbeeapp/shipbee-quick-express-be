@@ -72,12 +72,26 @@ export class CreateOrderDto {
   distance: number;
 
   @IsString()
-  name: string;
+  @IsOptional()
+  senderName: string;
 
   @IsString()
-  phoneNumber: string;
+  @IsOptional()
+  senderPhoneNumber: string;
 
   @IsEmail()
   @IsOptional()
-  email: string;
+  senderEmail: string;
+
+  @IsString()
+  @IsOptional()
+  receiverName: string;
+
+  @IsString()
+  @IsOptional()
+  receiverPhoneNumber: string;
+
+  @IsEmail()
+  @IsOptional()
+  receiverEmail: string;
 }
