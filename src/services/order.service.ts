@@ -103,7 +103,7 @@ export default class OrderService {
      await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
 
      await sendOrderConfirmation(orderData, totalCost, "ship@shipbee.io", 'admin').catch((err) => {
-       console.error("Error sending email to admin:", err);
+       console.error("Error sending emaill to admin:", err);
       });
      console.log('sent mail to admin: ', env.SMTP.USER);
      if (orderData.senderEmail) {
