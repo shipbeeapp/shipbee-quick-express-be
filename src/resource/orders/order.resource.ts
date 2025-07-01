@@ -10,13 +10,20 @@ export class OrderResponseDto {
     currentStatus: string;
     createdAt: Date;
   
-    user: {
+    sender: {
       id: string;
       name: string;
       email: string;
       phoneNumber: string;
     };
   
+    receiver: {
+      id: string;
+      name: string;
+      email: string;
+      phoneNumber: string;
+    };
+
     serviceSubcategory: {
       id: string;
       name: string;
@@ -69,11 +76,17 @@ export class OrderResponseDto {
       totalCost: Number(order.totalCost),
       currentStatus: order.status,
       createdAt: order.createdAt,
-      user: {
-        id: order.user.id,
-        name: order.user.name,
-        email: order.user.email,
-        phoneNumber: order.user.phoneNumber,
+      sender: {
+        id: order.sender.id,
+        name: order.sender.name,
+        email: order.sender.email,
+        phoneNumber: order.sender.phoneNumber,
+      },
+      receiver: {
+        id: order.sender.id,
+        name: order.sender.name,
+        email: order.sender.email,
+        phoneNumber: order.sender.phoneNumber,
       },
       serviceSubcategory: {
         id: order.serviceSubcategory.id,
