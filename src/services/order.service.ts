@@ -131,7 +131,7 @@ export default class OrderService {
 
   async getOrdersbyUser(userId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId }, relations: ["orders"] });
-    console.log(user.orders)
+    console.log(user.sentOrders)
   }
 
   async getOrders() {

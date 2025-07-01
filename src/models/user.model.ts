@@ -16,8 +16,13 @@ export class User extends BaseEntity {
   @Column({ unique: true, type: "text", nullable: true })
   email: string;
 
-  @OneToMany(() => Order, (order) => order.user)
-  orders: Order[];
+  // 👇 New: orders where the user is the sender
+  @OneToMany(() => Order, (order) => order.sender)
+  sentOrders: Order[];
+
+  // 👇 New: orders where the user is the receiver
+  @OneToMany(() => Order, (order) => order.receiver)
+  receivedOrders: Order[];
 
   @OneToMany(() => UserPromoCode, (userPromoCode) => userPromoCode.user)
   promoCodeUsages: UserPromoCode[];

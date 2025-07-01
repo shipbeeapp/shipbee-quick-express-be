@@ -47,11 +47,11 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
     const template = Handlebars.compile(html);
     const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
     const replacements = {
-      recipient: userType === 'admin' ? 'admin' : order.name,
+      recipient: userType === 'admin' ? 'admin' : order.senderName,
       heading: userType === 'admin' ? 'New Request Received – <strong>Quick shipBee!</strong>' : 'Your Service request has been submitted!',
-      name: order.name,
-      email: order.email,
-      phoneNumber: order.phoneNumber,
+      name: order.senderName,
+      email: order.senderEmail,
+      phoneNumber: order.senderPhoneNumber,
       serviceSubcategory: order.serviceSubcategory,
       quantity: '01', // Assuming quantity is always 1 for now
       itemType: order.itemType,
