@@ -46,6 +46,8 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
   
     const template = Handlebars.compile(html);
     const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
+    const imageUrls = orderDescription?.images || null;
+    const images = imageUrls ? imageUrls.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
     const replacements = {
       recipient: userType === 'admin' ? 'Test admin' : `Test ${order.senderName}`,
       heading: userType === 'admin' ? 'Test Request Received – <strong>Quick shipBee!</strong>' : 'Your Test Service request has been submitted!',
@@ -59,6 +61,7 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
       lifters: order.lifters ?? null,
       totalCost: Number(totalCost).toFixed(2),
       itemDescription: orderDescription?.text || '',
+      imageUrls: images,
       fromAddress: formatAddress(order.fromAddress),
       toAddress: formatAddress(order.toAddress),
       status: "CONFIRMED",

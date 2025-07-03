@@ -24,12 +24,31 @@
             {{toAddress}}</p>
             <p style="margin:0 0 16px;color:#000000">Date &amp; time:<br>
             {{pickUpDate}}</p>
-          </div>
+            {{#if itemDescription}}
+            <p style="margin:0 0 16px;color:#000000">Additional notes:<br>
+            {{itemDescription}}</p>
+            {{/if}}
+            {{#if imageUrls}}
+            <p style="margin:0 0 16px;color:#000000">Photos <br>
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+              {{#each imageUrls}}
+                <a href="{{this}}" rel="noopener noreferrer">
+                <img src="{{this}}" alt="Image" style="max-width:80px;max-height:80px;border-radius:4px; cursor:pointer;">
+              </a>
+              {{/each}}
+            </div>
+            {{/if}}
       
           <div style="margin-top:20px;color:#000000;font-size:16px;font-weight:400">
             <h3 style="padding-bottom:10px;color:#000000">User details</h3>
             <p style="margin:0 0 16px;color:#000000">Customer name:<br>{{name}}</p>
-            <p style="margin:0 0 16px; color:#000000">Phone number:<br>{{phoneNumber}}</p>
+            <p style="margin:0 0 16px; color:#000000">
+              Phone number:<br>
+              <a href="https://wa.me/974{{phoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
+                {{phoneNumber}}
+              </a>
+            </p>
             {{#if email}}
             <p style="margin:0 0 16px;color:#000000">Email:<br>{{email}}</p>
             {{/if}}
