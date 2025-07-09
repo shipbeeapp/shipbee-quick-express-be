@@ -31,8 +31,8 @@ export class UserController {
                 isNewUser: false // Assuming you want to set isNewUser to false on update
             };
             console.log("Updating user with ID:", paramUserId, "and data:", userData);
-            const updatedUser = await this.userService.updateUser(paramUserId, userData);
-            res.status(200).json({ success: true, data: updatedUser });
+            await this.userService.updateUser(paramUserId, userData);
+            res.status(200).json({ success: true, message: "User Updated Successfully" });
         } catch (error) {
             console.error("Error updating user:", error.message);
             res.status(500).json({ success: false, message: error.message });
