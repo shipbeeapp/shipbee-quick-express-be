@@ -18,6 +18,9 @@ export class User extends BaseEntity {
 
   @Column({ type: "text", nullable: true })
   otp: string;
+
+  @Column({type: "boolean", default: true})
+  isNewUser: boolean;
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

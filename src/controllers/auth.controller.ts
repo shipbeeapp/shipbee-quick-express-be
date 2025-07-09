@@ -41,7 +41,8 @@ export class AuthController {
         const userData = {
             email: user.email,
             userId: user.id,
-            phoneNumber: user.phoneNumber  
+            phoneNumber: user.phoneNumber,
+            isNewUser: user.isNewUser  
         }
         const myToken = jwt.sign(
             userData,
@@ -102,12 +103,13 @@ export class AuthController {
         const userData = { 
             email: user.email,
             userId: user.id,
-            phoneNumber: user.phoneNumber  
+            phoneNumber: user.phoneNumber,
+            isNewUser: user.isNewUser  
         }
         const myToken = jwt.sign(
             userData,
             env.JWT_SECRET,
         );
-        return res.status(200).json({ success: true, message: 'OTP verified successfully.', token: myToken, userData: userData });
+        return res.status(200).json({ success: true, message: 'OTP verified successfully.', token: myToken, userData: userData});
     }
 }

@@ -6,6 +6,7 @@ import validateDto from "../middlewares/validation.middleware.js";
 import {CreateOrderDto} from "../dto/order/createOrder.dto.js";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
+import { AuthenticatedRequest, authenticationMiddleware } from "../middlewares/authentication.middleware.js";
 
 export class OrderController {
   public router: Router = Router();
@@ -37,7 +38,7 @@ export class OrderController {
        this.createOrder.bind(this)
     );
 
-    this.router.get("/orders", this.getOrders.bind(this));
+    this.router.get("/orders", authenticationMiddleware, this.getOrders.bind(this));
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -61,7 +62,7 @@ export class OrderController {
     }
   }
 
-  private async getOrders(req: Request, res: Response) {
+  private async getOrders(req: AuthenticatedRequest, res: Response) {
     try {
       const orders = await this.orderService.getOrders();
       res.status(200).json({ success: true, orders: orders });

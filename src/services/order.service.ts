@@ -141,7 +141,7 @@ export default class OrderService {
       console.log("Data Source has been initialized! in OrderService");
     }
     const orders = await this.orderRepository.find({
-      relations: ["user", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
       order: {
         createdAt: "DESC",
       },

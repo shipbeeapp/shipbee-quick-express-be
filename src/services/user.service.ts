@@ -43,4 +43,18 @@ export default class UserService {
       throw error;
     }
   }
+
+  async updateUser(userId: string, userData: Partial<User>): Promise<User> {
+    try {
+      const user = await this.userRepository.findOneBy({ id: userId });
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+      Object.assign(user, userData);
+      return await this.userRepository.save(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
+    }
+  }
 }

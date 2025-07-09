@@ -71,7 +71,6 @@ export class OrderResponseDto {
           (img: string) => `${env.CLOUDINARY_BASE_URL}${img}`
         );
     }
-    console.log("toOrderResponseDto: ");
     return {
       id: order.id,
       createdAt: order.createdAt,
