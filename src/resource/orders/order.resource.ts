@@ -6,9 +6,13 @@ export class OrderResponseDto {
     itemType: string;
     itemDescription: string | null;
     lifters: number;
+    distance: number;
     totalCost: number;
     currentStatus: string;
     createdAt: Date;
+    updatedAt: Date;
+    orderNo: number;
+    vehicleId: string | null;
   
     sender: {
       id: string;
@@ -63,19 +67,24 @@ export class OrderResponseDto {
   export function toOrderResponseDto(order: Order): OrderResponseDto {
     const itemDescription = JSON.parse(order.itemDescription) || null;
     if (itemDescription?.images?.length) {
-        itemDescription.images = itemDescription.images.map(
+        itemDescription.images = itemDescription?.images?.map(
           (img: string) => `${env.CLOUDINARY_BASE_URL}${img}`
         );
     }
+    console.log("toOrderResponseDto: ");
     return {
       id: order.id,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      orderNo: order.orderNo,
       pickUpDate: order.pickUpDate,
       itemType: order.itemType,
       itemDescription: itemDescription,
       lifters: order.lifters,
+      distance: order.distance,
       totalCost: Number(order.totalCost),
       currentStatus: order.status,
-      createdAt: order.createdAt,
+      vehicleId: order.vehicle?.id || null,
       sender: {
         id: order.sender.id,
         name: order.sender.name,
@@ -115,7 +124,7 @@ export class OrderResponseDto {
         zone: order.toAddress.zone,
         landmarks: order.toAddress.landmarks,
       },
-      statusHistory: order.orderStatusHistory.map(status => ({
+      statusHistory: order.orderStatusHistory?.map(status => ({
         status: status.status,
         timestamp: status.createdAt,
       })),

@@ -7,7 +7,7 @@ import { UserPromoCode } from "./userPromoCode.model.js";
 export class User extends BaseEntity {
 
   
-  @Column({type: "text"})
+  @Column({type: "text", nullable: true})
   name: string;
 
   @Column({ nullable: true, unique: true, type: "text" })
@@ -16,6 +16,8 @@ export class User extends BaseEntity {
   @Column({ unique: true, type: "text", nullable: true })
   email: string;
 
+  @Column({ type: "text", nullable: true })
+  otp: string;
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

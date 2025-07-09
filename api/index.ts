@@ -3,6 +3,7 @@ import App from "../src/app.js";
 import { OrderController } from "../src/controllers/order.controller.js";
 import { CitiesController } from "../src/controllers/cities.controller.js";
 import { VehicleController } from "../src/controllers/vehicle.controller.js";
+import { AuthController } from "../src/controllers/auth.controller.js";
 
 let appInstance: App | null = null;
 
@@ -12,6 +13,7 @@ async function ensureAppInitialized() {
       new OrderController(),
       new CitiesController(),
       new VehicleController(),
+      new AuthController(),
     ]);
 
     // Optional: a test route

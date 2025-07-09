@@ -28,4 +28,8 @@ export const env = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   BASE_COST: process.env.BASE_COST || 360.80,
   PER_LIFTER_COST: process.env.PER_LIFTER_COST || 360.80,
+  JWT_SECRET: process.env.JWT_SECRET || 'my-secret-key',
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '+12492098080',
 };

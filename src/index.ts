@@ -3,12 +3,14 @@ import "reflect-metadata";
 import { OrderController } from "./controllers/order.controller.js";
 import { CitiesController } from "./controllers/cities.controller.js";
 import { VehicleController } from "./controllers/vehicle.controller.js";
+import { AuthController } from "./controllers/auth.controller.js";
 
 const app = new App(
     [
     new OrderController(),
     new CitiesController(),
     new VehicleController(),
+    new AuthController(),
     ],
 );
 app.app.get('/test', (req: any, res: any): void => {

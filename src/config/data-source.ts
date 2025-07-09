@@ -17,6 +17,7 @@ import {ModifyMandatoryFieldsAndAddOrderNumber1750280063917} from "../migrations
 import {AddVehiclesTable1751188463677} from "../migrations/1751188463677-AddVehiclesTable.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import {UpdateUserFieldsInOrder1751354850907} from "../migrations/1751354850907-UpdateUserFieldsInOrder.js"
+import {AddOtpInUserModel1752051730087} from "../migrations/1752051730087-AddOtpInUserModel.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -46,6 +47,7 @@ export const AppDataSource = new DataSource({
     ModifyMandatoryFieldsAndAddOrderNumber1750280063917,
     AddVehiclesTable1751188463677,
     UpdateUserFieldsInOrder1751354850907,
+    AddOtpInUserModel1752051730087,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

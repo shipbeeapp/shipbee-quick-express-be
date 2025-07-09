@@ -119,7 +119,7 @@ export default class OrderService {
 
      // Commit transaction
      await queryRunner.commitTransaction();
-     return order;
+     return toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
       await queryRunner.rollbackTransaction();
