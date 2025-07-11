@@ -102,6 +102,7 @@ export class AuthController {
         }
         const userData = { 
             email: user.email,
+            name: user.name,
             userId: user.id,
             phoneNumber: user.phoneNumber,
             isNewUser: user.isNewUser  
