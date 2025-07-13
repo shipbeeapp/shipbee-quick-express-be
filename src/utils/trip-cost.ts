@@ -1,3 +1,5 @@
+import { VehicleType } from "./enums/vehicleType.enum.js";
+
 const tripRates = {
     'Al Shamal': {
       'Al Daayen': 15,
@@ -101,18 +103,46 @@ export function getTripCost(fromCity: string, toCity: string): number {
   return tripRates[fromCity][toCity];
 }
 
-export function getTripCostBasedOnKm(distance: number): number {
+export function getTripCostBasedOnKm(distance: number, vehicleType: VehicleType): number {
   if (typeof distance !== 'number' || distance < 0) {
     throw new Error('Distance must be a positive number');
   }
-  if (distance > 0 && distance <= 10) {
-    return 13; // Base cost for short trips
-  } else if (distance > 10 && distance <= 20) {
-    return 15; // Cost for medium trips
-  } else if (distance > 20 && distance <= 30) {
-    return 25; // Cost for longer trips
-  } else {
-    return Math.ceil(distance); // Cost for very long trips
-  }
+  switch (vehicleType) {
+    case VehicleType.SEDAN_CAR || VehicleType.MOTORCYCLE:
+      if (distance > 0 && distance <= 10) {
+        return 13; // Base cost for short trips
+      } else if (distance > 10 && distance <= 20) {
+        return 15; // Cost for medium trips
+      } else if (distance > 20 && distance <= 30) {
+        return 25; // Cost for longer trips
+      } else {
+        return Math.ceil(distance); // Cost for very long trips
+      }
+    case VehicleType.VAN:
+      if (distance > 0 && distance <= 10) return 35; // Base cost for short trips
+      else if (distance > 10) return Math.ceil(35 + (distance - 10) * 3); // Cost for medium and long trips
+    
+    case VehicleType.CHILLER_VAN:
+      if (distance > 0 && distance <= 10) return 125; // Base cost for short trips
+      else if (distance > 10 && distance <= 20) return 145;
+      else if (distance > 20 && distance <= 30) return 205; // Cost for longer trips
+      else return Math.ceil(200 + (distance - 30) * 6); // Cost for very long trips
+    
+    case VehicleType.FREEZER_VAN:
+      if (distance > 0 && distance <= 10) return 125; // Base cost for short trips
+      else if (distance > 10 && distance <= 20) return 155;
+      else if (distance > 20 && distance <= 30) return 225; // Cost for longer trips
+      else return Math.ceil(220 + (distance - 30) * 8); // Cost for very long trips
+    
+    case VehicleType.PICKUP_TRUCK_TWO_TONS:
+      if (distance > 0 && distance <= 30) return 130; // Base cost for short trips
+      else if (distance > 30 && distance <= 50) return 230;
+      else return Math.ceil(230 + (distance - 50) * 4); // Cost for longer trips
+
+    case VehicleType.PICKUP_TRUCK_THREE_TONS:
+      if (distance > 0 && distance <= 30) return 160; // Base
+      else if (distance > 30 && distance <= 50) return 260;
+      else return Math.ceil(260 + (distance - 50) * 4); // Cost for longer trips
+}
 }
   

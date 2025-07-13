@@ -70,13 +70,14 @@ export default class OrderService {
       if (!serviceSubcategory) {
           throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
         }
+      let vehicle;
       if (orderData.vehicleId) {
         // If vehicleId is provided, fetch the vehicle and associate it with the order
-        await this.vehicleService.getVehicleById(orderData.vehicleId, queryRunner);
+        vehicle = await this.vehicleService.getVehicleById(orderData.vehicleId, queryRunner);
       }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance);
+      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, vehicle.type);
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository
