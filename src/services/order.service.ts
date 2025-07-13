@@ -130,8 +130,16 @@ export default class OrderService {
   }
 
   async getOrdersbyUser(userId: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId }, relations: ["orders"] });
-    console.log(user.sentOrders)
+    const orders = await this.orderRepository.find({
+      where: {
+        sender: { id: userId },
+      },
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      order: {
+        createdAt: "DESC",
+      },
+    })
+    return orders.map(toOrderResponseDto);
   }
 
   async getOrders() {

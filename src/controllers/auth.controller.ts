@@ -21,6 +21,7 @@ export class AuthController {
         this.router.post(`${this.path}/sign-up`, this.signup);
         this.router.post(`${this.path}/send-otp`, this.sendOtp)
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
+        this.router.post(`${this.path}/admin/login`, this.adminLogin);
     }
 
     private signup = async (req, res) => {
@@ -112,5 +113,17 @@ export class AuthController {
             env.JWT_SECRET,
         );
         return res.status(200).json({ success: true, message: 'OTP verified successfully.', token: myToken, userData: userData});
+    }
+
+    private adminLogin = async (req, res) => {
+        const { email, password } = req.body;
+        if (email !== env.ADMIN.EMAIL || password !== env.ADMIN.PASSWORD) {
+            return res.status(401).json({ success: false, message: 'Invalid admin credentials.' });
+        }
+        const adminData = {
+            email: env.ADMIN.EMAIL,
+        };
+        const token = jwt.sign(adminData, env.JWT_SECRET);
+        return res.status(200).json({ success: true, token, userData: adminData });
     }
 }

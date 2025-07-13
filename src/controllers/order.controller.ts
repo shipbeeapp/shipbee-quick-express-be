@@ -7,6 +7,7 @@ import {CreateOrderDto} from "../dto/order/createOrder.dto.js";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
 import { AuthenticatedRequest, authenticationMiddleware } from "../middlewares/authentication.middleware.js";
+import { env } from "../config/environment.js";
 
 export class OrderController {
   public router: Router = Router();
@@ -64,7 +65,11 @@ export class OrderController {
 
   private async getOrders(req: AuthenticatedRequest, res: Response) {
     try {
-      const orders = await this.orderService.getOrders();
+      console.log("Authenticated user ID:", req.userId);
+      console.log("Authenticated user email:", req.email);
+      let orders;
+      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders();
+      else orders = await this.orderService.getOrdersbyUser(req.userId);
       res.status(200).json({ success: true, orders: orders });
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
