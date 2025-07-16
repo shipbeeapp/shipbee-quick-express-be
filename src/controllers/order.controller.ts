@@ -68,6 +68,7 @@ export class OrderController {
       console.log("Authenticated user ID:", req.userId);
       console.log("Authenticated user email:", req.email);
       let orders;
+      console.log("admin in email: ", env.ADMIN.EMAIL);
       if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders();
       else orders = await this.orderService.getOrdersbyUser(req.userId);
       res.status(200).json({ success: true, orders: orders });
