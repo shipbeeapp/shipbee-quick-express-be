@@ -141,7 +141,6 @@ export default class OrderService {
         createdAt: "DESC",
       },
     })
-    console.log("Orders fetched for user:", orders);
     return orders.map(toOrderResponseDto);
   }
 
@@ -151,14 +150,13 @@ export default class OrderService {
       await AppDataSource.initialize();
       console.log("Data Source has been initialized! in OrderService");
     }
-    console.log("Fetching all orders... for admin");
+    console.log("Fetching all orders for admin");
     const orders = await this.orderRepository.find({
       relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
       order: {
         createdAt: "DESC",
       },
     });
-    console.log("All orders fetched for admin:", orders);
     return orders.map(toOrderResponseDto);
   }
 }
