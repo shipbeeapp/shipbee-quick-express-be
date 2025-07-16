@@ -158,6 +158,7 @@ export default class OrderService {
         createdAt: "DESC",
       },
     });
+    console.log("All orders fetched for admin:", orders);
     return orders.map(toOrderResponseDto);
   }
 }
