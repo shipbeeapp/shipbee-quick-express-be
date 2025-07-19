@@ -1,11 +1,9 @@
 export enum OrderStatus {
-    PENDING_PAYMENT = "pending_payment",
-    CONFIRMED = "confirmed",
-    PREPARING = "preparing",
-    EN_ROUTE = "en_route",
-    DELIVERED = "delivered",
-    CANCELED = "canceled",
-    FAILED = "failed",
+    PENDING = "Pending",
+    ASSIGNED = "Assigned",
+    ACTIVE = "Active",
+    COMPLETED = "Completed",
+    CANCELED = "Canceled",
   }
 // Order Status Workflow
 // 1️⃣ pending_payment → The user has filled in order details but hasn't completed the payment (still on payment page)

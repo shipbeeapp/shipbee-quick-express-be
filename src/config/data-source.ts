@@ -21,6 +21,7 @@ import {AddOtpInUserModel1752051730087} from "../migrations/1752051730087-AddOtp
 import { AddIsNewUserInUserModel1752060113738 } from "../migrations/1752060113738-AddIsNewUserInUserModel.js";
 import {AddUserTypeAndCompany1752070861633} from "../migrations/1752070861633-AddUserTypeAndCompany.js";
 import { AddNewVehicleTypes1752404858340 } from "../migrations/1752404858340-AddNewVehicleTypes.js";
+import {ModifyOrderStatusEnum1752935477326} from "../migrations/1752935477326-ModifyOrderStatusEnum.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -53,7 +54,8 @@ export const AppDataSource = new DataSource({
     AddOtpInUserModel1752051730087,
     AddIsNewUserInUserModel1752060113738,
     AddUserTypeAndCompany1752070861633,
-    AddNewVehicleTypes1752404858340
+    AddNewVehicleTypes1752404858340,
+    ModifyOrderStatusEnum1752935477326,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

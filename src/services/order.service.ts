@@ -94,7 +94,7 @@ export default class OrderService {
         distance: orderData.distance,
         totalCost,
         serviceSubcategory,
-        status: OrderStatus.CONFIRMED, // Default status
+        status: OrderStatus.PENDING, // Default status
         paymentMethod: PaymentMethod.CASH_ON_DELIVERY, // Default payment method
       });
 
@@ -158,6 +158,49 @@ export default class OrderService {
       },
     });
     return orders.map(toOrderResponseDto);
+  }
+
+  async updateOrderStatus(orderId: string, status: OrderStatus) {
+    console.log("Updating order status for order ID:", orderId, "to status:", status);
+    // Create a QueryRunner from the DataSource
+    const queryRunner = AppDataSource.createQueryRunner();
+
+    // Establish real database connection using our queryRunner
+    await queryRunner.connect();
+
+    // Start a new transaction
+    await queryRunner.startTransaction();
+    try {
+      const orderRepository = queryRunner.manager.getRepository(Order);
+      const order = await orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["orderStatusHistory"],
+      });
+
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+
+      // Update the order status
+      order.status = status;
+      const updatedOrder = await orderRepository.save(order);
+
+      // Add a new entry to the order status history
+      await this.orderStatusHistoryService.createOrderStatusHistory(updatedOrder, queryRunner);
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+      console.log("Order status updated successfully");
+    } catch (error) {
+      console.error("Error updating order status:", error.message);
+      // Rollback transaction in case of error
+      await queryRunner.rollbackTransaction();
+      throw new Error(`${error.message}`);
+    }
+    finally {
+      // Release the queryRunner which is manually created
+      await queryRunner.release();
+    }
   }
 }
 
