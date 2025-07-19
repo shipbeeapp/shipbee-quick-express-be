@@ -202,5 +202,18 @@ export default class OrderService {
       await queryRunner.release();
     }
   }
+
+  async getOrderDetails(orderId: string) {
+    console.log("Fetching order details for order ID:", orderId);
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+    });
+    if (!order) {
+      console.log(`Order with ID ${orderId} not found`);
+      return null;
+    }
+    return toOrderResponseDto(order);
+  }
 }
 

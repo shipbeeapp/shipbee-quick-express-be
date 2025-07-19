@@ -42,6 +42,8 @@ export class OrderController {
     this.router.get("/orders", authenticationMiddleware, this.getOrders.bind(this));
     // route to update order status. I want only admin to be able to update order status
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
+    // view order details by orderId
+    this.router.get("/orders/:orderId", authenticationMiddleware, this.getOrderDetails.bind(this));
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -96,6 +98,27 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Order Status Updated Successfully" });
     } catch (error) {
       console.error("Error in order controller updating order status:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async getOrderDetails(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+      const order = await this.orderService.getOrderDetails(orderId);
+      // Check if the authenticated user is the sender or an admin
+      if (req.userId !== order.sender.id && req.email !== env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to view this order." });
+      }
+      if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found." });
+      }
+      res.status(200).json({ success: true, data: order });
+    } catch (error) {
+      console.error("Error in order controller getting order details:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
