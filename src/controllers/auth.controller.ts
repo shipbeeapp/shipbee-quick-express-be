@@ -106,7 +106,8 @@ export class AuthController {
             name: user.name,
             userId: user.id,
             phoneNumber: user.phoneNumber,
-            isNewUser: user.isNewUser  
+            isNewUser: user.isNewUser,
+            userType: user.type // Assuming userType is a field in your User model  
         }
         const myToken = jwt.sign(
             userData,
