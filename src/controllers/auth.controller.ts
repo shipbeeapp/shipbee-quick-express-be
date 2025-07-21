@@ -4,6 +4,7 @@ import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { env } from '../config/environment.js';
 import { sendOtp } from '../services/email.service.js';
+import axios from 'axios';
 
 export class AuthController {
   public router: Router = Router();
@@ -27,30 +28,42 @@ export class AuthController {
     private signup = async (req, res) => {
         // This is a placeholder for the actual implementation
         // You would typically handle user signup logic here
-        const { token } = req.body
-        //decode it using jwt to get email
-        const decodedToken = jwt.decode(token);
-        console.log("decodedToken: ", decodedToken);
-        if (!decodedToken || typeof decodedToken !== 'object' || !decodedToken.email) {
-            return res.status(400).json({ success: false, message: 'Invalid token or email not found in token.' });
-        }
+        try {
+            const { token } = req.body
+            if (!token) {
+                return res.status(400).json({ success: false, message: 'Token is required.' });
+            }
+            const response = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+          
+              // This contains the user's profile info
+              const userInfo = response.data;
+          
+              console.log(userInfo);
 
-        const email = decodedToken.email;
-        const user = await this.userService.findOrCreateUser(email);
-        // const userEmail = await this.userService.findOrCreateUser(email);
-        // Now generate your own JWT for your app
-        const userData = {
-            email: user.email,
-            userId: user.id,
-            phoneNumber: user.phoneNumber,
-            isNewUser: user.isNewUser  
-        }
-        const myToken = jwt.sign(
-            userData,
-            env.JWT_SECRET,
-        );
+            const email = userInfo.email;
+            const user = await this.userService.findOrCreateUser({email});
+            // const userEmail = await this.userService.findOrCreateUser(email);
+            // Now generate your own JWT for your app
+            const userData = {
+                email: user.email,
+                userId: user.id,
+                phoneNumber: user.phoneNumber,
+                isNewUser: user.isNewUser  
+            }
+            const myToken = jwt.sign(
+                userData,
+                env.JWT_SECRET,
+            );
 
-        res.status(200).json({ success: true, token: myToken, userData: userData });
+            res.status(200).json({ success: true, token: myToken, userData: userData });
+        } catch (error) {
+            console.error('Error during signup:', error);
+            res.status(401).json({ success: false, message: 'Token not valid.' });
+        }
     }
 
     private sendOtp = async (req, res) => {
