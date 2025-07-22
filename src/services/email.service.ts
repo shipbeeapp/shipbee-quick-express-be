@@ -7,12 +7,13 @@ import path from 'path';
 import fs from 'fs';
 import { Resend } from 'resend';
 import twilio from 'twilio';
+import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 
 const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
-export async function sendOrderConfirmation(orderDetails: any, totalCost: number, recipientMail: string, userType: string = 'non-admin') {
-  const html = generateOrderHtml(orderDetails, totalCost, userType);
+export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin') {
+  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType);
   console.log("sending order confirmation email to:", recipientMail);
   await resend.emails.send({
     from: `Shipbee <${env.SMTP.USER}>`,
@@ -73,7 +74,7 @@ function formatAddress(address: any): string {
   }
 
 
-export function generateOrderHtml(order: CreateOrderDto, totalCost: number, userType: string): string {
+export function generateOrderHtml(order: CreateOrderDto, totalCost: number, vehicleType: VehicleType, userType: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', 'order-confirmation.html');
     const html = fs.readFileSync(templatePath, 'utf8');
   
@@ -107,6 +108,7 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
         email: order.receiverEmail,
         phoneNumber: order.receiverPhoneNumber,
       },
+      vehicleType: vehicleType,
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
     };
