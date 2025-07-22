@@ -108,7 +108,8 @@ export function getTripCostBasedOnKm(distance: number, vehicleType: VehicleType)
     throw new Error('Distance must be a positive number');
   }
   switch (vehicleType) {
-    case VehicleType.SEDAN_CAR || VehicleType.MOTORCYCLE:
+    case VehicleType.SEDAN_CAR :
+    case VehicleType.MOTORCYCLE:
       if (distance > 0 && distance <= 10) {
         return 13; // Base cost for short trips
       } else if (distance > 10 && distance <= 20) {

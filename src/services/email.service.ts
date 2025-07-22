@@ -97,6 +97,16 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, user
       imageUrls: images,
       fromAddress: formatAddress(order.fromAddress),
       toAddress: formatAddress(order.toAddress),
+      sender: {
+        name: order.senderName,
+        email: order.senderEmail,
+        phoneNumber: order.senderPhoneNumber,
+      },
+      receiver: {
+        name: order.receiverName,
+        email: order.receiverEmail,
+        phoneNumber: order.receiverPhoneNumber,
+      },
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
     };

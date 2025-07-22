@@ -22,6 +22,7 @@ import { AddIsNewUserInUserModel1752060113738 } from "../migrations/175206011373
 import {AddUserTypeAndCompany1752070861633} from "../migrations/1752070861633-AddUserTypeAndCompany.js";
 import { AddNewVehicleTypes1752404858340 } from "../migrations/1752404858340-AddNewVehicleTypes.js";
 import {ModifyOrderStatusEnum1752935477326} from "../migrations/1752935477326-ModifyOrderStatusEnum.js";
+import { AddNewItemTypes1752141261233 } from "../migrations/1752141261233-AddNewItemTypes.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -54,6 +55,7 @@ export const AppDataSource = new DataSource({
     AddOtpInUserModel1752051730087,
     AddIsNewUserInUserModel1752060113738,
     AddUserTypeAndCompany1752070861633,
+    AddNewItemTypes1752141261233,
     AddNewVehicleTypes1752404858340,
     ModifyOrderStatusEnum1752935477326,
   ], // ✅ Path to migrations

@@ -40,19 +40,45 @@
             </div>
             {{/if}}
       
-          <div style="margin-top:20px;color:#000000;font-size:16px;font-weight:400">
-            <h3 style="padding-bottom:10px;color:#000000">User details</h3>
-            <p style="margin:0 0 16px;color:#000000">Customer name:<br>{{name}}</p>
-            <p style="margin:0 0 16px; color:#000000">
-              Phone number:<br>
-              <a href="https://wa.me/974{{phoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
-                {{phoneNumber}}
-              </a>
-            </p>
-            {{#if email}}
-            <p style="margin:0 0 16px;color:#000000">Email:<br>{{email}}</p>
-            {{/if}}
-          </div>
+            <table style="width:100%; border-collapse:collapse; font-size:16px; color:#000000">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:8px;"> </th>
+                  <th style="text-align:left; padding:8px;">Sender information</th>
+                  <th style="text-align:left; padding:8px;">Receiver information</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding:8px;">Full name</td>
+                  <td style="padding:8px;">{{sender.name}}</td>
+                  <td style="padding:8px;">{{receiver.name}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px;">Phone number</td>
+                  <td style="padding:8px;">
+                    <a href="https://wa.me/974{{sender.phoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
+                      {{sender.phoneNumber}}
+                    </a>
+                  </td>
+                  <td style="padding:8px;">
+                    <a href="https://wa.me/974{{receiver.phoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
+                      {{receiver.phoneNumber}}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px;">Email address</td>
+                  <td style="padding:8px;">{{sender.email}}</td>
+                  <td style="padding:8px;">{{#if receiver.email}}{{receiver.email}}{{else}}-{{/if}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px;">Address information</td>
+                  <td style="padding:8px;">{{fromAddress}}</td>
+                  <td style="padding:8px;">{{toAddress}}</td>
+                </tr>
+              </tbody>
+            </table>
       
           <div style="margin-top:40px;color:#000000;font-size:16px;font-weight:400">
             <h3 style="font-size:16px;margin-bottom:8px;">Service Details</h3>
