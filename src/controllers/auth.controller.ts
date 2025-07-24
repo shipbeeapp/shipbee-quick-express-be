@@ -52,7 +52,8 @@ export class AuthController {
                 email: user.email,
                 userId: user.id,
                 phoneNumber: user.phoneNumber,
-                isNewUser: user.isNewUser  
+                isNewUser: user.isNewUser,
+                userType: user.type  
             }
             const myToken = jwt.sign(
                 userData,
