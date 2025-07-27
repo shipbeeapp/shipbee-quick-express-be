@@ -2,7 +2,8 @@ import { Entity, Column, OneToMany, Relation, OneToOne, JoinColumn } from "typeo
 import BaseEntity from "./baseEntity.js";
 import { Order } from "./order.model.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
-import { Driver } from "./driver.model.js";
+// import { Driver } from "./driver.model.js";
+// let Driver: any
 
 @Entity("vehicles")
 export class Vehicle extends BaseEntity {
@@ -12,6 +13,8 @@ export class Vehicle extends BaseEntity {
     @Column({ type: "text", nullable: true })
     number: string; // Vehicle number or license plate
     
-    @OneToOne(() => Driver, (driver) => driver.vehicle)
-    driver: Driver; // Relation to the driver who owns this vehicle
+    @OneToOne(() => Driver, (driver: any) => driver.vehicle)
+    driver: any; // Relation to the driver who owns this vehicle
 }
+
+import { Driver } from "./driver.model.js";

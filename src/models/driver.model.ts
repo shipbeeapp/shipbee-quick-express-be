@@ -1,7 +1,8 @@
 import { Entity, Column, OneToOne, JoinColumn, OneToMany } from "typeorm";
 import BaseEntity from "./baseEntity.js";
-import { Vehicle } from "./vehicle.model.js";
+// import { Vehicle } from "./vehicle.model.js";
 import { Order } from "./order.model.js";
+// let Vehicle: any;
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
@@ -18,10 +19,12 @@ export class Driver extends BaseEntity {
     @Column({type: "text", nullable: true})
     otp: string;
 
-    @OneToOne(() => Vehicle, (vehicle) => vehicle.driver)
+    @OneToOne(() => Vehicle, (vehicle: any) => vehicle.driver)
     @JoinColumn({name: "vehicleId"}) // This will create a foreign key in the drivers table
-    vehicle: Vehicle;
+    vehicle: any;
 
     @OneToMany(() => Order, order => order.driver)
     orders: Order[];
 }
+
+import { Vehicle } from "./vehicle.model.js";
