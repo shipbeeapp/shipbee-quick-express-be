@@ -6,7 +6,7 @@ import { VehicleController } from "./controllers/vehicle.controller.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { UserController } from "./controllers/user.controller.js";
 import http from "http";
-import { initializeSocket } from "./socket/socket.js";
+// import { initializeSocket } from "./socket/socket.js";
 import { env } from "./config/environment.js";
 const app = new App(
     [

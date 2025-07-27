@@ -15,7 +15,7 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import VehicleService from "./vehicle.service.js";
-import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
+// import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 
 
