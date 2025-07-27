@@ -13,6 +13,7 @@ export class VehicleController {
     private initializeRoutes() {
         this.router.get('/vehicles', this.getAllVehicles.bind(this));
         this.router.get('/vehicles/:id', this.getVehicleById.bind(this));
+        this.router.get('/vehicle-types', this.getAllVehicleTypes.bind(this));
         // Additional routes for creating, updating, and deleting vehicles can be added here
     }
 
@@ -37,5 +38,13 @@ export class VehicleController {
         }
     }
 
-
+    private async getAllVehicleTypes(req, res) {
+        try {
+            const vehicleTypes = await this.vehicleService.getAllVehicleTypes();
+            res.status(200).json({ success: true, data: vehicleTypes });
+        } catch (error) {
+            console.error("Error fetching vehicle types:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }

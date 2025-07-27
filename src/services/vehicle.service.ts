@@ -1,6 +1,7 @@
 import { Service } from "typedi";
 import { Vehicle } from "../models/vehicle.model.js";
 import { AppDataSource } from "../config/data-source.js";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 
 @Service()
 export default class VehicleService {
@@ -37,5 +38,11 @@ export default class VehicleService {
   async createVehicle(vehicleData: any) {
     // Logic to create a new vehicle in the database
     // This would typically involve using a repository pattern with TypeORM
+  }
+
+  async getAllVehicleTypes() {
+    // Logic to retrieve all vehicle types
+    // This could be a static list or fetched from the database
+    return Object.values(VehicleType);
   }
 }

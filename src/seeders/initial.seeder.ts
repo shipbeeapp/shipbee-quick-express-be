@@ -54,22 +54,8 @@ export const seedDatabase = async () => {
       }
     }
 
-    console.log("🌱 Seeding Vehicle Types...");
-    const vehicleRepo = queryRunner.manager.getRepository(Vehicle);
-    const vehicleTypes = Object.values(VehicleType);
-
-    for (const vehicleType of vehicleTypes) {
-      const existingVehicle = await vehicleRepo.findOne({ where: { type: vehicleType } });
-
-      if (!existingVehicle) {
-      const newVehicle = vehicleRepo.create({ type: vehicleType });
-      await vehicleRepo.save(newVehicle);
-      }
-    }
-    console.log("🌱 Vehicle Seeding Completed");
-
     await queryRunner.commitTransaction();
-    console.log("✅ Categories, Subcategories, and Vehicles Seeded Successfully");
+    console.log("✅ Categories, Subcategories Seeded Successfully");
   } catch (error) {
     console.error("❌ Error Seeding Database:", error);
     await queryRunner.rollbackTransaction();
