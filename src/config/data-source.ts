@@ -45,8 +45,8 @@ export const AppDataSource = new DataSource({
     OrderStatusHistory,
     Payment,
     PaymentStatusHistory,
-    Vehicle, // ✅ Add Vehicle entity
     Driver, // ✅ Add Driver entity
+    Vehicle, // ✅ Add Vehicle entity
   ],
   migrations: [
     InitialMigration1739286971657,
