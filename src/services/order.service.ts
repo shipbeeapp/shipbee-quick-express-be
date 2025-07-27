@@ -152,7 +152,12 @@ export default class OrderService {
   }
 
   async getOrdersbyUser(userId: string) {
+    try {
     console.log("Fetching orders for user ID:", userId);
+    const user = await this.userService.getUserById(userId);
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
     const orders = await this.orderRepository.find({
       where: {
         sender: { id: userId },
@@ -163,6 +168,10 @@ export default class OrderService {
       },
     })
     return orders.map(toOrderResponseDto);
+  } catch (error) {
+    console.error("Error fetching orders for user:", error.message);
+    throw new Error(`Could not fetch orders for user: ${error.message}`);
+  }
   }
 
   async getOrders() {
