@@ -18,8 +18,8 @@ const app = new App(
     ],
 );
 
-const server = http.createServer(app.app);
-initializeSocket(server); // ✅ inject socket here
+// const server = http.createServer(app.app);
+// initializeSocket(server); // ✅ inject socket here
 
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
@@ -27,9 +27,7 @@ app.app.get('/test', (req: any, res: any): void => {
 app.initializeDataSource()
 .then(() => {
   console.log("Data Source initialized successfully!");
-  server.listen(env.PORT, () => {
-    console.log(`🚀 Server running on port ${env.PORT}`);
-  });
+  app.listen();
   console.log("Server is listening for requests...");
 })
 .catch((err) => {
