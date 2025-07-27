@@ -1,5 +1,6 @@
 import { Order } from '../../models/order.model.js';
 import { env } from '../../config/environment.js';
+import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -12,7 +13,7 @@ export class OrderResponseDto {
     createdAt: Date;
     updatedAt: Date;
     orderNo: number;
-    vehicleId: string | null;
+    vehicleType: VehicleType;
   
     sender: {
       id: string;
@@ -83,7 +84,7 @@ export class OrderResponseDto {
       distance: order.distance,
       totalCost: Number(order.totalCost),
       currentStatus: order.status,
-      vehicleId: order.vehicle?.id || null,
+      vehicleType: order.vehicleType,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,

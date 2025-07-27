@@ -5,11 +5,17 @@ import {Container} from 'typedi';
 import { env } from '../config/environment.js';
 import { sendOtp } from '../services/email.service.js';
 import axios from 'axios';
+import bcrypt from 'bcrypt';
+
+import DriverService from '../services/driver.service.js';
+import { DriverDto } from '../dto/driver/driver.dto.js';
+import authenticationMiddleware from '../middlewares/authentication.middleware.js';
 
 export class AuthController {
   public router: Router = Router();
   public path = '/auth';
   private userService: UserService = Container.get(UserService)
+  private driverService = Container.get(DriverService); // Assuming driverService is also UserService
   constructor() {
 
     this.initializeRoutes();
@@ -23,6 +29,13 @@ export class AuthController {
         this.router.post(`${this.path}/send-otp`, this.sendOtp)
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
         this.router.post(`${this.path}/admin/login`, this.adminLogin);
+        this.router.post(`${this.path}/admin/driver/reset-password`, authenticationMiddleware, this.adminResetPasswordForDriver);
+        this.router.post(`${this.path}/driver/signup`, authenticationMiddleware, this.driverSignup);
+        this.router.post(`${this.path}/driver/login`, this.driverLogin);
+        //forget password for driver
+        this.router.post(`${this.path}/driver/forget-password`, this.driverForgetPassword);
+        // reset password for driver
+        this.router.post(`${this.path}/driver/reset-password`, this.driverResetPassword);
     }
 
     private signup = async (req, res) => {
@@ -141,4 +154,133 @@ export class AuthController {
         const token = jwt.sign(adminData, env.JWT_SECRET);
         return res.status(200).json({ success: true, token, userData: adminData });
     }
+
+    private driverSignup = async (req, res) => {
+        if (req.email !== env.ADMIN.EMAIL) {
+            return res.status(403).json({ success: false, message: "You are not authorized to invite drivers." });
+        }
+        const driverDto: DriverDto = req.body;
+        if (!driverDto.phoneNumber || !driverDto.name) {
+            return res.status(400).json({ success: false, message: 'Email, phone number and name are required.' });
+        }
+        try {
+            // Hash the password before saving
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(driverDto.password, saltRounds);
+
+            // Replace the plain password with the hashed one
+            driverDto.password = hashedPassword;
+            const {driver, vehicleType} = await this.driverService.findOrCreateDriver(driverDto);
+            const driverData = {
+                email: driver.email,
+                driverId: driver.id,
+                phoneNumber: driver.phoneNumber,
+                vehicleType: vehicleType,
+                vehicleNumber: driverDto.vehicleNumber,
+            }
+            return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
+        } catch (error) {
+            console.error('Error during driver signup:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to sign up driver.' });
+        }
+    }
+
+    private driverLogin = async (req, res) => {
+        const { phoneNumber, password } = req.body;
+        if (!phoneNumber || !password) {
+            return res.status(400).json({ success: false, message: 'Phone number and password are required.' });
+        }
+        try {
+            const driver = await this.driverService.findDriverByPhone(phoneNumber);
+            if (!driver) {
+                return res.status(404).json({ success: false, message: 'Driver not found.' });
+            }
+            // Compare the provided password with the hashed password in the database
+            const isPasswordValid = await bcrypt.compare(password, driver.password);
+
+            if (!isPasswordValid) {
+                return res.status(401).json({ success: false, message: 'Invalid driver credentials.' });
+            }
+            const driverData = {
+                driverId: driver.id,
+                phoneNumber: driver.phoneNumber,
+                vehicleType: driver.vehicle?.type,
+            }
+            const token = jwt.sign(driverData, env.JWT_SECRET);
+            return res.status(200).json({ success: true, token, driverData });
+        } catch (error) {
+            console.error('Error during driver login:', error);
+            return res.status(500).json({ success: false, message: 'Failed to log in driver.' });
+        }
+    }
+
+    private driverForgetPassword = async (req, res) => {
+        const { phoneNumber } = req.body;
+        if (!phoneNumber) {
+            return res.status(400).json({ success: false, message: 'Phone number is required.' });
+        }
+        try {
+            const driver = await this.driverService.findDriverByPhone(phoneNumber);
+            if (!driver) {
+                return res.status(404).json({ success: false, message: 'Driver not found.' });
+            }
+            // Generate a new OTP
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            driver.otp = otp; // Save the OTP to the driver model
+            await this.driverService.saveDriver(driver); // Save the driver with the OTP
+            await sendOtp(phoneNumber, otp);
+            return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
+        } catch (error) {
+            console.error('Error sending OTP:', error);
+            return res.status(500).json({ success: false, message: 'Failed to send OTP.' });
+        }
+    }
+
+    private driverResetPassword = async (req, res) => {
+        const { phoneNumber, otp, newPassword } = req.body;
+        if (!phoneNumber || !otp || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Phone number, OTP and new password are required.' });
+        }
+        try {
+            const driver = await this.driverService.findDriverByPhone(phoneNumber);
+            if (!driver) {
+                return res.status(404).json({ success: false, message: 'Driver not found.' });
+            }
+            if (driver.otp !== otp) {
+                return res.status(400).json({ success: false, message: 'Invalid OTP.' });
+            }
+            // Hash the new password before saving
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+            driver.password = hashedPassword; // Update the password
+            driver.otp = null; // Clear the OTP after successful reset
+            await this.driverService.saveDriver(driver); // Save the updated driver
+            return res.status(200).json({ success: true, message: 'Password reset successfully.' });
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            return res.status(500).json({success: false, message: 'Error Resetting password'})
+        }
+    }
+
+    private adminResetPasswordForDriver = async (req, res) => {
+            const { phoneNumber, newPassword } = req.body;
+            if (!phoneNumber || !newPassword) {
+                return res.status(400).json({ success: false, message: 'Phone number and new password are required.' });
+            }
+            try {
+                const driver = await this.driverService.findDriverByPhone(phoneNumber);
+                if (!driver) {
+                    return res.status(404).json({ success: false, message: 'Driver not found.' });
+                }
+                // Hash the new password before saving
+                const saltRounds = 10;
+                const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+                driver.password = hashedPassword; // Update the password
+                await this.driverService.saveDriver(driver); // Save the updated driver
+                return res.status(200).json({ success: true, message: 'Password reset successfully.' });
+            } catch (error) {
+                console.error('Error admin resetting password for driver:', error);
+                return res.status(500).json({ success: false, message: 'Error admin resetting password.' });
+            }
+        }
 }

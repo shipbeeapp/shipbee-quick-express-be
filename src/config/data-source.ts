@@ -23,6 +23,8 @@ import {AddUserTypeAndCompany1752070861633} from "../migrations/1752070861633-Ad
 import { AddNewVehicleTypes1752404858340 } from "../migrations/1752404858340-AddNewVehicleTypes.js";
 import {ModifyOrderStatusEnum1752935477326} from "../migrations/1752935477326-ModifyOrderStatusEnum.js";
 import { AddNewItemTypes1752141261233 } from "../migrations/1752141261233-AddNewItemTypes.js";
+import { Driver } from "../models/driver.model.js"; // Import the Driver model
+import { AddDriverModel1753372238514 } from "../migrations/1753372238514-AddDriverModel.js"; // Import the migration for Driver model
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -44,6 +46,7 @@ export const AppDataSource = new DataSource({
     Payment,
     PaymentStatusHistory,
     Vehicle, // ✅ Add Vehicle entity
+    Driver, // ✅ Add Driver entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -58,6 +61,7 @@ export const AppDataSource = new DataSource({
     AddNewItemTypes1752141261233,
     AddNewVehicleTypes1752404858340,
     ModifyOrderStatusEnum1752935477326,
+    AddDriverModel1753372238514, // ✅ Add migration for Driver model
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

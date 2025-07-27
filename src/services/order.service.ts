@@ -15,6 +15,9 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import VehicleService from "./vehicle.service.js";
+import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+
 
 @Service()
 export default class OrderService {
@@ -70,14 +73,9 @@ export default class OrderService {
       if (!serviceSubcategory) {
           throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
         }
-      let vehicle;
-      if (orderData.vehicleId) {
-        // If vehicleId is provided, fetch the vehicle and associate it with the order
-        vehicle = await this.vehicleService.getVehicleById(orderData.vehicleId, queryRunner);
-      }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, vehicle.type);
+      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, orderData.vehicleType);
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository
@@ -87,6 +85,7 @@ export default class OrderService {
         itemType: orderData.itemType,
         itemDescription: orderData.itemDescription ?? null,
         lifters: orderData.lifters ?? 0,   
+        vehicleType: orderData.vehicleType,
         sender,
         receiver,
         fromAddress,
@@ -103,18 +102,29 @@ export default class OrderService {
      //Step 5: Add Order Status History
      await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
 
-     await sendOrderConfirmation(orderData, totalCost, vehicle.type, "ship@shipbee.io", 'admin').catch((err) => {
-       console.error("Error sending emaill to admin:", err);
-      });
-     console.log('sent mail to admin: ', env.SMTP.USER);
+    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
+    //    console.error("Error sending emaill to admin:", err);
+    //   });
+    //  console.log('sent mail to admin: ', env.SMTP.USER);
      if (orderData.senderEmail) {
-      await sendOrderConfirmation(orderData, totalCost, vehicle.type, orderData.senderEmail).catch((err) => {
+      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
         console.error("Error sending email to user:", err);
       }
       );
       console.log('sent mail to user: ', orderData.senderEmail);
      }
 
+     const io = getSocketInstance();
+     const onlineDrivers = getOnlineDrivers();
+       
+     // Broadcast to online drivers with matching vehicleType
+     for (const [driverId, { socketId, vehicleType }] of onlineDrivers.entries()) {
+       if (vehicleType === orderData.vehicleType) {
+          console.log(`🚚 Sending order to driver ${driverId} with socket ID ${socketId}`);
+         io.to(socketId).emit("new-order", toOrderResponseDto(order));
+         console.log(`🚚 Sent order to driver ${driverId}`);
+       }
+     }
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
 
@@ -214,6 +224,15 @@ export default class OrderService {
       return null;
     }
     return toOrderResponseDto(order);
+  }
+
+  async getPendingOrdersForVehicleType(vehicleType: VehicleType) {
+    console.log("Fetching pending orders for vehicle type:", vehicleType);
+    return this.orderRepository.find({
+      where: { status: OrderStatus.PENDING, vehicleType },
+      relations: ["sender", "receiver", "fromAddress", "toAddress"], // add as needed
+      order: { createdAt: "DESC" },
+    });
   }
 }
 

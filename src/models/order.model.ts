@@ -7,8 +7,8 @@ import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import BaseEntity from "./baseEntity.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import { Vehicle } from "./vehicle.model.js";
-
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+import { Driver } from "./driver.model.js";
 @Entity("orders")
 export class Order extends BaseEntity {
   @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('order_no_seq')", })
@@ -61,7 +61,10 @@ export class Order extends BaseEntity {
   @OneToMany(() => OrderStatusHistory, history => history.order)
   orderStatusHistory: OrderStatusHistory[];
 
-  @ManyToOne(() => Vehicle, (vehicle) => vehicle.orders)
-  @JoinColumn({ name: "vehicleId" })
-  vehicle: Relation<Vehicle>;
+  @Column({type: "enum", enum: VehicleType, nullable: true})
+  vehicleType: VehicleType; // type of vehicle used for the order
+
+  @ManyToOne(() => Driver, driver => driver.orders, { nullable: true })
+  @JoinColumn({ name: "driverId" })
+  driver: Driver; // driver assigned to the order, if any
 }

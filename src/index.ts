@@ -5,6 +5,9 @@ import { CitiesController } from "./controllers/cities.controller.js";
 import { VehicleController } from "./controllers/vehicle.controller.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { UserController } from "./controllers/user.controller.js";
+import http from "http";
+import { initializeSocket } from "./socket/socket.js";
+import { env } from "./config/environment.js";
 const app = new App(
     [
     new OrderController(),
@@ -14,13 +17,19 @@ const app = new App(
     new UserController(),
     ],
 );
+
+const server = http.createServer(app.app);
+initializeSocket(server); // ✅ inject socket here
+
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
 app.initializeDataSource()
 .then(() => {
   console.log("Data Source initialized successfully!");
-  app.listen();
+  server.listen(env.PORT, () => {
+    console.log(`🚀 Server running on port ${env.PORT}`);
+  });
   console.log("Server is listening for requests...");
 })
 .catch((err) => {
