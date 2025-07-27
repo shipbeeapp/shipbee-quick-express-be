@@ -29,7 +29,7 @@ export default class OrderService {
   
   constructor() {}
   
-  async createOrder(orderData: CreateOrderDto) {
+  async createOrder(orderData: CreateOrderDto, userId?: string) {
     console.log("Creating order with data:", orderData);
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
@@ -45,12 +45,24 @@ export default class OrderService {
 
     try {
       // 🔹 Step 1: Get or Create Users
+      let sender;
+      if (userId) {
+        sender = await this.userService.getUserById(userId);
+        if (!sender) {
+          throw new Error(`Sender with ID ${userId} not found`);
+        }
+        orderData.senderName = sender.name;
+        orderData.senderEmail = sender.email;
+        orderData.senderPhoneNumber = sender.phoneNumber;
+      }
+      else {
       const senderData = {
         email: orderData.senderEmail,
         name: orderData.senderName,
         phoneNumber: orderData.senderPhoneNumber
       };
-      
+      sender = await this.userService.findOrCreateUser(senderData, queryRunner);
+    }
       const receiverData = {
         email: orderData.receiverEmail,
         name: orderData.receiverName,
@@ -58,7 +70,6 @@ export default class OrderService {
       };
       
       // Create or find both users
-      const sender = await this.userService.findOrCreateUser(senderData, queryRunner);
       const receiver = await this.userService.findOrCreateUser(receiverData, queryRunner);
 
       // 🔹 Step 2: Create Addresses

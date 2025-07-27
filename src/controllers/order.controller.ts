@@ -8,6 +8,7 @@ import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
 import { AuthenticatedRequest, authenticationMiddleware } from "../middlewares/authentication.middleware.js";
 import { env } from "../config/environment.js";
+import jwt from 'jsonwebtoken';
 
 export class OrderController {
   public router: Router = Router();
@@ -48,6 +49,19 @@ export class OrderController {
 
   private async createOrder(req: Request, res: Response) {
     try {
+      let userId: string | undefined;
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        try {
+          const decoded: any = jwt.verify(token, env.JWT_SECRET); // adjust secret as needed
+          userId = decoded.userId;
+        } catch (err) {
+          // Invalid token, ignore and proceed as guest
+          console.error("Invalid token:", err.message);
+          return res.status(401).json({ success: false, message: "Invalid token" });
+        }
+      }
       console.log("req.body in create order", req.body);
       const orderData = req.body;
       console.log("req.files", req.files);
@@ -58,8 +72,7 @@ export class OrderController {
             images: imageUrls,
         });
       }
-      
-      const order = await this.orderService.createOrder(orderData);
+      const order = await this.orderService.createOrder(orderData, userId);
       res.status(201).json({ success: true, data: order });
     } catch (error) {
       console.error("Error in order controller creating order:", error.message);

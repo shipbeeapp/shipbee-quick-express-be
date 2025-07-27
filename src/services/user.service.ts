@@ -57,4 +57,13 @@ export default class UserService {
       throw error;
     }
   }
+
+  async getUserById(userId: string): Promise<User | null> {
+    try {
+      return await this.userRepository.findOneBy({ id: userId });
+    } catch (error) {
+      console.error("Error fetching user by ID:", error);
+      throw error;
+    }
+  }
 }
