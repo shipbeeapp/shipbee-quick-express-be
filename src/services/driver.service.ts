@@ -2,6 +2,8 @@ import { Service } from "typedi";
 import { AppDataSource } from "../config/data-source.js";
 import { Driver } from "../models/driver.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
+import { UpdateDriverDto } from "../dto/driver/updateDriver.dto.js";
+import { Not } from "typeorm";
 
 @Service()
 export default class DriverService {
@@ -72,6 +74,59 @@ export default class DriverService {
         } catch (error) {
             console.error("Error saving driver:", error);
             throw error;
+        }
+    }
+
+    async updateDriver(driverId: string, driverData: UpdateDriverDto) {
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        
+        try {
+            const driverRepository = queryRunner.manager.getRepository(Driver);
+            const vehicleRepository = queryRunner.manager.getRepository(Vehicle);
+
+            const driver = await driverRepository.findOne({
+                where: { id: driverId },
+                relations: ['vehicle'], // make sure vehicle relation is loaded
+              });
+            
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            // Update vehicle if vehicleType is provided and driver has a vehicle
+            if (driverData.vehicleType && driver.vehicle) {
+                console.log("Updating vehicle type for driver:", driverId, "with: ", driver.vehicle.type, "to", driverData.vehicleType);
+                driver.vehicle.type = driverData.vehicleType;
+                console.log("Vehicle type before saving:", driver.vehicle);
+                await vehicleRepository.save(driver.vehicle);
+                console.log("Vehicle type updated successfully");
+            }
+
+            if (driverData.phoneNumber) {
+                // Check if the new phone number already exists for another driver
+                const existingDriver = await driverRepository.findOne({
+                    where: { phoneNumber: driverData.phoneNumber, id: Not(driverId) }
+                });
+                if (existingDriver) {
+                    throw new Error(`Driver with phone number ${driverData.phoneNumber} already exists`);
+                }
+            }
+          
+            // Remove vehicleType from driverData to avoid assigning it directly
+            const { vehicleType, ...rest } = driverData;
+        
+            // Update driver fields
+            Object.assign(driver, rest);
+        
+            await driverRepository.save(driver);
+            await queryRunner.commitTransaction();
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error("Error updating driver:", error);
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
     }
 }

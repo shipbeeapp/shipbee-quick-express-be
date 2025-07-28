@@ -115,3 +115,19 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, vehi
   
     return template(replacements);
   }
+
+
+export async function sendDriverData(phoneNumber: string, password: string) {
+  try {
+    console.log("Sending driver data to phone number:", phoneNumber);
+    await twilioClient.messages.create({
+      body: `Your Shipbee driver account has been created. Your phone number is ${phoneNumber} and your password is ${password}. Here is the link to download the driver app: ${env.DRIVER_APP_LINK}`,
+      from: env.TWILIO_PHONE_NUMBER,
+      to: `+974${phoneNumber}`,
+    });
+    console.log(`Driver data sent to phone number: ${phoneNumber}`);
+  } catch (error) {
+    console.error('Error sending driver data via SMS:', error);
+    throw new Error(`Failed to send driver data to ${phoneNumber}: ${error.message}`);
+  }
+}

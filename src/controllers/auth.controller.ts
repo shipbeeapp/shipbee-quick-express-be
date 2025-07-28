@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { env } from '../config/environment.js';
-import { sendOtp } from '../services/email.service.js';
+import { sendOtp, sendDriverData } from '../services/email.service.js';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
 
@@ -167,7 +167,7 @@ export class AuthController {
             // Hash the password before saving
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(driverDto.password, saltRounds);
-
+            const plainPassword = driverDto.password; // Store the plain password for sending to the driver
             // Replace the plain password with the hashed one
             driverDto.password = hashedPassword;
             const {driver, vehicleType} = await this.driverService.findOrCreateDriver(driverDto);
@@ -178,6 +178,7 @@ export class AuthController {
                 vehicleType: vehicleType,
                 vehicleNumber: driverDto.vehicleNumber,
             }
+            await sendDriverData(driverDto.phoneNumber, plainPassword);
             return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
         } catch (error) {
             console.error('Error during driver signup:', error);

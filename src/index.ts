@@ -5,6 +5,7 @@ import { CitiesController } from "./controllers/cities.controller.js";
 import { VehicleController } from "./controllers/vehicle.controller.js";
 import { AuthController } from "./controllers/auth.controller.js";
 import { UserController } from "./controllers/user.controller.js";
+import { DriverController } from "./controllers/driver.controller.js"; // Assuming DriverController is defined
 import http from "http";
 // import { initializeSocket } from "./socket/socket.js";
 import { env } from "./config/environment.js";
@@ -15,6 +16,7 @@ const app = new App(
     new VehicleController(),
     new AuthController(),
     new UserController(),
+    new DriverController(), // Assuming DriverController is defined
     ],
 );
 

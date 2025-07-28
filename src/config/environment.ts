@@ -35,5 +35,6 @@ export const env = {
   ADMIN: {
     EMAIL: process.env.ADMIN_EMAIL || 'admin@shipbee.io',
     PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
-  }
+  },
+  DRIVER_APP_LINK: process.env.DRIVER_APP_LINK || 'https://example.com/driver-app',
 };
