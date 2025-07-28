@@ -123,7 +123,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
     await twilioClient.messages.create({
       body: `Your Shipbee driver account has been created. Your phone number is ${phoneNumber} and your password is ${password}. Here is the link to download the driver app: ${env.DRIVER_APP_LINK}`,
       from: env.TWILIO_PHONE_NUMBER,
-      to: `+974${phoneNumber}`,
+      to: `+20${phoneNumber}`,
     });
     console.log(`Driver data sent to phone number: ${phoneNumber}`);
   } catch (error) {
