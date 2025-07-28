@@ -98,7 +98,8 @@ export class AuthController {
                 user.otp = otp; // Save the OTP to the user model
                 await this.userService.saveUser(user); // Save the user with the OTP
                 console.log("otp: ", otp);
-                await sendOtp(emailOrPhone, otp);
+                const phoneExtension = '+974'
+                await sendOtp(emailOrPhone, otp, phoneExtension);
                 return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
             } catch (error) {
                 console.error('Error sending OTP:', error);
@@ -229,7 +230,8 @@ export class AuthController {
             const otp = Math.floor(1000 + Math.random() * 9000).toString();
             driver.otp = otp; // Save the OTP to the driver model
             await this.driverService.saveDriver(driver); // Save the driver with the OTP
-            await sendOtp(phoneNumber, otp);
+            const phoneExtension = '+20'
+            await sendOtp(phoneNumber, otp, phoneExtension);
             return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
         } catch (error) {
             console.error('Error sending OTP:', error);

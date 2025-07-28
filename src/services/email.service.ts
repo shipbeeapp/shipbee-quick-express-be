@@ -24,7 +24,7 @@ export async function sendOrderConfirmation(orderDetails: any, totalCost: number
     console.log("Order confirmation email sentt to:", recipientMail);
 }
 
-export async function sendOtp(emailOrPhone: string, otp: string){
+export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension: string) {
   if (emailOrPhone.includes('@')) {
     // Handle email case
     try {
@@ -45,7 +45,7 @@ export async function sendOtp(emailOrPhone: string, otp: string){
       await twilioClient.messages.create({
         body: `Your Shipbee OTP code is ${otp}`,
         from: env.TWILIO_PHONE_NUMBER,
-        to: `+974${emailOrPhone}`,
+        to: `${phoneExtension}${emailOrPhone}`,
       });
       console.log(`OTP sent to phone number: ${emailOrPhone}`);
     } catch (error) {
