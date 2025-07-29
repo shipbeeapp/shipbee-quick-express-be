@@ -34,6 +34,8 @@ export class AuthController {
         this.router.post(`${this.path}/driver/login`, this.driverLogin);
         //forget password for driver
         this.router.post(`${this.path}/driver/forget-password`, this.driverForgetPassword);
+        // verify otp for driver
+        this.router.post(`${this.path}/driver/verify-otp`, this.driverVerifyOtp);
         // reset password for driver
         this.router.post(`${this.path}/driver/reset-password`, this.driverResetPassword);
     }
@@ -239,10 +241,10 @@ export class AuthController {
         }
     }
 
-    private driverResetPassword = async (req, res) => {
-        const { phoneNumber, otp, newPassword } = req.body;
-        if (!phoneNumber || !otp || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Phone number, OTP and new password are required.' });
+    private driverVerifyOtp = async (req, res) => {
+        const { phoneNumber, otp } = req.body;
+        if (!phoneNumber || !otp) {
+            return res.status(400).json({ success: false, message: 'Phone number and OTP are required.' });
         }
         try {
             const driver = await this.driverService.findDriverByPhone(phoneNumber);
@@ -252,16 +254,47 @@ export class AuthController {
             if (driver.otp !== otp) {
                 return res.status(400).json({ success: false, message: 'Invalid OTP.' });
             }
+            // Clear the OTP after successful verification
+            driver.otp = null;
+            await this.driverService.saveDriver(driver); // Save the updated driver
+            // Generate a new token for the driver
+            const driverData = {
+                driverId: driver.id,
+            }
+            const token = jwt.sign(driverData, env.JWT_SECRET);
+            return res.status(200).json({ success: true, message: 'OTP verified successfully.', token });
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+            return res.status(500).json({ success: false, message: 'Failed to verify OTP.' });
+        }
+    }
+
+    private driverResetPassword = async (req, res) => {
+        const { newPassword } = req.body;
+        if (!newPassword) {
+            return res.status(400).json({ success: false, message: 'New password is required.' });
+        }
+        try {
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) {
+                return res.status(401).json({ success: false, message: 'Unauthorized access.' });
+            }
+            // Verify the token
+            const decodedToken = jwt.verify(token, env.JWT_SECRET) as { driverId: string };
+            const driver = await this.driverService.findDriverById(decodedToken.driverId);
+            if (!driver) {
+                return res.status(404).json({ success: false, message: 'Driver not found.' });
+            }
+            
             // Hash the new password before saving
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
             driver.password = hashedPassword; // Update the password
-            driver.otp = null; // Clear the OTP after successful reset
             await this.driverService.saveDriver(driver); // Save the updated driver
             return res.status(200).json({ success: true, message: 'Password reset successfully.' });
         } catch (error) {
             console.error('Error resetting password:', error);
-            return res.status(500).json({success: false, message: 'Error Resetting password'})
+            return res.status(500).json({success: false, message: `Error Resetting password: ${error.message}`})
         }
     }
 

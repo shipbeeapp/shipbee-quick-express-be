@@ -68,6 +68,17 @@ export default class DriverService {
         }
     }
 
+    async findDriverById(driverId: string): Promise<Driver | null> {
+        try {
+            return await this.driverRepository.findOne({
+                where: { id: driverId },
+            });
+        } catch (error) {
+            console.error("Error finding driver by ID:", error);
+            throw error;
+        }
+    }
+
     async saveDriver(driver: Driver): Promise<Driver> {
         try {
             return await this.driverRepository.save(driver);
