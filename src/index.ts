@@ -29,7 +29,9 @@ app.app.get('/test', (req: any, res: any): void => {
 app.initializeDataSource()
 .then(() => {
   console.log("Data Source initialized successfully!");
-  app.listen();
+  server.listen(env.PORT, () => {
+    console.log(`Server is running on port ${env.PORT}`);
+  });
   console.log("Server is listening for requests...");
 })
 .catch((err) => {
