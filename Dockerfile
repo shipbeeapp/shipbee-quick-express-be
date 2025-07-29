@@ -9,6 +9,7 @@ RUN npm install
 # Copy the source code and compile TypeScript
 COPY . .
 RUN npm run build
+COPY private ./dist/private
 
 # 🏗️ Stage 2: Run (Final Image)
 FROM node:22-alpine
