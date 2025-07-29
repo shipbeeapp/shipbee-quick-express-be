@@ -14,10 +14,13 @@ const onlineDrivers = new Map<string, OnlineDriver>(); // driverId -> socketId
 let io: SocketIOServer;
 
 export function initializeSocket(server: HTTPServer): SocketIOServer {
+  console.log("Initializing Socket.IO...");
   io = new SocketIOServer(server, {
     path: "/ws",
     cors: { origin: "*" },
   });
+  console.log("Socket.IO initialized");
+  console.log("io:", io);
   const orderService = Container.get(OrderService) // Assuming you have an OrderService class to handle orders
 
   io.on("connection", (socket) => {
