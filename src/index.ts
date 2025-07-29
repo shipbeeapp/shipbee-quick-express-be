@@ -7,7 +7,7 @@ import { AuthController } from "./controllers/auth.controller.js";
 import { UserController } from "./controllers/user.controller.js";
 import { DriverController } from "./controllers/driver.controller.js"; // Assuming DriverController is defined
 import http from "http";
-// import { initializeSocket } from "./socket/socket.js";
+import { initializeSocket } from "./socket/socket.js";
 import { env } from "./config/environment.js";
 const app = new App(
     [
@@ -20,8 +20,8 @@ const app = new App(
     ],
 );
 
-// const server = http.createServer(app.app);
-// initializeSocket(server); // ✅ inject socket here
+const server = http.createServer(app.app);
+initializeSocket(server); // ✅ inject socket here
 
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');

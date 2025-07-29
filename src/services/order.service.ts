@@ -15,7 +15,7 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import VehicleService from "./vehicle.service.js";
-// import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
+import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 
 
@@ -125,22 +125,22 @@ export default class OrderService {
       console.log('sent mail to user: ', orderData.senderEmail);
      }
 
-    //  const io = getSocketInstance();
-    //  const onlineDrivers = getOnlineDrivers();
+     const io = getSocketInstance();
+     const onlineDrivers = getOnlineDrivers();
        
-    //  // Broadcast to online drivers with matching vehicleType
-    //  for (const [driverId, { socketId, vehicleType }] of onlineDrivers.entries()) {
-    //    if (vehicleType === orderData.vehicleType) {
-    //       console.log(`🚚 Sending order to driver ${driverId} with socket ID ${socketId}`);
-    //      io.to(socketId).emit("new-order", toOrderResponseDto(order));
-    //      console.log(`🚚 Sent order to driver ${driverId}`);
-    //    }
-    //  }
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
 
      // Commit transaction
      await queryRunner.commitTransaction();
+     // Broadcast to online drivers with matching vehicleType
+     for (const [driverId, { socketId, vehicleType }] of onlineDrivers.entries()) {
+       if (vehicleType === orderData.vehicleType) {
+          console.log(`🚚 Sending order to driver ${driverId} with socket ID ${socketId}`);
+         io.to(socketId).emit("new-order", toOrderResponseDto(order));
+         console.log(`🚚 Sent order to driver ${driverId}`);
+       }
+     }
      return toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
