@@ -232,7 +232,7 @@ export class AuthController {
             const otp = Math.floor(1000 + Math.random() * 9000).toString();
             driver.otp = otp; // Save the OTP to the driver model
             await this.driverService.saveDriver(driver); // Save the driver with the OTP
-            const phoneExtension = '+20'
+            const phoneExtension = '+974';
             await sendOtp(phoneNumber, otp, phoneExtension);
             return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
         } catch (error) {
