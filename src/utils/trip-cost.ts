@@ -120,6 +120,7 @@ export function getTripCostBasedOnKm(distance: number, vehicleType: VehicleType)
         return Math.ceil(distance); // Cost for very long trips
       }
     case VehicleType.VAN:
+    case VehicleType.PANEL_VAN:
       if (distance > 0 && distance <= 10) return 35; // Base cost for short trips
       else if (distance > 10) return Math.ceil(35 + (distance - 10) * 3); // Cost for medium and long trips
     
