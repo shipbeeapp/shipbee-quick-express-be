@@ -129,8 +129,6 @@ export default class OrderService {
       console.log('sent mail to user: ', orderData.senderEmail);
      }
 
-     const io = getSocketInstance();
-     const onlineDrivers = getOnlineDrivers();
        
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);

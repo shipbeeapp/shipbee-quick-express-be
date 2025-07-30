@@ -12,8 +12,15 @@ export function scheduleOrderEmission(order: Order): void {
   console.log(`📅 Scheduling order ${order.id} for ${emitTime.toISOString()}`);
   const now = new Date();
   console.log(`⏰ Current time is ${now.toISOString()}`);
+
+  if (now >= pickupTime) {
+    // Pickup time already passed, no point emitting
+    console.log(`❌ Pickup time for order ${order.id} already passed, skipping emit.`);
+    return;
+  }
+
   if (emitTime <= now) {
-    console.log(`⏱ Pickup time is soon/past — emitting order ${order.id} immediately`);
+    console.log(`⏱ Pickup time is soon (within 15 minutes) — emitting order ${order.id} immediately`);
     emitOrderToDrivers(order);
     return;
   }
