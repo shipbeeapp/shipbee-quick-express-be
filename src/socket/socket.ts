@@ -48,6 +48,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
     socket.on("driver-offline", (driverId: string) => {
       onlineDrivers.delete(driverId);
       console.log(`Driver ${driverId} went offline`);
+      console.log("Current online drivers:", Array.from(onlineDrivers.keys()));
     });
 
     socket.on("disconnect", () => {
