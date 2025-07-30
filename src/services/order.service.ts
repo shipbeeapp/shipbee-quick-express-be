@@ -17,6 +17,8 @@ import { env } from "../config/environment.js";
 import VehicleService from "./vehicle.service.js";
 import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
+// import { getDistanceAndDuration } from "../utils/google-maps/distance-time.js"; // Assuming you have a function to get distance and duration
 
 
 @Service()
@@ -137,7 +139,8 @@ export default class OrderService {
      for (const [driverId, { socketId, vehicleType }] of onlineDrivers.entries()) {
        if (vehicleType === orderData.vehicleType) {
           console.log(`🚚 Sending order to driver ${driverId} with socket ID ${socketId}`);
-         io.to(socketId).emit("new-order", toOrderResponseDto(order));
+          // const { distanceKm, durationMin } = await getDistanceAndDuration(currentLocation, order.fromAddress.city);
+         io.to(socketId).emit("new-order", createDriverOrderResource(order));
          console.log(`🚚 Sent order to driver ${driverId}`);
        }
      }

@@ -37,4 +37,5 @@ export const env = {
     PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
   },
   DRIVER_APP_LINK: process.env.DRIVER_APP_LINK || 'https://example.com/driver-app',
+  GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
 };
