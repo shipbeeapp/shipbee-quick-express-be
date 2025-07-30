@@ -45,6 +45,8 @@ export class OrderController {
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
     // view order details by orderId
     this.router.get("/orders/:orderId", authenticationMiddleware, this.getOrderDetails.bind(this));
+    // accept order by driver
+    this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -132,6 +134,21 @@ export class OrderController {
       res.status(200).json({ success: true, data: order });
     } catch (error) {
       console.error("Error in order controller getting order details:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async acceptOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId; // Get driverId from the authenticated request
+      if (!orderId || !driverId) {
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+      }
+      const order = await this.orderService.acceptOrder(orderId, driverId);
+      res.status(200).json({ success: true, message: "Order accepted successfully." });
+    } catch (error) {
+      console.error("Error in order controller accepting order:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

@@ -257,5 +257,42 @@ export default class OrderService {
       order: { createdAt: "DESC" },
     });
   }
+
+  async acceptOrder(orderId: string, driverId: string) {
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    // Lock the order row to prevent race condition
+    const order = await queryRunner.manager
+      .getRepository(Order)
+      .createQueryBuilder("order")
+      .setLock("pessimistic_write")
+      .where("order.id = :orderId", { orderId })
+      .getOne();
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new Error("Order already accepted");
+    }
+
+    // Update order to assign driver and change status
+    order.driver = { id: driverId } as any;
+    order.status = OrderStatus.ASSIGNED;
+
+    await queryRunner.manager.save(order);
+    await queryRunner.commitTransaction();
+  } catch (err) {
+    await queryRunner.rollbackTransaction();
+    throw err;
+  } finally {
+    await queryRunner.release();
+  }
+}
+
 }
 
