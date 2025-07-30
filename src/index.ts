@@ -9,6 +9,9 @@ import { DriverController } from "./controllers/driver.controller.js"; // Assumi
 import http from "http";
 import { initializeSocket } from "./socket/socket.js";
 import { env } from "./config/environment.js";
+import { schedulePendingOrdersOnStartup } from "./utils/order.scheduler.js";
+import { Container } from "typedi";
+import OrderService from "./services/order.service.js";
 const app = new App(
     [
     new OrderController(),
@@ -27,8 +30,10 @@ app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
 app.initializeDataSource()
-.then(() => {
+.then(async () => {
   console.log("Data Source initialized successfully!");
+  const orderService = Container.get(OrderService);
+  await schedulePendingOrdersOnStartup(orderService);
   server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
   });

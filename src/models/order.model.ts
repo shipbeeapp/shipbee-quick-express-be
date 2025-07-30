@@ -26,7 +26,7 @@ export class Order extends BaseEntity {
   @JoinColumn({ name: "serviceSubcategoryId" })
   serviceSubcategory: ServiceSubcategory;
 
-  @Column("timestamp")
+  @Column({ type: "timestamptz" })
   pickUpDate: Date;
 
   @Column({type: "enum", enum: itemType, nullable: true})

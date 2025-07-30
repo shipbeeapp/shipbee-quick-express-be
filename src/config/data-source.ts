@@ -26,6 +26,7 @@ import { AddNewItemTypes1752141261233 } from "../migrations/1752141261233-AddNew
 import { Driver } from "../models/driver.model.js"; // Import the Driver model
 import { AddDriverModel1753372238514 } from "../migrations/1753372238514-AddDriverModel.js"; // Import the migration for Driver model
 import { AddCoordinatesInAddress1753873681411 } from "../migrations/1753873681411-AddCoordinatesInAddress.js"; // Import the migration for coordinates in Address
+import {AlterPickUpDateToBeUtc1753894608853} from "../migrations/1753894608853-AlterPickUpDateToBeUtc.js"; // Import the migration for altering pickUpDate to be UTC
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -64,6 +65,7 @@ export const AppDataSource = new DataSource({
     ModifyOrderStatusEnum1752935477326,
     AddDriverModel1753372238514, // ✅ Add migration for Driver model
     AddCoordinatesInAddress1753873681411, // ✅ Add migration for coordinates in Address
+    AlterPickUpDateToBeUtc1753894608853, // ✅ Add migration for altering pickUpDate to be UTC
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

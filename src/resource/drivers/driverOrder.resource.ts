@@ -11,6 +11,10 @@ export class DriverOrderResource {
     toAddress: string;
     toCoordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
     additionalToAddressInfo: string;
+    senderName: string;
+    senderPhoneNumber: string;
+    receiverName: string;
+    receiverPhoneNumber: string;
     // distanceToPickup: number;
     // timeToPickup: number;
 }
@@ -27,6 +31,10 @@ export function createDriverOrderResource(order: any): DriverOrderResource {
     resource.toAddress = order.toAddress.city;
     resource.toCoordinates = order.toAddress.coordinates;
     resource.additionalToAddressInfo = order.toAddress.landmarks;
+    resource.senderName = order.sender.name;
+    resource.senderPhoneNumber = order.sender.phoneNumber;
+    resource.receiverName = order.receiver.name;
+    resource.receiverPhoneNumber = order.receiver.phoneNumber;
     // resource.distanceToPickup = distanceToPickup;
     // resource.timeToPickup = timeToPickup;
     return resource;

@@ -16,8 +16,10 @@ import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import VehicleService from "./vehicle.service.js";
 import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
+import { Between, MoreThan } from "typeorm";
+import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
-import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
+import { clearNotificationsForOrder } from "../utils/notification-tracker.js";
 // import { getDistanceAndDuration } from "../utils/google-maps/distance-time.js"; // Assuming you have a function to get distance and duration
 
 
@@ -31,7 +33,7 @@ export default class OrderService {
   private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
   private vehicleService = Container.get(VehicleService);
   // private mailService = Container.get(MailService);  
-  
+
   constructor() {}
   
   async createOrder(orderData: CreateOrderDto, userId?: string) {
@@ -136,14 +138,7 @@ export default class OrderService {
      // Commit transaction
      await queryRunner.commitTransaction();
      // Broadcast to online drivers with matching vehicleType
-     for (const [driverId, { socketId, vehicleType }] of onlineDrivers.entries()) {
-       if (vehicleType === orderData.vehicleType) {
-          console.log(`🚚 Sending order to driver ${driverId} with socket ID ${socketId}`);
-          // const { distanceKm, durationMin } = await getDistanceAndDuration(currentLocation, order.fromAddress.city);
-         io.to(socketId).emit("new-order", createDriverOrderResource(order));
-         console.log(`🚚 Sent order to driver ${driverId}`);
-       }
-     }
+     scheduleOrderEmission(order);
      return toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
@@ -249,10 +244,24 @@ export default class OrderService {
     return toOrderResponseDto(order);
   }
 
-  async getPendingOrdersForVehicleType(vehicleType: VehicleType) {
-    console.log("Fetching pending orders for vehicle type:", vehicleType);
+  async getPendingOrdersWithPickupAfter(date: Date) {
     return this.orderRepository.find({
-      where: { status: OrderStatus.PENDING, vehicleType },
+      where: { 
+         status: OrderStatus.PENDING,
+         pickUpDate: MoreThan(date)
+       },
+      relations: ["sender", "receiver", "fromAddress", "toAddress"], // add as needed
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async getPendingOrdersInWindow(vehicleType: VehicleType, startTime: Date, endTime: Date) {
+    return this.orderRepository.find({
+      where: {
+        status: OrderStatus.PENDING,
+        vehicleType: vehicleType,
+        pickUpDate: Between(startTime, endTime)
+      },
       relations: ["sender", "receiver", "fromAddress", "toAddress"], // add as needed
       order: { createdAt: "DESC" },
     });
@@ -286,6 +295,7 @@ export default class OrderService {
 
     await queryRunner.manager.save(order);
     await queryRunner.commitTransaction();
+    clearNotificationsForOrder(order.id); // Clear notifications for this order
   } catch (err) {
     await queryRunner.rollbackTransaction();
     throw err;
