@@ -3,7 +3,6 @@ import { Type, Transform } from "class-transformer";
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
-import { Vehicle } from "../../models/vehicle.model.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
 
 
@@ -31,6 +30,14 @@ class AddressDto {
     @IsString()
     @IsOptional()
     zone: string;
+
+    @IsString()
+    @IsOptional()
+    landmarks: string;
+
+    @IsString()
+    @IsOptional()
+    coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
 export class CreateOrderDto {

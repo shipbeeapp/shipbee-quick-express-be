@@ -32,6 +32,9 @@ export class Address extends BaseEntity {
   @Column({ nullable: true, type: "text" })
   landmarks: string;
 
+  @Column({ type: "text", nullable: true })
+  coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
+
   // One-to-Many with Orders where this address is the sender
   @OneToMany(() => Order, (order) => order.fromAddress)
   sentOrders: Order[];
