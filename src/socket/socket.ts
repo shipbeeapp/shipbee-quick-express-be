@@ -6,6 +6,7 @@ import { Order } from "../models/order.model.js"; // Assuming you have an Order 
 import { hasDriverBeenNotified, markDriverNotified } from "../utils/notification-tracker.js";
 import { Container } from "typedi";
 import OrderService from "../services/order.service.js"; // Assuming you have an OrderService to fetch
+import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js"; // Assuming you have a function to create order resources for drivers
 
 type OnlineDriver = {
     socketId: string;
@@ -93,7 +94,7 @@ export function emitOrderToDrivers(order: Order): void {
         console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
         continue; // Skip if the driver has already been notified
       }
-      io.to(socketId).emit("new-order", order);
+      io.to(socketId).emit("new-order", createDriverOrderResource(order));
       markDriverNotified(order.id, driverId);
       console.log(`📦 Sent order ${order.id} to driver ${driverId}`);
     }
