@@ -23,7 +23,10 @@ class App {
     this.app.use(express.json()); // Example middleware for handling JSON data
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
     this.app.use(cors({ origin: "*" }));
-
+    this.app.use((req, res, next) => {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+      next();
+});
 
   }
 
