@@ -12,6 +12,18 @@ import { env } from "./config/environment.js";
 import { schedulePendingOrdersOnStartup } from "./utils/order.scheduler.js";
 import { Container } from "typedi";
 import OrderService from "./services/order.service.js";
+
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  // process.exit(1); // optional: crash the app to avoid unknown state
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  // process.exit(1); // optional: restart app via Render or Docker
+});
+
 const app = new App(
     [
     new OrderController(),
