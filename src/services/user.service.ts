@@ -7,8 +7,8 @@ export default class UserService {
   private userRepository = AppDataSource.getRepository(User);
 
   async findOrCreateUser(data: any, queryRunner?: any): Promise<User> {
+    const manager = queryRunner ? queryRunner.manager.getRepository(User) : this.userRepository;
     try {
-      const manager = queryRunner ? queryRunner.manager.getRepository(User) : this.userRepository;
       let user;
       console.log("findOrCreateUser called with data:", data);
       if (data.email && data.phoneNumber) {
@@ -32,6 +32,14 @@ export default class UserService {
       return user;
   } catch (error) {
     console.log(error);
+    if (error.code === '23505') {
+      // Duplicate key error: try to fetch the user again
+      return await manager.findOneBy([
+        { email: data.email },
+        { phoneNumber: data.phoneNumber }
+      ]);
+    }
+    throw new Error(`Error in findOrCreateUser: ${error.message}`);
   }
 }
 
