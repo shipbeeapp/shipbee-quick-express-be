@@ -180,6 +180,7 @@ export class AuthController {
                 phoneNumber: driver.phoneNumber,
                 vehicleType: vehicleType,
                 vehicleNumber: driverDto.vehicleNumber,
+                vehicleModel: driverDto.vehicleModel // Assuming vehicleModel is part of the driverDto
             }
             await sendDriverData(driverDto.phoneNumber, plainPassword);
             return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
@@ -207,8 +208,11 @@ export class AuthController {
             }
             const driverData = {
                 driverId: driver.id,
+                name: driver.name,
                 phoneNumber: driver.phoneNumber,
                 vehicleType: driver.vehicle?.type,
+                vehicleModel: driver.vehicle?.model,
+                vehicleNumber: driver.vehicle?.number,
             }
             const token = jwt.sign(driverData, env.JWT_SECRET);
             return res.status(200).json({ success: true, token, driverData });

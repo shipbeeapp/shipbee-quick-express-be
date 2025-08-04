@@ -12,6 +12,9 @@ export class Vehicle extends BaseEntity {
 
     @Column({ type: "text", nullable: true })
     number: string; // Vehicle number or license plate
+
+    @Column({ type: "text", nullable: true })
+    model: string; // Vehicle model
     
     @OneToOne(() => Driver, (driver: any) => driver.vehicle)
     driver: any; // Relation to the driver who owns this vehicle

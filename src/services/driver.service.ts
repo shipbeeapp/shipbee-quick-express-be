@@ -35,6 +35,7 @@ export default class DriverService {
                     vehicle = vehicleManager.create({
                         type: data.vehicleType,
                         number: data.vehicleNumber,
+                        model: data.vehicleModel, // Assuming vehicleModel is part of the data
                         // add other vehicle fields if needed
                     });
                     vehicle = await vehicleManager.save(vehicle);
@@ -138,6 +139,16 @@ export default class DriverService {
             throw error;
         } finally {
             await queryRunner.release();
+        }
+    }
+    async findAllDrivers(): Promise<Driver[]> {
+        try {
+            return await this.driverRepository.find({
+                relations: ['vehicle'], // Include vehicle relation if needed
+            });
+        } catch (error) {
+            console.error("Error fetching all drivers:", error);
+            throw error;
         }
     }
 }

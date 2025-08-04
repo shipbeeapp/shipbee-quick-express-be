@@ -17,4 +17,8 @@ export class DriverDto {
 
     @IsString()
     vehicleNumber: string; // Vehicle number or license plate
+
+    @IsString()
+    @IsOptional()
+    vehicleModel: string; // Vehicle model
 }
