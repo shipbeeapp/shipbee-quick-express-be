@@ -1,34 +1,30 @@
 // utils/googleDistance.ts
-import { Client } from "@googlemaps/google-maps-services-js";
+import axios from "axios";
 import { env } from "../../config/environment.js"; // load API_KEY from .env
 
-const client = new Client({});
-
-export async function getDistanceAndDuration(
-  origin: any,
-  destination: any
-): Promise<{ distanceKm: number; durationMin: number }> {
+export async function getDrivingDistanceInKm(
+  origin: string,
+  destination: string
+): Promise<{ distanceMeters: number | null, durationMinutes: number | null } | null> {
   try {
-    const response = await client.distancematrix({
+    console.log(`Fetching distance from ${origin} to ${destination}`);
+    const response = await axios.get("https://maps.googleapis.com/maps/api/distancematrix/json", {
       params: {
-        origins: [`${origin.lat},${origin.lng}`],
-        destinations: [`${destination.lat},${destination.lng}`],
+        origins: origin,
+        destinations: destination,
         key: env.GOOGLE_MAPS_API_KEY,
+        mode: "driving",
       },
     });
-
-    const element = response.data.rows[0].elements[0];
-
-    if (element.status !== "OK") {
-      throw new Error(`Distance Matrix API error: ${element.status}`);
-    }
-
+    console.log("Distance response:", JSON.stringify(response.data, null, 2));
+    const distanceMeters = response.data.rows?.[0]?.elements?.[0]?.distance?.value;
+    const durationMinutes = Math.ceil(response.data.rows?.[0]?.elements?.[0]?.duration?.value / 60);
     return {
-      distanceKm: element.distance.value / 1000, // meters to km
-      durationMin: element.duration.value / 60,   // seconds to minutes
+        distanceMeters: distanceMeters ? distanceMeters / 1000 : null,
+        durationMinutes: durationMinutes ? durationMinutes : null
     };
-  } catch (err) {
-    console.error("Google Maps API error:", err);
-    throw err;
+  } catch (error) {
+    console.error("Failed to fetch distance from Google Maps:", error);
+    return null;
   }
 }

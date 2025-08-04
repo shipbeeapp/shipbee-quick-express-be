@@ -15,11 +15,11 @@ export class DriverOrderResource {
     senderPhoneNumber: string;
     receiverName: string;
     receiverPhoneNumber: string;
-    // distanceToPickup: number;
-    // timeToPickup: number;
+    distanceToPickup: number;
+    timeToPickup: number;
 }
 
-export function createDriverOrderResource(order: any): DriverOrderResource {
+export function createDriverOrderResource(order: any, distanceToPickup: number, timeToPickup: number): DriverOrderResource {
     const resource = new DriverOrderResource();
     resource.orderId = order.id;
     resource.itemType = order.itemType;
@@ -35,8 +35,8 @@ export function createDriverOrderResource(order: any): DriverOrderResource {
     resource.senderPhoneNumber = order.sender.phoneNumber;
     resource.receiverName = order.receiver.name;
     resource.receiverPhoneNumber = order.receiver.phoneNumber;
-    // resource.distanceToPickup = distanceToPickup;
-    // resource.timeToPickup = timeToPickup;
+    resource.distanceToPickup = distanceToPickup;
+    resource.timeToPickup = timeToPickup;
     return resource;
 }
 
