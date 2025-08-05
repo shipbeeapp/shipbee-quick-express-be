@@ -141,11 +141,30 @@ export default class DriverService {
             await queryRunner.release();
         }
     }
-    async findAllDrivers(): Promise<Driver[]> {
+    async findAllDrivers(): Promise<any> {
         try {
-            return await this.driverRepository.find({
-                relations: ['vehicle'], // Include vehicle relation if needed
-            });
+            const result = await this.driverRepository
+            .createQueryBuilder("driver")
+            .leftJoinAndSelect("driver.vehicle", "vehicle")
+            .leftJoin("driver.orders", "order")
+            .select([
+                "driver.id",
+                "driver.name",
+                "driver.phoneNumber",
+                "driver.status",
+                "driver.updatedAt",
+                "vehicle.id",
+                "vehicle.type",
+                "vehicle.model",
+                "vehicle.number",
+            ])
+            .addSelect("COUNT(order.id)", "orderCount")
+            .groupBy("driver.id")
+            .addGroupBy("vehicle.id")
+            .getRawMany();
+        
+        console.log("Raw driver data:", result);
+        return result;
         } catch (error) {
             console.error("Error fetching all drivers:", error);
             throw error;

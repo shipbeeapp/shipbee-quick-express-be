@@ -9,6 +9,9 @@ import OrderService from "../services/order.service.js"; // Assuming you have an
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js"; // Assuming you have a function to create order resources for drivers
 import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
 import { env } from "../config/environment.js"; // Assuming you have an environment config
+import { AppDataSource } from "../config/data-source.js";
+import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
+import { Driver } from "../models/driver.model.js"; // Assuming you have a Driver model
 
 type OnlineDriver = {
     socketId: string;
@@ -38,6 +41,10 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         vehicleType: vehicleType,
         currentLocation: currentLocation,
       });
+      await AppDataSource.getRepository(Driver).update(
+        { id: driverId },
+        { status: DriverStatus.ACTIVE, updatedAt: new Date()}
+      );
       console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
 
       const now = new Date();
@@ -67,28 +74,30 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       }
     });
 
-    socket.on("location-update", (data: { driverId: string; location: string }) => {
+    socket.on("location-update", async (data: { driverId: string; location: string }) => {
       const { driverId, location } = data;
 
       const driver = onlineDrivers.get(driverId);
       if (driver) {
         driver.currentLocation = location;
         onlineDrivers.set(driverId, driver);
-
+        await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
         console.log(`📍 Updated location for driver ${driverId}:`, location);
       }
 });
 
-    socket.on("driver-offline", (driverId: string) => {
+    socket.on("driver-offline", async (driverId: string) => {
       onlineDrivers.delete(driverId);
       console.log(`Driver ${driverId} went offline`);
+      await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
       console.log("Current online drivers:", Array.from(onlineDrivers.keys()));
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
         for (const [driverId, info] of onlineDrivers.entries()) {
           if (info.socketId === socket.id) {
             onlineDrivers.delete(driverId);
+            await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
             console.log(`Driver ${driverId} disconnected`);
             break;
           }

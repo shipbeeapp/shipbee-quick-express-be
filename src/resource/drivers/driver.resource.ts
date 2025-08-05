@@ -1,16 +1,19 @@
 import { Driver } from '../../models/driver.model.js';
 
 export class DriverResource {
-    static toResponse(driver: Driver): any {
+    static toResponse(driver: any): any {
         return {
-            id: driver.id,
-            name: driver.name,
-            phoneNumber: driver.phoneNumber,
+            id: driver.driver_id,
+            name: driver.driver_name,
+            phoneNumber: driver.driver_phoneNumber,
+            status: driver.driver_status,
+            lastActiveAt: driver.driver_updatedAt,
             vehicle: {
-                type: driver.vehicle?.type,
-                model: driver.vehicle?.model,
-                number: driver.vehicle?.number,
+                type: driver.vehicle_type,
+                model: driver.vehicle_model,
+                number: driver.vehicle_number,
             },
+            ordersCount: Number(driver.orderCount),
         };
     }
 

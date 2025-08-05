@@ -19,6 +19,9 @@ export class Driver extends BaseEntity {
     @Column({type: "text", nullable: true})
     otp: string;
 
+    @Column({ type: "enum", enum: DriverStatus, default: DriverStatus.OFFLINE })
+    status: DriverStatus;
+
     @OneToOne(() => Vehicle, (vehicle: any) => vehicle.driver)
     @JoinColumn({name: "vehicleId"}) // This will create a foreign key in the drivers table
     vehicle: any;
@@ -28,3 +31,4 @@ export class Driver extends BaseEntity {
 }
 
 import { Vehicle } from "./vehicle.model.js";
+import { DriverStatus } from "../utils/enums/driverStatus.enum.js";

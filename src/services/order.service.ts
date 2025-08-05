@@ -21,7 +21,8 @@ import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder } from "../utils/notification-tracker.js";
 // import { getDistanceAndDuration } from "../utils/google-maps/distance-time.js"; // Assuming you have a function to get distance and duration
-
+import { Driver } from "../models/driver.model.js";
+import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 
 @Service()
 export default class OrderService {
@@ -293,6 +294,11 @@ export default class OrderService {
     order.status = OrderStatus.ASSIGNED;
 
     await queryRunner.manager.save(order);
+    // Update driver status to ON_DUTY
+    await queryRunner.manager.getRepository(Driver).update(
+      { id: driverId },
+      { status: DriverStatus.ON_DUTY }
+    );
     await queryRunner.commitTransaction();
     clearNotificationsForOrder(order.id); // Clear notifications for this order
   } catch (err) {
