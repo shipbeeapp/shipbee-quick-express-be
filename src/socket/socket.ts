@@ -120,6 +120,7 @@ export function getOnlineDrivers(): Map<string, OnlineDriver> {
 export async function emitOrderToDrivers(order: Order): Promise<void> {
   const io = getSocketInstance();
   const onlineDrivers = getOnlineDrivers();
+  console.log(`📦 Emitting order ${order.id} to online drivers... ${Array.from(onlineDrivers.keys()).join(", ")}`);
   for (const [driverId, { socketId, vehicleType, currentLocation }] of onlineDrivers.entries()) {
     if (vehicleType === order.vehicleType) {
       if (hasDriverBeenNotified(driverId, order.id)) {
@@ -130,6 +131,7 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
         currentLocation,
         order.fromAddress.coordinates
       );
+      console.log(`📦 Distance of pickup from driver ${driverId}: ${distanceMeters} km`);
       if (distanceMeters === null || distanceMeters > env.RADIUS_KM) {
         console.log(`❌ Driver ${driverId} too far (${distanceMeters} km) or distance unavailable`);
         continue;
