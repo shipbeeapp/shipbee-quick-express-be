@@ -4,6 +4,8 @@ import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
+import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
+import { PaymentStatus } from "../../utils/enums/paymentStatus.enum.js";
 
 
 class AddressDto {
@@ -107,4 +109,12 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(VehicleType)
   vehicleType?: VehicleType;
+
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsEnum(PaymentStatus)
+  paymentStatus?: PaymentStatus;
 }

@@ -9,6 +9,8 @@ import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { Driver } from "./driver.model.js";
+import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
+
 @Entity("orders")
 export class Order extends BaseEntity {
   @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('order_no_seq')", })
@@ -57,6 +59,9 @@ export class Order extends BaseEntity {
 
   @Column({type: "enum", enum: PaymentMethod})
   paymentMethod: PaymentMethod; // payment method used for the order
+
+  @Column({ type: "enum", enum: PaymentStatus, default: PaymentStatus.PENDING })
+  paymentStatus: PaymentStatus; // current status of payment
 
   @OneToMany(() => OrderStatusHistory, history => history.order)
   orderStatusHistory: OrderStatusHistory[];

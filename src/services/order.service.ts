@@ -23,6 +23,7 @@ import { clearNotificationsForOrder } from "../utils/notification-tracker.js";
 // import { getDistanceAndDuration } from "../utils/google-maps/distance-time.js"; // Assuming you have a function to get distance and duration
 import { Driver } from "../models/driver.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
+import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 
 @Service()
 export default class OrderService {
@@ -110,7 +111,8 @@ export default class OrderService {
         totalCost,
         serviceSubcategory,
         status: OrderStatus.PENDING, // Default status
-        paymentMethod: PaymentMethod.CASH_ON_DELIVERY, // Default payment method
+        paymentStatus: orderData.paymentStatus ?? PaymentStatus.PENDING, // Default payment status
+        paymentMethod: orderData.paymentMethod ?? PaymentMethod.CASH_ON_DELIVERY, // Default payment method
       });
 
      await queryRunner.manager.save(order);
