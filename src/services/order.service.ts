@@ -244,6 +244,23 @@ export default class OrderService {
     return toOrderResponseDto(order);
   }
 
+  async getOrderDriver(orderId: string) {
+    console.log("Fetching driver for order ID:", orderId);
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ["driver"],
+    });
+    if (!order) {
+      console.log(`Order with ID ${orderId} not found`);
+      return null;
+    }
+    if (!order.driver) {
+      console.log(`No driver assigned for order ID ${orderId}`);
+      return null;
+    }
+    return order.driver;
+  }
+
   async getPendingOrdersWithPickupAfter(date: Date) {
     return this.orderRepository.find({
       where: { 
@@ -308,6 +325,11 @@ export default class OrderService {
     await queryRunner.release();
   }
 }
+
+  async updateProofOfOrder(orderId: string, proofUrl: string) {
+    console.log("Updating proof of order for order ID:", orderId, "with URL:", proofUrl);
+    await this.orderRepository.update(orderId, { proofOfOrder: proofUrl });
+  }
 
 }
 

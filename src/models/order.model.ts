@@ -64,6 +64,9 @@ export class Order extends BaseEntity {
   @Column({type: "enum", enum: VehicleType, nullable: true})
   vehicleType: VehicleType; // type of vehicle used for the order
 
+  @Column({ type: "text", nullable: true })
+  proofOfOrder: string; // URL to the proof photo uploaded by the driver
+
   @ManyToOne(() => Driver, driver => driver.orders, { nullable: true })
   @JoinColumn({ name: "driverId" })
   driver: Driver; // driver assigned to the order, if any

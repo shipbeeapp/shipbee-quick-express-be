@@ -29,6 +29,7 @@ import { AddCoordinatesInAddress1753873681411 } from "../migrations/175387368141
 import {AlterPickUpDateToBeUtc1753894608853} from "../migrations/1753894608853-AlterPickUpDateToBeUtc.js"; // Import the migration for altering pickUpDate to be UTC
 import {AddVehicleModel1754297466425} from "../migrations/1754297466425-AddVehicleModel.js"; // Import the migration for adding vehicle model
 import { AddDriverStatus1754389046526 } from "../migrations/1754389046526-AddDriverStatus.js"; // Import the migration for adding driver status
+import {AddProofOfOrder1754397946946} from "../migrations/1754397946946-AddProofOfOrder.js"; // Import the migration for adding proof of order
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -70,6 +71,7 @@ export const AppDataSource = new DataSource({
     AlterPickUpDateToBeUtc1753894608853, // ✅ Add migration for altering pickUpDate to be UTC
     AddVehicleModel1754297466425, // ✅ Add migration for adding vehicle model
     AddDriverStatus1754389046526, // ✅ Add migration for adding driver status
+    AddProofOfOrder1754397946946, // ✅ Add migration for adding proof of order
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

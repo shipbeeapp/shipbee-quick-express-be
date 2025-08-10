@@ -47,6 +47,13 @@ export class OrderController {
     this.router.get("/orders/:orderId", authenticationMiddleware, this.getOrderDetails.bind(this));
     // accept order by driver
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
+
+    this.router.post(
+    "/orders/:orderId/proof",
+    authenticationMiddleware, // Only authenticated drivers
+    upload.single("proof"),
+    this.uploadProofOfOrder.bind(this)
+  );
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -149,6 +156,30 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Order accepted successfully." });
     } catch (error) {
       console.error("Error in order controller accepting order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async uploadProofOfOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId; // Get driverId from the authenticated request
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Proof of order file is required." });
+      }
+      const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
+      // Optionally: check if this driver is assigned to this order
+      const driver = await this.orderService.getOrderDriver(orderId);
+      if (!driver || driver.id !== driverId) {
+        return res.status(403).json({ success: false, message: "Not authorized for this order" });
+      }
+      await this.orderService.updateProofOfOrder(orderId, proofUrl);
+      res.status(200).json({ success: true, message: "Proof of order uploaded successfully." });
+    } catch (error) {
+      console.error("Error in order controller uploading proof of order:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
