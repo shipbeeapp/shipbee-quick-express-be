@@ -246,6 +246,23 @@ export default class OrderService {
     return toOrderResponseDto(order);
   }
 
+  async getOrderDriver(orderId: string) {
+    console.log("Fetching driver for order ID:", orderId);
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ["driver"],
+    });
+    if (!order) {
+      console.log(`Order with ID ${orderId} not found`);
+      return null;
+    }
+    if (!order.driver) {
+      console.log(`No driver assigned for order ID ${orderId}`);
+      return null;
+    }
+    return order.driver;
+  }
+
   async getPendingOrdersWithPickupAfter(date: Date) {
     return this.orderRepository.find({
       where: { 
@@ -311,5 +328,67 @@ export default class OrderService {
   }
 }
 
-}
+  async updateProofOfOrder(orderId: string, proofUrl: string) {
+    console.log("Updating proof of order for order ID:", orderId, "with URL:", proofUrl);
+    proofUrl = proofUrl.split("image/upload/")[1];
+    await this.orderRepository.update(orderId, { proofOfOrder: proofUrl });
+  }
 
+  async startOrder(orderId: string, driverId: string) {
+    try {
+      console.log("Starting order for order ID:", orderId, "by driver ID:", driverId);
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["driver"],
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      if (order.driver?.id !== driverId) {
+        throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+      }
+      if (order.status === OrderStatus.ACTIVE) {
+        throw new Error(`Order with ID ${orderId} has already started`);
+      }
+      if (order.status !== OrderStatus.ASSIGNED) {
+        throw new Error(`Order with ID ${orderId} is not in ASSIGNED status`);
+      }
+      order.status = OrderStatus.ACTIVE;
+      await this.orderRepository.save(order);
+      console.log(`Order ${orderId} started successfully by driver ${driverId}`);
+    } catch (error) {
+      console.error("Error starting order:", error.message);
+      throw new Error(`Could not start order: ${error.message}`);
+    }
+} 
+
+async completeOrder(orderId: string, driverId: string) {
+  try {
+    console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ["driver"],
+    });
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found`);
+    }
+    if (order.driver?.id !== driverId) {
+      throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new Error(`Order with ID ${orderId} has already been completed`);
+    }
+
+    if (order.status !== OrderStatus.ACTIVE) {
+      throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
+    }
+    order.status = OrderStatus.COMPLETED;
+    await this.orderRepository.save(order);
+    console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
+  } catch (error) {
+    console.error("Error completing order:", error.message);
+    throw new Error(`Could not complete order: ${error.message}`);
+  }
+}
+}

@@ -4,11 +4,16 @@ import { Driver } from "../models/driver.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
 import { UpdateDriverDto } from "../dto/driver/updateDriver.dto.js";
 import { Not } from "typeorm";
+import { Between } from "typeorm";
+import { Order } from "../models/order.model.js";
+import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
+import { calculateActiveHoursToday } from "../socket/socket.js";
 
 @Service()
 export default class DriverService {
     private driverRepository = AppDataSource.getRepository(Driver);
     private vehicleRepository = AppDataSource.getRepository(Vehicle);
+    private orderRepository = AppDataSource.getRepository(Order); // Assuming you have an Order model
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
@@ -167,6 +172,128 @@ export default class DriverService {
         return result;
         } catch (error) {
             console.error("Error fetching all drivers:", error);
+            throw error;
+        }
+    }
+
+    async getDriverIncome(driverId: string): Promise<any> {
+        try {
+
+            // Get All orders for this driver
+            const result = await this.orderRepository
+                .find({
+                    where: {
+                        driver: { id: driverId },
+                        status: OrderStatus.COMPLETED // Assuming you want completed orders only
+                    },
+                    select: ["id", "pickUpDate", "totalCost"],
+                    order: { pickUpDate: "DESC" }
+                });
+
+            const totalIncome = result.reduce((sum, order) => sum + Number(order.totalCost || 0), 0);
+            console.log("Total income for driver:", totalIncome);
+
+            const orders = result.map(order => ({
+                id: order.id,
+                date: order.pickUpDate.toISOString().split("T")[0],
+                time: order.pickUpDate.toISOString().split("T")[1].slice(0, 8),
+                driverShare: Number(order.totalCost) || 0
+            }));
+
+            return {
+                totalIncome,
+                orders
+            };
+        } catch (error) {
+            console.error("Error fetching driver income:", error);
+            throw error;
+        }
+    }
+
+    async getDriverPerformance(driverId: string): Promise<any> {
+        try {
+            // Get today's start and end timestamps
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            const monthlyOrders = await this.orderRepository.count({
+                where: {
+                    driver: { id: driverId },
+                    pickUpDate: Between(startOfMonth, endOfMonth),
+                    status: OrderStatus.COMPLETED
+                }
+            });
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+            sevenDaysAgo.setHours(0, 0, 0, 0); // Set to start of the day
+            console.log("Fetching earnings for driver:", driverId, "from", sevenDaysAgo, "to", now);
+            const earningsLastWeek = await this.orderRepository
+                .createQueryBuilder("order")
+                .select([
+                  "TO_CHAR(order.pickUpDate, 'DD FMMon') AS date",       // <-- extract date only
+                  "COALESCE(SUM(order.totalCost)::float, 0) AS total"
+                ])
+                .where("order.driverId = :driverId", { driverId })
+                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                  start: sevenDaysAgo,
+                  end: now,
+                })
+                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
+                .groupBy("TO_CHAR(order.pickUpDate, 'DD FMMon')")
+                .orderBy("date", "ASC")
+                .getRawMany();
+            console.log("Earnings last week for driver:", driverId, earningsLastWeek);
+
+            const startOfDay = new Date(now);
+            startOfDay.setHours(0, 0, 0, 0); // Set to start of the day
+            console.log("Fetching total trips today for driver:", driverId, "from", startOfDay, "to", now);
+            const totalTripsToday = await this.orderRepository.count({
+                where: {
+                    driver: { id: driverId },
+                    pickUpDate: Between(startOfDay, now),
+                    status: OrderStatus.COMPLETED
+                }
+            });
+
+            console.log("Total trips today for driver:", driverId, totalTripsToday);
+            const earningsToday = await this.orderRepository
+                .createQueryBuilder("order")
+                .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
+                .where("order.driverId = :driverId", { driverId })
+                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                    start: startOfDay,
+                    end: now
+                })
+                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
+                .getRawOne();
+            
+            console.log("Earnings today for driver:", driverId, earningsToday);
+            const earningsMonth = await this.orderRepository
+                .createQueryBuilder("order")
+                .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
+                .where("order.driverId = :driverId", { driverId })
+                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                    start: startOfMonth,
+                    end: endOfMonth
+                })
+                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
+                .getRawOne();
+
+            const hoursActiveToday = calculateActiveHoursToday(driverId);
+            console.log("Active hours today for driver:", driverId, hoursActiveToday);
+
+            return {
+                monthlyOrders,
+                earningsLastWeek,
+                totalTripsToday,
+                earningsToday: earningsToday.total,
+                earningsMonth: earningsMonth.total,
+                hoursActiveToday,
+            }
+
+        } catch (error) {
+            console.error("Error fetching driver performance:", error);
             throw error;
         }
     }
