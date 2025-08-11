@@ -25,6 +25,12 @@ const driverSessions = new Map<string, Session[]>();
 
 let io: SocketIOServer;
 
+const RADIUS_BY_VEHICLE_TYPE: Record<any, number> = {
+  [VehicleType.MOTORCYCLE]: env.RADIUS_KM_MOTORCYCLE,
+  [VehicleType.SEDAN_CAR]: env.RADIUS_KM_SEDAN_CAR,
+  // For all other vehicle types, default to 15 km
+};
+
 export function initializeSocket(server: HTTPServer): SocketIOServer {
   console.log("Initializing Socket.IO...");
   io = new SocketIOServer(server, {
@@ -60,13 +66,14 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       console.log(`⏰ Upcoming orders will be checked until ${fifteenMinutesLater.toISOString()}`);
 
       const upcomingOrders = await orderService.getPendingOrdersInWindow(vehicleType, now, fifteenMinutesLater);
+      const maxRadiusKm = RADIUS_BY_VEHICLE_TYPE[vehicleType] ?? env.RADIUS_KM_OTHER; // default 15 km
       for (const order of upcomingOrders) {
         const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
           currentLocation,
           order.fromAddress.coordinates
         );
 
-        if (distanceMeters === null || distanceMeters > env.RADIUS_KM) {
+        if (distanceMeters === null || distanceMeters > maxRadiusKm) {
           console.log(`❌ Driver ${driverId} is too far (${distanceMeters} km) from order ${order.id}`);
           continue;
         }
@@ -163,7 +170,9 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
         order.fromAddress.coordinates
       );
       console.log(`📦 Distance of pickup from driver ${driverId}: ${distanceMeters} km`);
-      if (distanceMeters === null || distanceMeters > env.RADIUS_KM) {
+      const maxRadiusKm = RADIUS_BY_VEHICLE_TYPE[vehicleType] ?? env.RADIUS_KM_OTHER; // default 15 km
+      console.log(`📦 Max radius for vehicle type ${vehicleType}: ${maxRadiusKm} km`);
+      if (distanceMeters === null || distanceMeters > maxRadiusKm) {
         console.log(`❌ Driver ${driverId} too far (${distanceMeters} km) or distance unavailable`);
         continue;
       }
