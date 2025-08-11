@@ -30,6 +30,7 @@ import {AlterPickUpDateToBeUtc1753894608853} from "../migrations/1753894608853-A
 import {AddVehicleModel1754297466425} from "../migrations/1754297466425-AddVehicleModel.js"; // Import the migration for adding vehicle model
 import { AddDriverStatus1754389046526 } from "../migrations/1754389046526-AddDriverStatus.js"; // Import the migration for adding driver status
 import {AddProofOfOrder1754397946946} from "../migrations/1754397946946-AddProofOfOrder.js"; // Import the migration for adding proof of order
+import {AddDriverShareOfTrip1754905342146} from "../migrations/1754905342146-AddDriverShareOfTrip.js"; // Import the migration for adding driver share of trip
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -72,6 +73,7 @@ export const AppDataSource = new DataSource({
     AddVehicleModel1754297466425, // ✅ Add migration for adding vehicle model
     AddDriverStatus1754389046526, // ✅ Add migration for adding driver status
     AddProofOfOrder1754397946946, // ✅ Add migration for adding proof of order
+    AddDriverShareOfTrip1754905342146, // ✅ Add migration for adding driver share of trip
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

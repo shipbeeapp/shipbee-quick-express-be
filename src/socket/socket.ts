@@ -19,6 +19,9 @@ type OnlineDriver = {
     currentLocation: string;
   };
 const onlineDrivers = new Map<string, OnlineDriver>(); // driverId -> socketId
+type Session = [Date, Date | null]; // [onlineTime, offlineTime]
+
+const driverSessions = new Map<string, Session[]>();
 
 let io: SocketIOServer;
 
@@ -32,22 +35,26 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
   const orderService = Container.get(OrderService); // Assuming you have an OrderService to fetch orders
 
   io.on("connection", (socket) => {
-    console.log("Driver connected:", socket.id);
-
+    
     socket.on("driver-online", async (data: { driverId: string; vehicleType: VehicleType, currentLocation: string }) => {
+      console.log("Driver connected:", socket.id);
       const { driverId, vehicleType, currentLocation } = data;
       onlineDrivers.set(driverId, {
         socketId: socket.id,
         vehicleType: vehicleType,
         currentLocation: currentLocation,
       });
+      // Add new session with online time = now, offline time = null (still online)
+      const now = new Date();
+      const sessions = driverSessions.get(driverId) || [];
+      sessions.push([now, null]);
+      driverSessions.set(driverId, sessions);
       await AppDataSource.getRepository(Driver).update(
         { id: driverId },
         { status: DriverStatus.ACTIVE, updatedAt: new Date()}
       );
       console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
 
-      const now = new Date();
       console.log(`⏰ Current time is ${now.toISOString()}`);
       const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000);
       console.log(`⏰ Upcoming orders will be checked until ${fifteenMinutesLater.toISOString()}`);
@@ -88,6 +95,18 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
 
     socket.on("driver-offline", async (driverId: string) => {
       onlineDrivers.delete(driverId);
+      const now = new Date();
+      const sessions = driverSessions.get(driverId);
+      if (sessions && sessions.length > 0) {
+        // Find last session with null offline time and set it
+        for (let i = sessions.length - 1; i >= 0; i--) {
+          if (sessions[i][1] === null) {
+            sessions[i][1] = now;
+            console.log(`Driver ${driverId} went offline at ${now.toISOString()}`);
+            break;
+          }
+        }
+      }
       console.log(`Driver ${driverId} went offline`);
       await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
       console.log("Current online drivers:", Array.from(onlineDrivers.keys()));
@@ -98,6 +117,18 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
           if (info.socketId === socket.id) {
             onlineDrivers.delete(driverId);
             await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
+            const now = new Date();
+            const sessions = driverSessions.get(driverId);
+            if (sessions && sessions.length > 0) {
+              // Find last session with null offline time and set it
+              for (let i = sessions.length - 1; i >= 0; i--) {
+                if (sessions[i][1] === null) {
+                  sessions[i][1] = now;
+                  console.log(`Driver ${driverId} went offline at ${now.toISOString()}`);
+                  break;
+                }
+              }
+            }
             console.log(`Driver ${driverId} disconnected`);
             break;
           }
@@ -141,4 +172,27 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
   }
+}
+
+export function calculateActiveHoursToday(driverId: string): number {
+  const sessions = driverSessions.get(driverId) || [];
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  let totalMilliseconds = 0;
+
+  for (const [start, end] of sessions) {
+    // Ignore sessions completely outside today
+    if (start >= todayEnd || (end !== null && end <= todayStart)) continue;
+
+    // Clamp start/end inside today's range
+    const sessionStart = start < todayStart ? todayStart : start;
+    const sessionEnd = end === null || end > todayEnd ? new Date() : end;
+
+    totalMilliseconds += sessionEnd.getTime() - sessionStart.getTime();
+  }
+
+  return Number((totalMilliseconds / (1000 * 60 * 60)).toFixed(1)); // convert ms to hours, rounded to 1 decimal
 }

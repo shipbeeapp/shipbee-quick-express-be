@@ -49,6 +49,18 @@ export class OrderController {
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
 
     this.router.post(
+      "/orders/:orderId/start",
+      authenticationMiddleware,
+      this.startOrder.bind(this)
+    );
+
+    this.router.post(
+      "/orders/:orderId/complete",
+      authenticationMiddleware,
+      this.completeOrder.bind(this),
+    );
+
+    this.router.post(
     "/orders/:orderId/proof",
     authenticationMiddleware, // Only authenticated drivers
     upload.single("proof"),
@@ -180,6 +192,36 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Proof of order uploaded successfully." });
     } catch (error) {
       console.error("Error in order controller uploading proof of order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async startOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId; // Get driverId from the authenticated request
+      if (!orderId || !driverId) {
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+      }
+      await this.orderService.startOrder(orderId, driverId);
+      res.status(200).json({ success: true, message: "Order started successfully." });
+    } catch (error) {
+      console.error("Error in order controller starting order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async completeOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId; // Get driverId from the authenticated request
+      if (!orderId || !driverId) {
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+      }
+      await this.orderService.completeOrder(orderId, driverId);
+      res.status(200).json({ success: true, message: "Order completed successfully." });
+    } catch (error) {
+      console.error("Error in order controller completing order:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
