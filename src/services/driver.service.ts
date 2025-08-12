@@ -228,20 +228,33 @@ export default class DriverService {
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
             sevenDaysAgo.setHours(0, 0, 0, 0); // Set to start of the day
             console.log("Fetching earnings for driver:", driverId, "from", sevenDaysAgo, "to", now);
-            const earningsLastWeek = await this.orderRepository
-                .createQueryBuilder("order")
+            const earningsLastWeek = await this.orderRepository.manager
+                .createQueryBuilder()
+                .from(`(
+                  SELECT generate_series(
+                    DATE_TRUNC('day', :start::timestamp),
+                    DATE_TRUNC('day', :end::timestamp),
+                    '1 day'
+                  )::date AS day
+                )`, "days")
                 .select([
-                  "TO_CHAR(order.pickUpDate, 'DD FMMon') AS date",       // <-- extract date only
-                  "COALESCE(SUM(order.totalCost)::float, 0) AS total"
+                  `TO_CHAR(days.day, 'DD FMMon') AS date`,
+                  `TO_CHAR(days.day, 'Dy') AS day_name`,
+                  `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
-                .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                .leftJoin(Order, "o", `
+                  DATE(o."pickUpDate") = days.day
+                  AND o."driverId" = :driverId
+                  AND o."status" = :status
+                `)
+                .setParameters({
                   start: sevenDaysAgo,
                   end: now,
+                  driverId,
+                  status: OrderStatus.COMPLETED
                 })
-                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
-                .groupBy("TO_CHAR(order.pickUpDate, 'DD FMMon')")
-                .orderBy("date", "ASC")
+                .groupBy("days.day")
+                .orderBy("days.day", "ASC")
                 .getRawMany();
             console.log("Earnings last week for driver:", driverId, earningsLastWeek);
 
@@ -289,7 +302,7 @@ export default class DriverService {
                 totalTripsToday,
                 earningsToday: earningsToday.total,
                 earningsMonth: earningsMonth.total,
-                hoursActiveToday,
+                hoursActiveToday: Number(hoursActiveToday.toFixed(1)) // Round to 1 decimal place,
             }
 
         } catch (error) {

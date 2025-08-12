@@ -203,5 +203,5 @@ export function calculateActiveHoursToday(driverId: string): number {
     totalMilliseconds += sessionEnd.getTime() - sessionStart.getTime();
   }
 
-  return Number((totalMilliseconds / (1000 * 60 * 60)).toFixed(1)); // convert ms to hours, rounded to 1 decimal
+  return totalMilliseconds / (1000 * 60 * 60); // convert ms to hours, rounded to 1 decimal
 }
