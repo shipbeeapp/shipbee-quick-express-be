@@ -8,6 +8,8 @@ import { Between } from "typeorm";
 import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { calculateActiveHoursToday } from "../socket/socket.js";
+import { emitOrderToDrivers } from "../socket/socket.js";
+import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 
 @Service()
 export default class DriverService {
@@ -307,6 +309,33 @@ export default class DriverService {
 
         } catch (error) {
             console.error("Error fetching driver performance:", error);
+            throw error;
+        }
+    }
+
+    async cancelOrder(driverId: string, orderId: string): Promise<void> {
+        try {
+            const order = await this.orderRepository.findOne({
+                where: { id: orderId, driver: { id: driverId } },
+                relations: ["driver"]
+            });
+            if (!order) {
+                throw new Error(`Order with ID ${orderId} not found or not assigned to driver ${driverId}`);
+            }
+            if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED || order.status === OrderStatus.PENDING) {
+                throw new Error(`Order with ID ${orderId} is has status ${order.status} and cannot be cancelled`);
+            }
+            //check that order is related to this driver
+            if (order.driver.id !== driverId) {
+                throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
+            }
+            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null });
+            console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
+            //emit order to socket
+            resetNotifiedDrivers(order.id);
+            await emitOrderToDrivers(order);
+        } catch (error) {
+            console.error("Error cancelling order:", error);
             throw error;
         }
     }

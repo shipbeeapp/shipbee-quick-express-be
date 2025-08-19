@@ -22,6 +22,9 @@ export class Driver extends BaseEntity {
     @Column({ type: "enum", enum: DriverStatus, default: DriverStatus.OFFLINE })
     status: DriverStatus;
 
+    @Column({ type: "text", nullable: true })
+    profilePicture: string; // URL to the driver's profile picture
+
     @OneToOne(() => Vehicle, (vehicle: any) => vehicle.driver)
     @JoinColumn({name: "vehicleId"}) // This will create a foreign key in the drivers table
     vehicle: any;

@@ -75,6 +75,9 @@ export class Order extends BaseEntity {
   @Column({ type: "float", nullable: true })
   driverShare: number; // share of the total cost for the driver, if applicable
 
+  @Column({ type: "text", nullable: true })
+  completionOtp: string; // OTP for order completion, if applicable
+
   @ManyToOne(() => Driver, driver => driver.orders, { nullable: true })
   @JoinColumn({ name: "driverId" })
   driver: Driver; // driver assigned to the order, if any

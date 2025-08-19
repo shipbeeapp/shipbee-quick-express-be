@@ -55,6 +55,21 @@ export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension:
   }
 }
 
+export async function sendOtpToUser(phoneNumber: string, otp: string, phoneExtension: string = '+974') {
+  // You can use Twilio, or any SMS service
+  try {
+    await twilioClient.messages.create({
+      to: `${phoneExtension}${phoneNumber}`,
+      from: env.TWILIO_PHONE_NUMBER,
+      body: `Please provide the driver with this code to complete the order: ${otp}`,
+    });
+    console.log(`OTP sent to ${phoneNumber}: ${otp}`);
+  } catch (err) {
+    console.error("Error sending OTP:", err.message);
+    throw new Error(`Failed to send OTP to ${phoneNumber}: ${err.message}`);
+  }
+}
+
 function formatAddress(address: any): string {
     if (!address) return '';
   

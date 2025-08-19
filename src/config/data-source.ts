@@ -32,6 +32,7 @@ import { AddDriverStatus1754389046526 } from "../migrations/1754389046526-AddDri
 import {AddProofOfOrder1754397946946} from "../migrations/1754397946946-AddProofOfOrder.js"; // Import the migration for adding proof of order
 import {AddDriverShareOfTrip1754905342146} from "../migrations/1754905342146-AddDriverShareOfTrip.js"; // Import the migration for adding driver share of trip
 import {AddPaymentStatus1754827678174} from "../migrations/1754827678174-AddPaymentStatus.js"; // Import the migration for adding payment status
+import {AddCompletionOtpInOrder1755363254865} from "../migrations/1755363254865-AddCompletionOtpInOrder.js"; // Import the migration for adding completion OTP in Order
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -76,6 +77,7 @@ export const AppDataSource = new DataSource({
     AddProofOfOrder1754397946946, // ✅ Add migration for adding proof of order
     AddDriverShareOfTrip1754905342146, // ✅ Add migration for adding driver share of trip
     AddPaymentStatus1754827678174, // ✅ Add migration for adding payment status
+    AddCompletionOtpInOrder1755363254865, // ✅ Add migration for adding completion OTP in Order
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

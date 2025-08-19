@@ -24,6 +24,8 @@ import { clearNotificationsForOrder } from "../utils/notification-tracker.js";
 import { Driver } from "../models/driver.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
+import { sendOtpToUser } from "../services/email.service.js";
+import { createMyOrderResource, myOrderResource } from "../resource/drivers/myOrder.resource.js";
 
 @Service()
 export default class OrderService {
@@ -362,7 +364,7 @@ export default class OrderService {
     }
 } 
 
-async completeOrder(orderId: string, driverId: string) {
+async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: string) {
   try {
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
     const order = await this.orderRepository.findOne({
@@ -383,7 +385,12 @@ async completeOrder(orderId: string, driverId: string) {
     if (order.status !== OrderStatus.ACTIVE) {
       throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
     }
+    if (order.completionOtp !== otp) {
+      throw new Error(`Invalid OTP for order ${orderId}`);
+    }
     order.status = OrderStatus.COMPLETED;
+    order.proofOfOrder = proofUrl.split("image/upload/")[1];
+    order.completionOtp = null; // Clear OTP after completion
     await this.orderRepository.save(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
   } catch (error) {
@@ -391,4 +398,50 @@ async completeOrder(orderId: string, driverId: string) {
     throw new Error(`Could not complete order: ${error.message}`);
   }
 }
+
+  async updateCompletionOtp(orderId: string, otp: string) {
+    try {
+      console.log("Updating completion OTP for order ID:", orderId, "with OTP:", otp);
+      await this.orderRepository.update(orderId, { completionOtp: otp });
+      console.log(`Completion OTP updated successfully for order ${orderId}`);
+    } catch (error) {
+      console.error("Error updating completion OTP:", error.message);
+      throw new Error(`Could not update completion OTP: ${error.message}`);
+    }
+  }
+
+  async sendOtpToReceiver(orderId: string, otp: string) {
+    try {
+      console.log("Sending OTP to receiver for order ID:", orderId);
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["receiver"],
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      if (!order.receiver || !order.receiver.phoneNumber) {
+        throw new Error(`Receiver for order ${orderId} does not have a phone number`);
+      }
+      await sendOtpToUser(order.receiver.phoneNumber, otp, '+20');
+      console.log(`OTP sent to receiver for order ${orderId}: ${otp}`);
+    } catch (error) {
+      console.error("Error sending OTP to receiver:", error.message);
+      throw new Error(`Could not send OTP to receiver: ${error.message}`);
+    }
+  }
+
+  async getDriverOrders(driverId: string): Promise<myOrderResource[]> {
+        try {
+            const orders = await this.orderRepository.find({
+                where: { driver: { id: driverId }, status: OrderStatus.COMPLETED },
+                relations: ["fromAddress", "toAddress", "sender", "receiver"],
+                order: { pickUpDate: "DESC" }
+            });
+            return orders.map(order => createMyOrderResource(order));
+        } catch (error) {
+            console.error("Error fetching driver orders:", error);
+            throw error;
+        }
+    }
 }

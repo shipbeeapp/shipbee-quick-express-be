@@ -213,6 +213,7 @@ export class AuthController {
                 vehicleType: driver.vehicle?.type,
                 vehicleModel: driver.vehicle?.model,
                 vehicleNumber: driver.vehicle?.number,
+                profilePicture: `${env.CLOUDINARY_BASE_URL}${driver.profilePicture}` // Assuming profilePicture is a field in the Driver model
             }
             const token = jwt.sign(driverData, env.JWT_SECRET);
             return res.status(200).json({ success: true, token, driverData });

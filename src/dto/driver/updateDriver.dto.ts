@@ -10,6 +10,10 @@ export class UpdateDriverDto {
     @IsOptional()
     phoneNumber: string;
 
+    @IsString()
+    @IsOptional()
+    profilePicture: string; // URL to the driver's profile picture
+
     @IsEnum(VehicleType)
     @IsOptional()
     vehicleType: VehicleType; // Type of vehicle the driver operates
