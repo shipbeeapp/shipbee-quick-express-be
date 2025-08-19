@@ -12,6 +12,7 @@ import { env } from "./config/environment.js";
 import { schedulePendingOrdersOnStartup } from "./utils/order.scheduler.js";
 import { Container } from "typedi";
 import OrderService from "./services/order.service.js";
+import { TermsAndConditionsController } from "./controllers/terms-and-conditions.controller.js";
 
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -32,6 +33,7 @@ const app = new App(
     new AuthController(),
     new UserController(),
     new DriverController(), // Assuming DriverController is defined
+    new TermsAndConditionsController(), // Add TermsAndConditionsController
     ],
 );
 

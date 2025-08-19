@@ -33,6 +33,9 @@ import {AddProofOfOrder1754397946946} from "../migrations/1754397946946-AddProof
 import {AddDriverShareOfTrip1754905342146} from "../migrations/1754905342146-AddDriverShareOfTrip.js"; // Import the migration for adding driver share of trip
 import {AddPaymentStatus1754827678174} from "../migrations/1754827678174-AddPaymentStatus.js"; // Import the migration for adding payment status
 import {AddCompletionOtpInOrder1755363254865} from "../migrations/1755363254865-AddCompletionOtpInOrder.js"; // Import the migration for adding completion OTP in Order
+import {AddTermsAndConditionsTable1755602838041} from "../migrations/1755602838041-AddTermsAndConditionsTable.js"; // Import the migration for adding terms and conditions table
+import { TermsAndConditions } from "../models/terms-and-conditions.model.js"; // Import the TermsAndConditions model
+
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -55,6 +58,7 @@ export const AppDataSource = new DataSource({
     PaymentStatusHistory,
     Driver, // ✅ Add Driver entity
     Vehicle, // ✅ Add Vehicle entity
+    TermsAndConditions, // ✅ Add TermsAndConditions entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -78,6 +82,7 @@ export const AppDataSource = new DataSource({
     AddDriverShareOfTrip1754905342146, // ✅ Add migration for adding driver share of trip
     AddPaymentStatus1754827678174, // ✅ Add migration for adding payment status
     AddCompletionOtpInOrder1755363254865, // ✅ Add migration for adding completion OTP in Order
+    AddTermsAndConditionsTable1755602838041, // ✅ Add migration for adding terms and conditions table
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
