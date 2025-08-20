@@ -324,7 +324,7 @@ export default class DriverService {
             const totalTripsToday = await this.orderRepository.count({
                 where: {
                     driver: { id: driverId },
-                    completedAt: Between(startOfDay, now),
+                    completedAt: Between(startOfDay, endOfDay),
                     status: OrderStatus.COMPLETED
                 }
             });
@@ -336,7 +336,7 @@ export default class DriverService {
                 .where("order.driverId = :driverId", { driverId })
                 .andWhere("order.completedAt BETWEEN :start AND :end", {
                     start: startOfDay,
-                    end: now
+                    end: endOfDay
                 })
                 .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
                 .getRawOne();
