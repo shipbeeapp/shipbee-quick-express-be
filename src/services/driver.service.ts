@@ -211,34 +211,42 @@ export default class DriverService {
                 999
               )
             );
-            // Get All orders for this driver
-            const result = await this.orderRepository
-                .find({
-                    where: {
-                        driver: { id: driverId },
-                        status: OrderStatus.COMPLETED,// Assuming you want completed orders only
-                        completedAt: Between(startOfToday, endOfToday)
-                    },
-                    select: ["id", "pickUpDate", "totalCost", "completedAt"],
-                    order: { pickUpDate: "DESC" }
-                });
+            // 1. Query today's completed orders for income
+            const todayOrders = await this.orderRepository.find({
+                where: {
+                    driver: { id: driverId },
+                    status: OrderStatus.COMPLETED,
+                    completedAt: Between(startOfToday, endOfToday)
+                },
+                select: ["id", "totalCost", "completedAt"]
+            });
 
-            const totalIncome = result.reduce((sum, order) => sum + Number(order.totalCost || 0), 0);
-            console.log("Total income for driver:", totalIncome);
-            console.log("Driver orders:", JSON.stringify(result, null, 2));
-            const orders = result.map(order => ({
+            const totalIncome = todayOrders.reduce(
+                (sum, order) => sum + Number(order.totalCost || 0),
+                0
+            );
+                        // 2. Query all completed orders for list
+            const allOrders = await this.orderRepository.find({
+                where: {
+                    driver: { id: driverId },
+                    status: OrderStatus.COMPLETED
+                },
+                select: ["id", "pickUpDate", "totalCost", "completedAt"],
+                order: { completedAt: "DESC" }
+            });
+            const orders = allOrders.map(order => ({
                 id: order.id,
                 date: order.completedAt.toLocaleString("en-US", {
-                    timeZone: "Asia/Qatar", // or use device's local timezone
-                    day: "numeric",    // 15
-                    month: "numeric",     // July
-                    year: "numeric",   // 2025
+                    timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                    day: "numeric",
+                    month: "numeric",
+                    year: "numeric"
                 }),
                 time: order.completedAt.toLocaleTimeString("en-US", {
                     hour: "numeric",
                     minute: "2-digit",
                     hour12: true,
-                    timeZone: "Asia/Qatar",
+                    timeZone: "Asia/Qatar"
                 }),
                 driverShare: Number(order.totalCost) || 0
             }));
@@ -257,19 +265,30 @@ export default class DriverService {
         try {
             // Get today's start and end timestamps
             const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            const shiftedNow = new Date(now.getTime() + 3 * 60 * 60 * 1000); // add 3 hours in ms
+            // Start and end of today (Qatar time)
+            const startOfDay = new Date(shiftedNow);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            const endOfDay = new Date(shiftedNow);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+
+            // Start and end of current month (Qatar time)
+            const startOfMonth = new Date(shiftedNow.getFullYear(), shiftedNow.getMonth(), 1);
+            const endOfMonth = new Date(shiftedNow.getFullYear(), shiftedNow.getMonth() + 1, 0, 23, 59, 59, 999);
+
+            // Last 7 days range (Qatar time)
+            const sevenDaysAgo = new Date(shiftedNow);
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+            sevenDaysAgo.setUTCHours(0, 0, 0, 0);
 
             const monthlyOrders = await this.orderRepository.count({
                 where: {
                     driver: { id: driverId },
-                    pickUpDate: Between(startOfMonth, endOfMonth),
+                    completedAt: Between(startOfMonth, endOfMonth),
                     status: OrderStatus.COMPLETED
                 }
             });
-            const sevenDaysAgo = new Date(now);
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-            sevenDaysAgo.setHours(0, 0, 0, 0); // Set to start of the day
+
             console.log("Fetching earnings for driver:", driverId, "from", sevenDaysAgo, "to", now);
             const earningsLastWeek = await this.orderRepository.manager
                 .createQueryBuilder()
@@ -286,13 +305,13 @@ export default class DriverService {
                   `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
                 .leftJoin(Order, "o", `
-                  DATE(o."pickUpDate") = days.day
+                  DATE(o."completedAt") = days.day
                   AND o."driverId" = :driverId
                   AND o."status" = :status
                 `)
                 .setParameters({
                   start: sevenDaysAgo,
-                  end: now,
+                  end: shiftedNow,
                   driverId,
                   status: OrderStatus.COMPLETED
                 })
@@ -301,13 +320,11 @@ export default class DriverService {
                 .getRawMany();
             console.log("Earnings last week for driver:", driverId, earningsLastWeek);
 
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0); // Set to start of the day
             console.log("Fetching total trips today for driver:", driverId, "from", startOfDay, "to", now);
             const totalTripsToday = await this.orderRepository.count({
                 where: {
                     driver: { id: driverId },
-                    pickUpDate: Between(startOfDay, now),
+                    completedAt: Between(startOfDay, now),
                     status: OrderStatus.COMPLETED
                 }
             });
@@ -317,7 +334,7 @@ export default class DriverService {
                 .createQueryBuilder("order")
                 .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
                 .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                .andWhere("order.completedAt BETWEEN :start AND :end", {
                     start: startOfDay,
                     end: now
                 })
@@ -329,7 +346,7 @@ export default class DriverService {
                 .createQueryBuilder("order")
                 .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
                 .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.pickUpDate BETWEEN :start AND :end", {
+                .andWhere("order.completedAt BETWEEN :start AND :end", {
                     start: startOfMonth,
                     end: endOfMonth
                 })
