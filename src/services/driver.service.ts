@@ -180,11 +180,37 @@ export default class DriverService {
 
     async getDriverIncome(driverId: string): Promise<any> {
         try {
-            const startOfToday = new Date();
-            startOfToday.setUTCHours(0, 0, 0, 0);
-
-            const endOfToday = new Date();
-            endOfToday.setUTCHours(23, 59, 59, 999);
+            // Qatar is UTC+3
+            const offsetHours = 3;
+                    
+            // Get current UTC time
+            const now = new Date();
+                    
+            // Start of today in Qatar time
+            const startOfToday = new Date(
+              Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                0 - offsetHours, // shift UTC midnight to Qatar midnight
+                0,
+                0,
+                0
+              )
+            );
+            
+            // End of today in Qatar time
+            const endOfToday = new Date(
+              Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                23 - offsetHours, // shift UTC to Qatar
+                59,
+                59,
+                999
+              )
+            );
             // Get All orders for this driver
             const result = await this.orderRepository
                 .find({
