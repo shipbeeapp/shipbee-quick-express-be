@@ -180,25 +180,40 @@ export default class DriverService {
 
     async getDriverIncome(driverId: string): Promise<any> {
         try {
+            const startOfToday = new Date();
+            startOfToday.setUTCHours(0, 0, 0, 0);
 
+            const endOfToday = new Date();
+            endOfToday.setUTCHours(23, 59, 59, 999);
             // Get All orders for this driver
             const result = await this.orderRepository
                 .find({
                     where: {
                         driver: { id: driverId },
-                        status: OrderStatus.COMPLETED // Assuming you want completed orders only
+                        status: OrderStatus.COMPLETED,// Assuming you want completed orders only
+                        completedAt: Between(startOfToday, endOfToday)
                     },
-                    select: ["id", "pickUpDate", "totalCost"],
+                    select: ["id", "pickUpDate", "totalCost", "completedAt"],
                     order: { pickUpDate: "DESC" }
                 });
 
             const totalIncome = result.reduce((sum, order) => sum + Number(order.totalCost || 0), 0);
             console.log("Total income for driver:", totalIncome);
-
+            console.log("Driver orders:", JSON.stringify(result, null, 2));
             const orders = result.map(order => ({
                 id: order.id,
-                date: order.pickUpDate.toISOString().split("T")[0],
-                time: order.pickUpDate.toISOString().split("T")[1].slice(0, 8),
+                date: order.completedAt.toLocaleString("en-US", {
+                    timeZone: "Asia/Qatar", // or use device's local timezone
+                    day: "numeric",    // 15
+                    month: "numeric",     // July
+                    year: "numeric",   // 2025
+                }),
+                time: order.completedAt.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                    timeZone: "Asia/Qatar",
+                }),
                 driverShare: Number(order.totalCost) || 0
             }));
 
@@ -313,7 +328,7 @@ export default class DriverService {
         }
     }
 
-    async cancelOrder(driverId: string, orderId: string): Promise<void> {
+    async cancelOrder(driverId: string, orderId: string, cancellationReason: string): Promise<void> {
         try {
             const order = await this.orderRepository.findOne({
                 where: { id: orderId, driver: { id: driverId } },
@@ -323,13 +338,13 @@ export default class DriverService {
                 throw new Error(`Order with ID ${orderId} not found or not assigned to driver ${driverId}`);
             }
             if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED || order.status === OrderStatus.PENDING) {
-                throw new Error(`Order with ID ${orderId} is has status ${order.status} and cannot be cancelled`);
+                throw new Error(`Order with ID ${orderId} has status ${order.status} and cannot be cancelled`);
             }
             //check that order is related to this driver
             if (order.driver.id !== driverId) {
                 throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
             }
-            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null });
+            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null, cancellationReason });
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
             //emit order to socket
             resetNotifiedDrivers(order.id);

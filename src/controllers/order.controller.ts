@@ -208,7 +208,7 @@ export class OrderController {
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
       await this.orderService.updateCompletionOtp(orderId, otp);
       console.log(`Generated OTP for order ${orderId}: ${otp}`);
-      await this.orderService.sendOtpToReceiver(orderId, otp);
+      // await this.orderService.sendOtpToReceiver(orderId, otp);
       res.status(200).json({ success: true, message: "Order started successfully." });
     } catch (error) {
       console.error("Error in order controller starting order:", error.message);
@@ -221,7 +221,7 @@ export class OrderController {
       const { orderId } = req.params;
       const driverId = req.driverId; // Get driverId from the authenticated request
       const { otp } = req.body; // Get OTP from request body
-      if (!orderId || !driverId || !otp) {
+      if (!orderId || !driverId) {
       return res.status(400).json({ success: false, message: "Order ID, Driver ID, and OTP are required." });
       }
       if (!req.file) {

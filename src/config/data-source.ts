@@ -35,7 +35,7 @@ import {AddPaymentStatus1754827678174} from "../migrations/1754827678174-AddPaym
 import {AddCompletionOtpInOrder1755363254865} from "../migrations/1755363254865-AddCompletionOtpInOrder.js"; // Import the migration for adding completion OTP in Order
 import {AddTermsAndConditionsTable1755602838041} from "../migrations/1755602838041-AddTermsAndConditionsTable.js"; // Import the migration for adding terms and conditions table
 import { TermsAndConditions } from "../models/terms-and-conditions.model.js"; // Import the TermsAndConditions model
-
+import { AddCancellationReasonInOrder1755685207970 } from "../migrations/1755685207970-AddCancellationReasonInOrder.js"; // Import the migration for adding cancellation reason in Order
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -83,6 +83,7 @@ export const AppDataSource = new DataSource({
     AddPaymentStatus1754827678174, // ✅ Add migration for adding payment status
     AddCompletionOtpInOrder1755363254865, // ✅ Add migration for adding completion OTP in Order
     AddTermsAndConditionsTable1755602838041, // ✅ Add migration for adding terms and conditions table
+    AddCancellationReasonInOrder1755685207970, // ✅ Add migration for adding cancellation reason in Order
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

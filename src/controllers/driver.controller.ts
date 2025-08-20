@@ -116,10 +116,11 @@ export class DriverController {
         try {
             const orderId = req.params.orderId;
             const driverId = req.driverId; // Get driverId from the authenticated request
+            const cancellationReason = req.body.reason; // Assuming reason is sent in the request body
             if (!orderId) {
                 return res.status(400).json({ success: false, message: "Order ID is required." });
             }
-            await this.driverService.cancelOrder(driverId, orderId);
+            await this.driverService.cancelOrder(driverId, orderId, cancellationReason);
             res.status(200).json({ success: true, message: "Order cancelled successfully." });
         } catch (error) {
             console.error("Error cancelling order:", error.message);

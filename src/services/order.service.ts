@@ -26,6 +26,8 @@ import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 import { sendOtpToUser } from "../services/email.service.js";
 import { createMyOrderResource, myOrderResource } from "../resource/drivers/myOrder.resource.js";
+import { DateTime } from "luxon";
+
 
 @Service()
 export default class OrderService {
@@ -356,7 +358,9 @@ export default class OrderService {
         throw new Error(`Order with ID ${orderId} is not in ASSIGNED status`);
       }
       order.status = OrderStatus.ACTIVE;
-      await this.orderRepository.save(order);
+      await this.orderRepository.update(orderId, { status: OrderStatus.ACTIVE, startedAt: new Date().toISOString() });
+      // console.log("Order started at:", order.startedAt);
+      // await this.orderRepository.save(order);
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
     } catch (error) {
       console.error("Error starting order:", error.message);
@@ -385,12 +389,13 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     if (order.status !== OrderStatus.ACTIVE) {
       throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
     }
-    if (order.completionOtp !== otp) {
-      throw new Error(`Invalid OTP for order ${orderId}`);
-    }
+    // if (order.completionOtp !== otp) {
+    //   throw new Error(`Invalid OTP for order ${orderId}`);
+    // }
     order.status = OrderStatus.COMPLETED;
     order.proofOfOrder = proofUrl.split("image/upload/")[1];
     order.completionOtp = null; // Clear OTP after completion
+    order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
     await this.orderRepository.save(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
   } catch (error) {
