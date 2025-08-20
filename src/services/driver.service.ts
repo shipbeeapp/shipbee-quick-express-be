@@ -263,23 +263,50 @@ export default class DriverService {
 
     async getDriverPerformance(driverId: string): Promise<any> {
         try {
-            // Get today's start and end timestamps
+            // Qatar is UTC+3
+            const offsetHours = 3;
             const now = new Date();
-            const shiftedNow = new Date(now.getTime() + 3 * 60 * 60 * 1000); // add 3 hours in ms
-            // Start and end of today (Qatar time)
-            const startOfDay = new Date(shiftedNow);
-            startOfDay.setUTCHours(0, 0, 0, 0);
-            const endOfDay = new Date(shiftedNow);
-            endOfDay.setUTCHours(23, 59, 59, 999);
 
-            // Start and end of current month (Qatar time)
-            const startOfMonth = new Date(shiftedNow.getFullYear(), shiftedNow.getMonth(), 1);
-            const endOfMonth = new Date(shiftedNow.getFullYear(), shiftedNow.getMonth() + 1, 0, 23, 59, 59, 999);
+            // Start of today in Qatar
+            const startOfDay = new Date(
+              Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                0 - offsetHours,
+                0,
+                0,
+                0
+              )
+            );
 
-            // Last 7 days range (Qatar time)
-            const sevenDaysAgo = new Date(shiftedNow);
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-            sevenDaysAgo.setUTCHours(0, 0, 0, 0);
+            // End of today in Qatar
+            const endOfDay = new Date(
+              Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                23 - offsetHours,
+                59,
+                59,
+                999
+              )
+            );
+        
+            // Start of current month in Qatar
+            const startOfMonth = new Date(
+              Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0 - offsetHours, 0, 0, 0)
+            );
+        
+            // End of current month in Qatar
+            const endOfMonth = new Date(
+              Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23 - offsetHours, 59, 59, 999)
+            );
+        
+            // Seven days ago (Qatar midnight)
+            const sevenDaysAgo = new Date(
+              Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0 - offsetHours, 0, 0, 0)
+            );
 
             const monthlyOrders = await this.orderRepository.count({
                 where: {
@@ -311,7 +338,7 @@ export default class DriverService {
                 `)
                 .setParameters({
                   start: sevenDaysAgo,
-                  end: shiftedNow,
+                  end: endOfDay,
                   driverId,
                   status: OrderStatus.COMPLETED
                 })
