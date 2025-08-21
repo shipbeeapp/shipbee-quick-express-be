@@ -270,36 +270,74 @@ export default class DriverService {
 
     async getDriverPerformance(driverId: string): Promise<any> {
         try {
+           // Qatar is UTC+3
+            const offsetHours = 3;
+                    
+            // Get current UTC time
             const now = new Date();
-        const startOfDay = new Date(Date.UTC(
-          now.getUTCFullYear(),
-          now.getUTCMonth(),
-          now.getUTCDate(),
-          0, 0, 0, 0
-        ));
-        // const endOfDay = new Date(Date.UTC(
-        //   now.getUTCFullYear(),
-        //   now.getUTCMonth(),
-        //   now.getUTCDate(),
-        //   23, 59, 59, 999
-        // ));
+                    
+            // Start of today in Qatar time
+            const startOfDay = new Date(
+              Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                0 - offsetHours, // shift UTC midnight to Qatar midnight
+                0,
+                0,
+                0
+              )
+            );
+        
+            // Start of month in Qatar time
+            const startOfMonth = new Date(
+                Date.UTC(
+                    now.getUTCFullYear(),
+                    now.getUTCMonth(),
+                    1,
+                    0 - offsetHours, // shift UTC midnight to Qatar midnight
+                    0,
+                    0,
+                    0
+                )
+                );
+            // End of month in Qatar time
+            const endOfMonth = new Date(
+                Date.UTC(
+                    now.getUTCFullYear(),
+                    now.getUTCMonth() + 1,
+                    0, // last day of the month
+                    23 - offsetHours, // shift UTC to Qatar
+                    59,
+                    59,
+                    999
+                )
+            );
 
-        const sevenDaysAgo = this.qatarMidnightUTC(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000)); // 7 days ago
-        const endOfDay = this.qatarMidnightUTC(now); // today
-
-        const startOfMonth = new Date(Date.UTC(
-          now.getUTCFullYear(),
-            now.getUTCMonth(),
-            1, // First day of the month
-            0, 0, 0, 0
-        ));
-        const endOfMonth = new Date(Date.UTC(
-            now.getUTCFullYear(),
-            now.getUTCMonth() + 1, // Next month
-            0, // First day of the next month
-            23, 59, 59, 999
-        ));
-
+            // 7 days ago in Qatar time
+            const sevenDaysAgo = new Date(
+                Date.UTC(
+                    now.getUTCFullYear(),
+                    now.getUTCMonth(),
+                    now.getUTCDate() - 7,
+                    0 - offsetHours, // shift UTC midnight to Qatar midnight
+                    0,
+                    0,
+                    0
+                )
+            );
+            // End of day in Qatar time
+            const endOfDay = new Date(
+                Date.UTC(
+                    now.getUTCFullYear(),
+                    now.getUTCMonth(),
+                    now.getUTCDate(),
+                    23 - offsetHours, // shift UTC to Qatar
+                    59,
+                    59,
+                    999
+                )
+            );
         // Total orders this month
         const monthlyOrders = await this.orderRepository.count({
             where: {
@@ -308,36 +346,18 @@ export default class DriverService {
                 status: OrderStatus.COMPLETED
             }
         });
-
+        console.log("sevenDaysAgo:", sevenDaysAgo, " endofDay:", endOfDay);
         // Earnings last 7 days
-        const earningsLastWeek = await this.orderRepository.manager
-            .createQueryBuilder()
-             .from(`(
-                SELECT generate_series(
-                    :start::timestamp,
-                    :end::timestamp,
-                    '1 day'
-                ) AS day
-            )`, "days")
-            .select([
-                `TO_CHAR(days.day, 'DD FMMon') AS date`,
-                `TO_CHAR(days.day, 'Dy') AS day_name`,
-                `COALESCE(SUM(o."totalCost")::float, 0) AS total`
-            ])
-            .leftJoin(Order, "o", `
-                (o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')::date = days.day
-                AND o."driverId" = :driverId
-                AND o."status" = :status
-            `)
-            .setParameters({
-                start: sevenDaysAgo,
-                end: endOfDay,
-                driverId,
+        const earningsLastWeek = await this.orderRepository.find({
+            where: {
+                driver: { id: driverId },
+                completedAt: Between(sevenDaysAgo, endOfDay),
                 status: OrderStatus.COMPLETED
-            })
-            .groupBy("days.day")
-            .orderBy("days.day", "ASC")
-            .getRawMany();
+            },
+            select: ["totalCost", "completedAt"],
+           
+        })
+        console.log("Earnings last week:", earningsLastWeek);
 
         // Total trips today
         const totalTripsToday = await this.orderRepository.count({
@@ -353,7 +373,7 @@ export default class DriverService {
             .createQueryBuilder("order")
             .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
             .where("order.driverId = :driverId", { driverId })
-            .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
+            .andWhere("order.completedAt BETWEEN :start AND :end", {
                 start: startOfDay,
                 end: endOfDay
             })
@@ -365,7 +385,7 @@ export default class DriverService {
             .createQueryBuilder("order")
             .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
             .where("order.driverId = :driverId", { driverId })
-            .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
+            .andWhere("order.completedAt BETWEEN :start AND :end", {
                 start: startOfMonth,
                 end: endOfMonth
             })
@@ -374,16 +394,42 @@ export default class DriverService {
 
         // Active hours today (custom function)
         const hoursActiveToday = calculateActiveHoursToday(driverId);
+        const earningsByDay: Record<string, number> = {};
+        earningsLastWeek.forEach(order => {
+            // Format date as YYYY-MM-DD for grouping
+            const day = order.completedAt.toLocaleDateString("en-CA", { 
+                timeZone: "Asia/Qatar",
+                day: "2-digit",
+                month: "short" 
+            }); // e.g., "2025-08-13"
+            earningsByDay[day] = (earningsByDay[day] || 0) + Number(order.totalCost || 0);
+        });
 
+        // Build the last 7 days array (oldest to newest)
+        const last7Days: { date: string, totalCost: number }[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(endOfDay);
+            d.setDate(d.getDate() - i);
+            const dayStr = d.toLocaleDateString("en-CA", { 
+                timeZone: "Asia/Qatar",
+                day: "2-digit",
+                month: "short"  
+            }); // "YYYY-MM-DD"
+            last7Days.push({
+                date: dayStr,
+                totalCost: earningsByDay[dayStr] || 0
+            });
+        }
         return {
             monthlyOrders,
-            earningsLastWeek,
+            earningsLastWeek: last7Days,
             totalTripsToday,
             earningsToday: earningsToday.total,
             earningsMonth: earningsMonth.total,
             hoursActiveToday: Number(hoursActiveToday.toFixed(1))
         };
 
+        
         } catch (error) {
             console.error("Error fetching driver performance:", error);
             throw error;
