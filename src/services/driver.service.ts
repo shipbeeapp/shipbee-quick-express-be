@@ -292,17 +292,17 @@ export default class DriverService {
                 999
               )
             );
-        
+
             // Start of current month in Qatar
             const startOfMonth = new Date(
               Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0 - offsetHours, 0, 0, 0)
             );
-        
+
             // End of current month in Qatar
             const endOfMonth = new Date(
               Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23 - offsetHours, 59, 59, 999)
             );
-        
+
             // Seven days ago (Qatar midnight)
             const sevenDaysAgo = new Date(
               Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0 - offsetHours, 0, 0, 0)
@@ -327,12 +327,12 @@ export default class DriverService {
                   )::date AS day
                 )`, "days")
                 .select([
-                  `TO_CHAR(days.day, 'DD FMMon') AS date`,
-                  `TO_CHAR(days.day, 'Dy') AS day_name`,
-                  `COALESCE(SUM(o."totalCost")::float, 0) AS total`
+                   `TO_CHAR(days.day AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar', 'DD FMMon') AS date`,
+                   `TO_CHAR(days.day AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar', 'Dy') AS day_name`,
+                   `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
                 .leftJoin(Order, "o", `
-                  DATE(o."completedAt") = days.day
+                  DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
                   AND o."driverId" = :driverId
                   AND o."status" = :status
                 `)
