@@ -321,8 +321,8 @@ export default class DriverService {
                 .createQueryBuilder()
                 .from(`(
                   SELECT generate_series(
-                    DATE_TRUNC('day', :start::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar),
-                    DATE_TRUNC('day', :end::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar),
+                    DATE_TRUNC('day', :start::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar'),
+                    DATE_TRUNC('day', :end::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar'),
                     '1 day'
                   )::date AS day
                 )`, "days")
