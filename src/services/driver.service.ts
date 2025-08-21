@@ -320,10 +320,10 @@ export default class DriverService {
             .createQueryBuilder()
             .from(`(
                 SELECT generate_series(
-                    DATE_TRUNC('day', (:start AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')),
-                    DATE_TRUNC('day', (:end AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')),
+                    (:start AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')::date,
+                    (:end AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')::date,
                     '1 day'
-                )::date AS day
+                ) AS day
             )`, "days")
             .select([
                 `TO_CHAR(days.day, 'DD FMMon') AS date`,
@@ -331,13 +331,13 @@ export default class DriverService {
                 `COALESCE(SUM(o."totalCost")::float, 0) AS total`
             ])
             .leftJoin(Order, "o", `
-                DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
+                (o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')::date = days.day
                 AND o."driverId" = :driverId
                 AND o."status" = :status
             `)
             .setParameters({
                 start: sevenDaysAgo,
-                end: endOfDay,
+                end: now,
                 driverId,
                 status: OrderStatus.COMPLETED
             })
