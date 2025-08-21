@@ -348,7 +348,7 @@ export default class DriverService {
                 .createQueryBuilder("order")
                 .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
                 .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.completedAt BETWEEN AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' :start AND :end", {
+                .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
                     start: startOfMonth,
                     end: endOfMonth
                 })
