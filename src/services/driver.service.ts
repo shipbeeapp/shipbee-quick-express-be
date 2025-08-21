@@ -263,51 +263,26 @@ export default class DriverService {
 
     async getDriverPerformance(driverId: string): Promise<any> {
         try {
-            // Qatar is UTC+3
-            const offsetHours = 3;
             const now = new Date();
 
-            // Start of today in Qatar
-            const startOfDay = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                0 - offsetHours,
-                0,
-                0,
-                0
-              )
-            );
-
-            // End of today in Qatar
-            const endOfDay = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                23 - offsetHours,
-                59,
-                59,
-                999
-              )
-            );
-
-            // Start of current month in Qatar
-            const startOfMonth = new Date(
-              Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0 - offsetHours, 0, 0, 0)
-            );
-
-            // End of current month in Qatar
-            const endOfMonth = new Date(
-              Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23 - offsetHours, 59, 59, 999)
-            );
-
-            // Seven days ago (Qatar midnight)
-            const sevenDaysAgo = new Date(
-              Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0 - offsetHours, 0, 0, 0)
-            );
-
+            // Always use UTC dates in JS
+            const startOfDay = new Date(Date.UTC(
+              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0
+            ));
+            const endOfDay = new Date(Date.UTC(
+              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999
+            ));
+        
+            const startOfMonth = new Date(Date.UTC(
+              now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0
+            ));
+            const endOfMonth = new Date(Date.UTC(
+              now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999
+            ));
+        
+            const sevenDaysAgo = new Date(Date.UTC(
+              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0
+            ));
             const monthlyOrders = await this.orderRepository.count({
                 where: {
                     driver: { id: driverId },
@@ -327,12 +302,12 @@ export default class DriverService {
                   )::date AS day
                 )`, "days")
                 .select([
-                   `TO_CHAR(days.day, 'DD FMMon') AS date`,
-                   `TO_CHAR(days.day, 'Dy') AS day_name`,
-                   `COALESCE(SUM(o."totalCost")::float, 0) AS total`
+                  `TO_CHAR(days.day, 'DD FMMon') AS date`,
+                  `TO_CHAR(days.day, 'Dy') AS day_name`,
+                  `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
                 .leftJoin(Order, "o", `
-                  DATE(o."completedAt") = days.day
+                  DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
                   AND o."driverId" = :driverId
                   AND o."status" = :status
                 `)
@@ -361,7 +336,7 @@ export default class DriverService {
                 .createQueryBuilder("order")
                 .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
                 .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.completedAt BETWEEN :start AND :end", {
+                .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
                     start: startOfDay,
                     end: endOfDay
                 })
@@ -373,7 +348,7 @@ export default class DriverService {
                 .createQueryBuilder("order")
                 .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
                 .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.completedAt BETWEEN :start AND :end", {
+                .andWhere("order.completedAt BETWEEN AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' :start AND :end", {
                     start: startOfMonth,
                     end: endOfMonth
                 })
