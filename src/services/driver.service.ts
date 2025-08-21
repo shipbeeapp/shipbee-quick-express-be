@@ -263,109 +263,132 @@ export default class DriverService {
 
     async getDriverPerformance(driverId: string): Promise<any> {
         try {
-            const now = new Date();
+            const offsetHours = 3; // Qatar UTC+3
+        const now = new Date();
 
-            // Always use UTC dates in JS
-            const startOfDay = new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0
-            ));
-            const endOfDay = new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999
-            ));
-        
-            const startOfMonth = new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0
-            ));
-            const endOfMonth = new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999
-            ));
-        
-            const sevenDaysAgo = new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6, 0, 0, 0, 0
-            ));
-            const monthlyOrders = await this.orderRepository.count({
-                where: {
-                    driver: { id: driverId },
-                    completedAt: Between(startOfMonth, endOfMonth),
-                    status: OrderStatus.COMPLETED
-                }
-            });
+        // Start of today in Qatar
+        const startOfDay = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate(),
+            0 - offsetHours, 0, 0, 0
+        ));
 
-            console.log("Fetching earnings for driver:", driverId, "from", sevenDaysAgo, "to", now);
-            const earningsLastWeek = await this.orderRepository.manager
-                .createQueryBuilder()
-                .from(`(
-                  SELECT generate_series(
+        // End of today in Qatar
+        const endOfDay = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate(),
+            23 - offsetHours, 59, 59, 999
+        ));
+
+        // Start of current month in Qatar
+        const startOfMonth = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            1,
+            0 - offsetHours, 0, 0, 0
+        ));
+
+        // End of current month in Qatar
+        const endOfMonth = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth() + 1,
+            0,
+            23 - offsetHours, 59, 59, 999
+        ));
+
+        // Seven days ago (start of day in Qatar)
+        const sevenDaysAgo = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate() - 6,
+            0 - offsetHours, 0, 0, 0
+        ));
+
+        // Total orders this month
+        const monthlyOrders = await this.orderRepository.count({
+            where: {
+                driver: { id: driverId },
+                completedAt: Between(startOfMonth, endOfMonth),
+                status: OrderStatus.COMPLETED
+            }
+        });
+
+        // Earnings last 7 days
+        const earningsLastWeek = await this.orderRepository.manager
+            .createQueryBuilder()
+            .from(`(
+                SELECT generate_series(
                     DATE_TRUNC('day', (:start AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')),
                     DATE_TRUNC('day', (:end AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar')),
                     '1 day'
-                  )::date AS day
-                )`, "days")
-                .select([
-                  `TO_CHAR(days.day, 'DD FMMon') AS date`,
-                  `TO_CHAR(days.day, 'Dy') AS day_name`,
-                  `COALESCE(SUM(o."totalCost")::float, 0) AS total`
-                ])
-                .leftJoin(Order, "o", `
-                  DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
-                  AND o."driverId" = :driverId
-                  AND o."status" = :status
-                `)
-                .setParameters({
-                  start: sevenDaysAgo,
-                  end: endOfDay,
-                  driverId,
-                  status: OrderStatus.COMPLETED
-                })
-                .groupBy("days.day")
-                .orderBy("days.day", "ASC")
-                .getRawMany();
-            console.log("Earnings last week for driver:", driverId, earningsLastWeek);
+                )::date AS day
+            )`, "days")
+            .select([
+                `TO_CHAR(days.day, 'DD FMMon') AS date`,
+                `TO_CHAR(days.day, 'Dy') AS day_name`,
+                `COALESCE(SUM(o."totalCost")::float, 0) AS total`
+            ])
+            .leftJoin(Order, "o", `
+                DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
+                AND o."driverId" = :driverId
+                AND o."status" = :status
+            `)
+            .setParameters({
+                start: sevenDaysAgo,
+                end: endOfDay,
+                driverId,
+                status: OrderStatus.COMPLETED
+            })
+            .groupBy("days.day")
+            .orderBy("days.day", "ASC")
+            .getRawMany();
 
-            console.log("Fetching total trips today for driver:", driverId, "from", startOfDay, "to", now);
-            const totalTripsToday = await this.orderRepository.count({
-                where: {
-                    driver: { id: driverId },
-                    completedAt: Between(startOfDay, endOfDay),
-                    status: OrderStatus.COMPLETED
-                }
-            });
-
-            console.log("Total trips today for driver:", driverId, totalTripsToday);
-            const earningsToday = await this.orderRepository
-                .createQueryBuilder("order")
-                .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
-                .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
-                    start: startOfDay,
-                    end: endOfDay
-                })
-                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
-                .getRawOne();
-            
-            console.log("Earnings today for driver:", driverId, earningsToday);
-            const earningsMonth = await this.orderRepository
-                .createQueryBuilder("order")
-                .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
-                .where("order.driverId = :driverId", { driverId })
-                .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
-                    start: startOfMonth,
-                    end: endOfMonth
-                })
-                .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
-                .getRawOne();
-
-            const hoursActiveToday = calculateActiveHoursToday(driverId);
-            console.log("Active hours today for driver:", driverId, hoursActiveToday);
-
-            return {
-                monthlyOrders,
-                earningsLastWeek,
-                totalTripsToday,
-                earningsToday: earningsToday.total,
-                earningsMonth: earningsMonth.total,
-                hoursActiveToday: Number(hoursActiveToday.toFixed(1)) // Round to 1 decimal place,
+        // Total trips today
+        const totalTripsToday = await this.orderRepository.count({
+            where: {
+                driver: { id: driverId },
+                completedAt: Between(startOfDay, endOfDay),
+                status: OrderStatus.COMPLETED
             }
+        });
+
+        // Earnings today
+        const earningsToday = await this.orderRepository
+            .createQueryBuilder("order")
+            .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
+            .where("order.driverId = :driverId", { driverId })
+            .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
+                start: startOfDay,
+                end: endOfDay
+            })
+            .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
+            .getRawOne();
+
+        // Earnings this month
+        const earningsMonth = await this.orderRepository
+            .createQueryBuilder("order")
+            .select("COALESCE(SUM(order.totalCost)::float, 0)", "total")
+            .where("order.driverId = :driverId", { driverId })
+            .andWhere("order.completedAt AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar' BETWEEN :start AND :end", {
+                start: startOfMonth,
+                end: endOfMonth
+            })
+            .andWhere("order.status = :status", { status: OrderStatus.COMPLETED })
+            .getRawOne();
+
+        // Active hours today (custom function)
+        const hoursActiveToday = await calculateActiveHoursToday(driverId);
+
+        return {
+            monthlyOrders,
+            earningsLastWeek,
+            totalTripsToday,
+            earningsToday: earningsToday.total,
+            earningsMonth: earningsMonth.total,
+            hoursActiveToday: Number(hoursActiveToday.toFixed(1))
+        };
 
         } catch (error) {
             console.error("Error fetching driver performance:", error);
