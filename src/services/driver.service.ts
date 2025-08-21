@@ -321,8 +321,8 @@ export default class DriverService {
                 .createQueryBuilder()
                 .from(`(
                   SELECT generate_series(
-                    DATE_TRUNC('day', :start::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar'),
-                    DATE_TRUNC('day', :end::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar'),
+                    DATE_TRUNC('day', :start::timestamp),
+                    DATE_TRUNC('day', :end::timestamp),
                     '1 day'
                   )::date AS day
                 )`, "days")
@@ -332,7 +332,7 @@ export default class DriverService {
                    `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
                 .leftJoin(Order, "o", `
-                  DATE(o."completedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar') = days.day
+                  DATE(o."completedAt") = days.day
                   AND o."driverId" = :driverId
                   AND o."status" = :status
                 `)
