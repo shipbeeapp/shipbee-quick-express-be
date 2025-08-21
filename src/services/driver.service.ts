@@ -321,14 +321,14 @@ export default class DriverService {
                 .createQueryBuilder()
                 .from(`(
                   SELECT generate_series(
-                    DATE_TRUNC('day', :start::timestamp),
-                    DATE_TRUNC('day', :end::timestamp),
+                    DATE_TRUNC('day', :start::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar),
+                    DATE_TRUNC('day', :end::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar),
                     '1 day'
                   )::date AS day
                 )`, "days")
                 .select([
-                   `TO_CHAR(days.day AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar', 'DD FMMon') AS date`,
-                   `TO_CHAR(days.day AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Qatar', 'Dy') AS day_name`,
+                   `TO_CHAR(days.day, 'DD FMMon') AS date`,
+                   `TO_CHAR(days.day, 'Dy') AS day_name`,
                    `COALESCE(SUM(o."totalCost")::float, 0) AS total`
                 ])
                 .leftJoin(Order, "o", `
