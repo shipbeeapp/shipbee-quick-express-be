@@ -440,7 +440,7 @@ export default class DriverService {
         try {
             const order = await this.orderRepository.findOne({
                 where: { id: orderId, driver: { id: driverId } },
-                relations: ["driver"]
+                relations: ["driver", "fromAddress", "toAddress", "sender", "receiver"]
             });
             if (!order) {
                 throw new Error(`Order with ID ${orderId} not found or not assigned to driver ${driverId}`);

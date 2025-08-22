@@ -308,10 +308,15 @@ export default class OrderService {
       throw new Error("Order not found");
     }
 
-    if (order.status !== OrderStatus.PENDING) {
-      throw new Error("Order already accepted");
+    if (order.status  == OrderStatus.ASSIGNED) {
+      throw new Error("Order already assigned to a driver");
     }
-
+    if (order.status == OrderStatus.ACTIVE) {
+      throw new Error("Order is already active");
+    }
+    if (order.status == OrderStatus.COMPLETED) {
+      throw new Error("Order is already completed");
+    }
     // Update order to assign driver and change status
     order.driver = { id: driverId } as any;
     order.status = OrderStatus.ASSIGNED;
