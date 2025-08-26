@@ -14,8 +14,6 @@ import { getTripCostBasedOnKm } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import VehicleService from "./vehicle.service.js";
-import { getSocketInstance, getOnlineDrivers } from "../socket/socket.js";
 import { Between, MoreThan } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
@@ -26,7 +24,8 @@ import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 import { sendOtpToUser } from "../services/email.service.js";
 import { createMyOrderResource, myOrderResource } from "../resource/drivers/myOrder.resource.js";
-import { DateTime } from "luxon";
+import ShipmentService from "./shipment.service.js";
+import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 
 
 @Service()
@@ -37,7 +36,7 @@ export default class OrderService {
   private addressService = Container.get(AddressService);
   private serviceSubcategoryService = Container.get(ServiceSubcategoryService);
   private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
-  private vehicleService = Container.get(VehicleService);
+  private shipmentService = Container.get(ShipmentService);
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -94,6 +93,14 @@ export default class OrderService {
       if (!serviceSubcategory) {
           throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
         }
+
+      // create shipment if shipment data is provided
+      let shipment = null;
+      console.log("Shipment data:", orderData.shipment);
+      if (orderData.shipment) {
+        shipment = await this.shipmentService.createShipment(orderData.shipment, queryRunner);
+        console.log("Shipment created:", shipment);
+      }
         
       //🔹 Step 3: Calculate total cost
       const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, orderData.vehicleType);
@@ -117,6 +124,7 @@ export default class OrderService {
         status: OrderStatus.PENDING, // Default status
         paymentStatus: orderData.paymentStatus ?? PaymentStatus.PENDING, // Default payment status
         paymentMethod: orderData.paymentMethod ?? PaymentMethod.CASH_ON_DELIVERY, // Default payment method
+        shipment,
       });
 
      await queryRunner.manager.save(order);
@@ -143,7 +151,9 @@ export default class OrderService {
      // Commit transaction
      await queryRunner.commitTransaction();
      // Broadcast to online drivers with matching vehicleType
-     scheduleOrderEmission(order);
+     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) {
+       scheduleOrderEmission(order);
+     }
      return toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
@@ -271,7 +281,8 @@ export default class OrderService {
     return this.orderRepository.find({
       where: { 
          status: OrderStatus.PENDING,
-         pickUpDate: MoreThan(date)
+         pickUpDate: MoreThan(date),
+         serviceSubcategory: { name: ServiceSubcategoryName.PERSONAL_QUICK }
        },
       relations: ["sender", "receiver", "fromAddress", "toAddress"], // add as needed
       order: { createdAt: "DESC" },
@@ -283,7 +294,8 @@ export default class OrderService {
       where: {
         status: OrderStatus.PENDING,
         vehicleType: vehicleType,
-        pickUpDate: Between(startTime, endTime)
+        pickUpDate: Between(startTime, endTime),
+        serviceSubcategory: { name: ServiceSubcategoryName.PERSONAL_QUICK }
       },
       relations: ["sender", "receiver", "fromAddress", "toAddress"], // add as needed
       order: { createdAt: "DESC" },

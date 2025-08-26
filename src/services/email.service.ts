@@ -126,6 +126,7 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, vehi
       vehicleType: vehicleType,
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
+      shipment: order.shipment
     };
   
     return template(replacements);

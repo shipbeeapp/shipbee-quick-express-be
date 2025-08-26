@@ -36,6 +36,8 @@ import {AddCompletionOtpInOrder1755363254865} from "../migrations/1755363254865-
 import {AddTermsAndConditionsTable1755602838041} from "../migrations/1755602838041-AddTermsAndConditionsTable.js"; // Import the migration for adding terms and conditions table
 import { TermsAndConditions } from "../models/terms-and-conditions.model.js"; // Import the TermsAndConditions model
 import { AddCancellationReasonInOrder1755685207970 } from "../migrations/1755685207970-AddCancellationReasonInOrder.js"; // Import the migration for adding cancellation reason in Order
+import { Shipment } from "../models/shipment.model.js"; // Import the Shipment model
+import { AddShipmentTable1756200923757 } from "../migrations/1756200923757-AddShipmentTable.js"; // Import the migration for adding Shipment table
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -59,6 +61,7 @@ export const AppDataSource = new DataSource({
     Driver, // ✅ Add Driver entity
     Vehicle, // ✅ Add Vehicle entity
     TermsAndConditions, // ✅ Add TermsAndConditions entity
+    Shipment, // ✅ Add Shipment entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -84,6 +87,7 @@ export const AppDataSource = new DataSource({
     AddCompletionOtpInOrder1755363254865, // ✅ Add migration for adding completion OTP in Order
     AddTermsAndConditionsTable1755602838041, // ✅ Add migration for adding terms and conditions table
     AddCancellationReasonInOrder1755685207970, // ✅ Add migration for adding cancellation reason in Order
+    AddShipmentTable1756200923757, // ✅ Add migration for adding Shipment table
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

@@ -39,8 +39,10 @@
               {{/each}}
             </div>
             {{/if}}
+            {{#if vehicleType}}
             <p style="margin:0 0 16px;color:#000000">Vehicle type:<br>
               {{vehicleType}}</p>
+            {{/if}}
       
             <table style="width:100%; border-collapse:collapse; font-size:16px; color:#000000">
               <thead>
@@ -81,6 +83,46 @@
                 </tr>
               </tbody>
             </table>
+          
+          <!-- Shipment Details -->
+          {{#if shipment}}
+          <div style="margin-top:40px;color:#000000;font-size:16px;font-weight:400">
+            <h3 style="font-size:16px;margin-bottom:8px;">Shipment Details</h3>
+            <table width="100%" cellspacing="0" cellpadding="8" style="border-collapse:collapse;">
+              <tbody>
+                {{#if shipment.weight}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Weight</td>
+                  <td style="padding:8px;">{{shipment.weight}} kg</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.length}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Dimensions (L × W × H)</td>
+                  <td style="padding:8px;">
+                    {{shipment.length}} × {{shipment.width}} × {{shipment.height}} cm
+                  </td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.itemCount}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Item Count</td>
+                  <td style="padding:8px;">{{shipment.itemCount}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.totalValue}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Total Value</td>
+                  <td style="padding:8px;">USD {{shipment.totalValue}}</td>
+                </tr>
+                {{/if}}
+              </tbody>
+            </table>
+          </div>
+          {{/if}}
       
           <div style="margin-top:40px;color:#000000;font-size:16px;font-weight:400">
             <h3 style="font-size:16px;margin-bottom:8px;">Service Details</h3>
@@ -97,7 +139,13 @@
                 <tr>
                   <td>{{serviceSubcategory}}</td>
                   <td>QAR {{totalCost}}</td>
-                  <td>{{quantity}}</td>
+                  <td>
+                    {{#if shipment}}
+                      {{shipment.itemCount}}
+                    {{else}}
+                      {{quantity}}
+                    {{/if}}
+                  </td>
                   <td>QAR {{totalCost}}</td>
                 </tr>
               </tbody>

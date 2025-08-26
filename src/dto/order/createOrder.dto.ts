@@ -42,6 +42,33 @@ class AddressDto {
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
+class ShipmentDto {
+    @IsNumber()
+    @Type(() => Number)
+    weight: number; // weight in kg
+
+    @IsNumber()
+    @Type(() => Number) 
+    length: number; // length in cm
+
+    @IsNumber()
+    @Type(() => Number)
+    width: number; // width in cm
+
+    @IsNumber()
+    @Type(() => Number)
+    height: number; // height in cm
+
+    @IsNumber()
+    @Type(() => Number)
+    itemCount: number; // number of items
+
+    @IsNumber()
+    @Type(() => Number)
+    totalValue: number; // total value in USD
+
+}
+
 export class CreateOrderDto {
   @IsOptional()
   vehicleId?: string;
@@ -117,4 +144,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(PaymentStatus)
   paymentStatus?: PaymentStatus;
+
+  @IsOptional()
+  @ValidateNested() // ✅ Ensure validation of nested object
+  @Type(() => ShipmentDto)
+  shipment?: ShipmentDto
 }

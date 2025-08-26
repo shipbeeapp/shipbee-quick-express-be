@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, Relation } from "typeorm";
+import { Entity, Column, ManyToOne, JoinColumn, OneToMany, Relation, OneToOne } from "typeorm";
 import { User } from "./user.model.js";
 import { ServiceSubcategory } from "./serviceSubcategory.model.js";
 import { Address } from "./address.model.js";
@@ -10,6 +10,7 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { Driver } from "./driver.model.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
+import { Shipment } from "./shipment.model.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
@@ -90,4 +91,9 @@ export class Order extends BaseEntity {
   @ManyToOne(() => Driver, driver => driver.orders, { nullable: true })
   @JoinColumn({ name: "driverId" })
   driver: Driver; // driver assigned to the order, if any
+
+  // inside Order class:
+  @OneToOne(() => Shipment, shipment => shipment.order)
+  @JoinColumn({ name: "shipmentId" }) // this will create a foreign key in "orders"
+  shipment: Shipment;
 }
