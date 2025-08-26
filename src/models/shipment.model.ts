@@ -1,6 +1,5 @@
 import { Column, Entity, OneToOne, JoinColumn } from "typeorm";
 import BaseEntity from "./baseEntity.js";
-import { Order } from "./order.model.js";
 
 @Entity("shipments")
 export class Shipment extends BaseEntity {
@@ -9,7 +8,7 @@ export class Shipment extends BaseEntity {
     weight: number;
 
     @OneToOne(() => Order, order => order.shipment)
-    order: Order;
+    order: any;
 
     // number of items
     @Column({type: "int", nullable: true})
@@ -31,3 +30,5 @@ export class Shipment extends BaseEntity {
     @Column({type: "numeric", precision: 10, scale: 2, nullable: true})
     height: number;
 }
+
+import { Order } from "./order.model.js";
