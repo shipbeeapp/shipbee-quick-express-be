@@ -92,10 +92,10 @@ export class OrderResponseDto {
         phoneNumber: order.sender?.phoneNumber,
       },
       receiver: {
-        id: order.sender?.id,
-        name: order.sender?.name,
-        email: order.sender?.email,
-        phoneNumber: order.sender?.phoneNumber,
+        id: order.receiver?.id,
+        name: order.receiver?.name,
+        email: order.receiver?.email,
+        phoneNumber: order.receiver?.phoneNumber,
       },
       serviceSubcategory: {
         id: order.serviceSubcategory.id,
