@@ -8,6 +8,7 @@ import fs from 'fs';
 import { Resend } from 'resend';
 import twilio from 'twilio';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
 
 const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
@@ -97,13 +98,14 @@ export function generateOrderHtml(order: CreateOrderDto, totalCost: number, vehi
     const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
     const imageUrls = orderDescription?.images || null;
     const images = imageUrls ? imageUrls.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
+    const category = order.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? 'Quick shipBee' : 'Express shipBee';
     const replacements = {
       recipient: userType === 'admin' ? 'admin' : `${order.senderName}`,
-      heading: userType === 'admin' ? 'New Request Received – <strong>Quick shipBee!</strong>' : 'Your Service request has been submitted!',
+      heading: userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!',
       name: order.senderName,
       email: order.senderEmail,
       phoneNumber: order.senderPhoneNumber,
-      serviceSubcategory: order.serviceSubcategory,
+      serviceSubcategory: order.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL ? 'Express' : order.serviceSubcategory,
       quantity: '01', // Assuming quantity is always 1 for now
       itemType: order.itemType,
       pickUpDate: new Date(order.pickUpDate).toLocaleString(),
