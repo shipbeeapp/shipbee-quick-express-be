@@ -352,9 +352,9 @@ export default class OrderService {
         "toAddress"
       ]
     });
-    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
-      console.error("Error sending emaill to admin:", err);
-     });
+    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+      console.error("Error sending email to admin:", err);
+    });
     console.log('sent mail to admin');
   } catch (err) {
     await queryRunner.rollbackTransaction();
@@ -396,7 +396,7 @@ export default class OrderService {
 
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
       // Reload order with relations
-      sendOrderConfirmation(order, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
         console.error("Error sending email to admin:", err);
       });
       console.log('sent mail to admin');
@@ -436,7 +436,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
     await this.orderRepository.save(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
-    sendOrderConfirmation(order, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
+    sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
         console.error("Error sending email to admin:", err);
       });
     console.log('sent mail to admin');
