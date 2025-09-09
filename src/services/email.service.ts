@@ -9,20 +9,21 @@ import { Resend } from 'resend';
 import twilio from 'twilio';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
 
 const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
-export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin') {
-  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType);
+export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation') {
+  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType);
   console.log("sending order confirmation email to:", recipientMail);
   await resend.emails.send({
     from: `Shipbee <${env.SMTP.USER}>`,
     to: recipientMail,
-    subject: 'Your Order Confirmation',
+    subject: emailType === 'order-confirmation' ? 'Your Order Confirmation' : `Order Status Update`,
     html: html,
   });
-    console.log("Order confirmation email sentt to:", recipientMail);
+    console.log(`${emailType} email sent to: ${recipientMail}`);
 }
 
 export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension: string) {
@@ -90,22 +91,40 @@ function formatAddress(address: any): string {
   }
 
 
-export function generateOrderHtml(order: CreateOrderDto, totalCost: number, vehicleType: VehicleType, userType: string): string {
-    const templatePath = path.join(process.cwd(), 'private', 'emails', 'order-confirmation.html');
+export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string): string {
+    const templatePath = path.join(process.cwd(), 'private', 'emails', `${emailType}.html`);
     const html = fs.readFileSync(templatePath, 'utf8');
   
     const template = Handlebars.compile(html);
     const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
     const imageUrls = orderDescription?.images || null;
     const images = imageUrls ? imageUrls.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
-    const category = order.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? 'Quick shipBee' : 'Express shipBee';
+    const category = (order.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK || order.serviceSubcategory?.name === ServiceSubcategoryName.PERSONAL_QUICK) ? 'Quick shipBee' : 'Express shipBee';
+    let orderStatus = '';
+    switch (order.status) {
+      case OrderStatus.ASSIGNED:
+        orderStatus = 'accepted';
+        break;
+      case OrderStatus.ACTIVE:
+        orderStatus = 'started';
+        break;
+      case OrderStatus.COMPLETED:
+        orderStatus = 'completed';
+        break;
+      case OrderStatus.CANCELED:
+        orderStatus = 'cancelled';
+        break;
+      default:
+        orderStatus = 'unknown';
+    }
+    const heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
     const replacements = {
       recipient: userType === 'admin' ? 'admin' : `${order.senderName}`,
-      heading: userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!',
+      heading: heading,
       name: order.senderName,
       email: order.senderEmail,
       phoneNumber: order.senderPhoneNumber,
-      serviceSubcategory: order.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL ? 'Express' : order.serviceSubcategory,
+      serviceSubcategory: (order.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL || order.serviceSubcategory?.name === ServiceSubcategoryName.INTERNATIONAL) ? 'Express' : (order.serviceSubcategory?.name || order.serviceSubcategory),
       quantity: '01', // Assuming quantity is always 1 for now
       itemType: order.itemType,
       pickUpDate: new Date(order.pickUpDate).toLocaleString(),

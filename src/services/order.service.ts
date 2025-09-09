@@ -341,6 +341,21 @@ export default class OrderService {
     );
     await queryRunner.commitTransaction();
     clearNotificationsForOrder(order.id); // Clear notifications for this order
+    const fullOrder = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: [
+        "driver",
+        "sender",
+        "receiver",
+        "serviceSubcategory",
+        "fromAddress",
+        "toAddress"
+      ]
+    });
+    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
+      console.error("Error sending emaill to admin:", err);
+     });
+    console.log('sent mail to admin');
   } catch (err) {
     await queryRunner.rollbackTransaction();
     throw err;
@@ -360,7 +375,7 @@ export default class OrderService {
       console.log("Starting order for order ID:", orderId, "by driver ID:", driverId);
       const order = await this.orderRepository.findOne({
         where: { id: orderId },
-        relations: ["driver"],
+        relations: ["driver", "sender", "fromAddress", "toAddress", "receiver", "serviceSubcategory"],
       });
       if (!order) {
         throw new Error(`Order with ID ${orderId} not found`);
@@ -378,7 +393,13 @@ export default class OrderService {
       await this.orderRepository.update(orderId, { status: OrderStatus.ACTIVE, startedAt: new Date().toISOString() });
       // console.log("Order started at:", order.startedAt);
       // await this.orderRepository.save(order);
+
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
+      // Reload order with relations
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
+        console.error("Error sending email to admin:", err);
+      });
+      console.log('sent mail to admin');
     } catch (error) {
       console.error("Error starting order:", error.message);
       throw new Error(`Could not start order: ${error.message}`);
@@ -390,7 +411,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ["driver"],
+      relations: ["driver", "sender", "fromAddress", "toAddress", "receiver", "serviceSubcategory"],
     });
     if (!order) {
       throw new Error(`Order with ID ${orderId} not found`);
@@ -415,6 +436,10 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
     await this.orderRepository.save(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
+    sendOrderConfirmation(order, order.totalCost, order.vehicleType, "basselhalabi17@aucegypt.edu", 'admin', 'order-status').catch((err) => {
+        console.error("Error sending email to admin:", err);
+      });
+    console.log('sent mail to admin');
   } catch (error) {
     console.error("Error completing order:", error.message);
     throw new Error(`Could not complete order: ${error.message}`);
