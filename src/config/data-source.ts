@@ -38,6 +38,7 @@ import { TermsAndConditions } from "../models/terms-and-conditions.model.js"; //
 import { AddCancellationReasonInOrder1755685207970 } from "../migrations/1755685207970-AddCancellationReasonInOrder.js"; // Import the migration for adding cancellation reason in Order
 import { Shipment } from "../models/shipment.model.js"; // Import the Shipment model
 import { AddShipmentTable1756200923757 } from "../migrations/1756200923757-AddShipmentTable.js"; // Import the migration for adding Shipment table
+import {MakeDistanceNullable1757840748304} from "../migrations/1757840748304-MakeDistanceNullable.js"; // Import the migration for making distance nullable
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -88,6 +89,7 @@ export const AppDataSource = new DataSource({
     AddTermsAndConditionsTable1755602838041, // ✅ Add migration for adding terms and conditions table
     AddCancellationReasonInOrder1755685207970, // ✅ Add migration for adding cancellation reason in Order
     AddShipmentTable1756200923757, // ✅ Add migration for adding Shipment table
+    MakeDistanceNullable1757840748304, // ✅ Add migration for making distance nullable
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

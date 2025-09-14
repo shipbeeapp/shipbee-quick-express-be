@@ -103,7 +103,7 @@ export default class OrderService {
       }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, orderData.vehicleType);
+      const totalCost = orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? (orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, orderData.vehicleType)) : null;
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository

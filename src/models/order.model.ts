@@ -49,7 +49,7 @@ export class Order extends BaseEntity {
   @Column({ nullable: true, type: "int" })
   lifters: number;
 
-  @Column("float")
+  @Column({ type: "float", nullable: true })
   distance: number; // distance in km, used for calculating cost
 
   @Column("decimal", { precision: 10, scale: 2, nullable: true })

@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested } from "class-validator";
+import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf } from "class-validator";
 import { Type, Transform } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
@@ -105,8 +105,9 @@ export class CreateOrderDto {
   @Transform(({ value }) => (value ? Number(value) : value))
   lifters?: number;
 
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
+  @Transform(({ value }) => (value ? Number(value) : value))
   @IsNumber()
-  @Type(() => Number)
   distance: number;
 
   @IsString()
@@ -133,7 +134,7 @@ export class CreateOrderDto {
   @IsOptional()
   receiverEmail: string;
 
-  @IsOptional()
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsEnum(VehicleType)
   vehicleType?: VehicleType;
 
