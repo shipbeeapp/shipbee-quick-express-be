@@ -10,7 +10,7 @@ import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
-import { getTripCostBasedOnKm } from "../utils/trip-cost.js";
+import { getTripCostBasedOnKg, getTripCostBasedOnKm } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation} from "../services/email.service.js";
 import { env } from "../config/environment.js";
@@ -103,7 +103,12 @@ export default class OrderService {
       }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? (orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : getTripCostBasedOnKm(orderData.distance, orderData.vehicleType)) : null;
+      const totalCost = orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? 
+                    (orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : 
+                    getTripCostBasedOnKm(orderData.distance, orderData.vehicleType)) : (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL ?
+                      getTripCostBasedOnKg(orderData.shipment.weight, orderData.fromAddress.country, orderData.toAddress.country) : null
+                    )
+      
       console.log(totalCost)
 
       //🔹 Step 4: Create Order using OrderRepository
