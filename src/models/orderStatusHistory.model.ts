@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, Or, JoinColumn, Relation } from "typeorm";
 import { Order } from "./order.model.js";
 import BaseEntity from "./baseEntity.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
+import { Driver } from "./driver.model.js";
 
 @Entity("order_status_history")
 export class OrderStatusHistory extends BaseEntity {
@@ -12,4 +13,11 @@ export class OrderStatusHistory extends BaseEntity {
 
   @Column({ type: "enum", enum: OrderStatus})
   status: OrderStatus;
+
+  @ManyToOne(() => Driver, driver => driver.orderStatusHistory, { nullable: true })
+  @JoinColumn({ name: "driverId" })
+  driver: Relation<Driver>;
+
+  @Column({type: "text", nullable: true})
+  cancellationReason?: string;
 }

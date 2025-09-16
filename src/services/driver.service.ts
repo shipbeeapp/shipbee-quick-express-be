@@ -11,6 +11,7 @@ import { calculateActiveHoursToday } from "../socket/socket.js";
 import { emitOrderToDrivers } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
+import { sendOrderConfirmation } from "../services/email.service.js";
 
 @Service()
 export default class DriverService {
@@ -442,7 +443,7 @@ export default class DriverService {
         try {
             const order = await this.orderRepository.findOne({
                 where: { id: orderId, driver: { id: driverId } },
-                relations: ["driver", "fromAddress", "toAddress", "sender", "receiver"]
+                relations: ["driver", "fromAddress", "toAddress", "sender", "receiver", "serviceSubcategory"]
             });
             if (!order) {
                 throw new Error(`Order with ID ${orderId} not found or not assigned to driver ${driverId}`);
@@ -454,10 +455,15 @@ export default class DriverService {
             if (order.driver.id !== driverId) {
                 throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
             }
-            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null, cancellationReason });
+            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null });
             // Add to order status history
-            await this.orderStatusHistoryService.createOrderStatusHistory(order);
+            order.status = OrderStatus.CANCELED; // update status for history record
+            await this.orderStatusHistoryService.createOrderStatusHistory(order, cancellationReason);
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
+            sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+              console.error("Error sending email to admin:", err);
+            });
+            console.log('sent mail to admin');
             //emit order to socket
             resetNotifiedDrivers(order.id);
             await emitOrderToDrivers(order);

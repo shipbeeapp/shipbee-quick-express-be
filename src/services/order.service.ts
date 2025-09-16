@@ -142,7 +142,7 @@ export default class OrderService {
      await queryRunner.manager.save(order);
 
      //Step 5: Add Order Status History
-     await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
+    await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
        console.error("Error sending emaill to admin:", err);
@@ -242,7 +242,7 @@ export default class OrderService {
       const updatedOrder = await orderRepository.save(order);
 
       // Add a new entry to the order status history
-      await this.orderStatusHistoryService.createOrderStatusHistory(updatedOrder, queryRunner);
+      await this.orderStatusHistoryService.createOrderStatusHistory(updatedOrder, null, queryRunner);
 
       // Commit transaction
       await queryRunner.commitTransaction();
@@ -352,7 +352,7 @@ export default class OrderService {
       { status: DriverStatus.ON_DUTY }
     );
     // Add to order status history
-    await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
+    await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
     await queryRunner.commitTransaction();
     clearNotificationsForOrder(order.id); // Clear notifications for this order

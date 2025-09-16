@@ -79,9 +79,6 @@ export class Order extends BaseEntity {
   @Column({ type: "text", nullable: true })
   completionOtp: string; // OTP for order completion, if applicable
 
-  @Column({ type: "text", nullable: true })
-  cancellationReason: string; // reason for order cancellation, if applicable
-
   @Column({type: "timestamptz", nullable: true})
   startedAt: Date; // timestamp when the order was started by the driver
 

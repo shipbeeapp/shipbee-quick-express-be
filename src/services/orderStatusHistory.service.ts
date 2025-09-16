@@ -8,7 +8,7 @@ import { AppDataSource } from "../config/data-source.js";
 export default class OrderStatusHistoryService {
     private orderStatusHistoryRepository = AppDataSource.getRepository(OrderStatusHistory);
 
-    async createOrderStatusHistory(order: Order, queryRunner?: any){
+    async createOrderStatusHistory(order: Order, cancellationReason: string = null, queryRunner?: any){
         try {
             const manager = queryRunner ? queryRunner.manager.getRepository(OrderStatusHistory) : this.orderStatusHistoryRepository;
             //check if order with status already exists
@@ -21,7 +21,7 @@ export default class OrderStatusHistoryService {
             //     return;
             // }
             console.log("Creating new order status history for order:", order.id, "with status:", order.status);
-            const orderStatusHistory = manager.create({ order, status: order.status });
+            const orderStatusHistory = manager.create({ order, status: order.status, driver: order.driver, cancellationReason: cancellationReason});
             await manager.save(orderStatusHistory);
         } catch (error) {
             console.log(error);
