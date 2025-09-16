@@ -1,4 +1,4 @@
-import { Service } from "typedi";
+import {Container, Service } from "typedi";
 import { AppDataSource } from "../config/data-source.js";
 import { Driver } from "../models/driver.model.js";
 import { Vehicle } from "../models/vehicle.model.js";
@@ -10,12 +10,14 @@ import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { calculateActiveHoursToday } from "../socket/socket.js";
 import { emitOrderToDrivers } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
+import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 
 @Service()
 export default class DriverService {
     private driverRepository = AppDataSource.getRepository(Driver);
     private vehicleRepository = AppDataSource.getRepository(Vehicle);
     private orderRepository = AppDataSource.getRepository(Order); // Assuming you have an Order model
+    private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
@@ -453,6 +455,8 @@ export default class DriverService {
                 throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
             }
             await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null, cancellationReason });
+            // Add to order status history
+            await this.orderStatusHistoryService.createOrderStatusHistory(order);
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
             //emit order to socket
             resetNotifiedDrivers(order.id);

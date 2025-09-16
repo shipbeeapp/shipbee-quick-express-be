@@ -26,17 +26,20 @@ import { sendOtpToUser } from "../services/email.service.js";
 import { createMyOrderResource, myOrderResource } from "../resource/drivers/myOrder.resource.js";
 import ShipmentService from "./shipment.service.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
+import PricingService from "./pricing.service.js";
+import { validateObject } from "../middlewares/validation.middleware.js";
+import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 
 
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
-  private userRepo = AppDataSource.getRepository(User);
   private userService = Container.get(UserService);
   private addressService = Container.get(AddressService);
   private serviceSubcategoryService = Container.get(ServiceSubcategoryService);
   private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
   private shipmentService = Container.get(ShipmentService);
+  private pricingService = Container.get(PricingService);
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -103,13 +106,17 @@ export default class OrderService {
       }
         
       //🔹 Step 3: Calculate total cost
-      const totalCost = orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK ? 
-                    (orderData.lifters ? (orderData.lifters * serviceSubcategory.perLifterCost) : 
-                    getTripCostBasedOnKm(orderData.distance, orderData.vehicleType)) : (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL ?
-                      getTripCostBasedOnKg(orderData.shipment.weight, orderData.fromAddress.country, orderData.toAddress.country) : null
-                    )
-      
-      console.log(totalCost)
+      const pricingInput = await validateObject(GetPricingDTO, {
+        serviceSubcategory: orderData.serviceSubcategory,
+        vehicleType: orderData.vehicleType,
+        distance: orderData.distance,
+        fromCountry: orderData.fromAddress.country,
+        toCountry: orderData.toAddress.country,
+        weight: orderData.shipment?.weight
+      });
+      const totalCost = await this.pricingService.calculatePricing(pricingInput);
+
+      console.log(totalCost);
 
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
@@ -137,17 +144,17 @@ export default class OrderService {
      //Step 5: Add Order Status History
      await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
 
-     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
-       console.error("Error sending emaill to admin:", err);
-      });
-     console.log('sent mail to admin: ', env.SMTP.USER);
-     if (orderData.senderEmail) {
-      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
-        console.error("Error sending email to user:", err);
-      }
-      );
-      console.log('sent mail to user: ', orderData.senderEmail);
-     }
+    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
+    //    console.error("Error sending emaill to admin:", err);
+    //   });
+    //  console.log('sent mail to admin: ', env.SMTP.USER);
+    //  if (orderData.senderEmail) {
+    //   await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
+    //     console.error("Error sending email to user:", err);
+    //   }
+    //   );
+    //   console.log('sent mail to user: ', orderData.senderEmail);
+    //  }
 
        
      //🔹 Step 5: Create Payment
@@ -344,6 +351,9 @@ export default class OrderService {
       { id: driverId },
       { status: DriverStatus.ON_DUTY }
     );
+    // Add to order status history
+    await this.orderStatusHistoryService.createOrderStatusHistory(order, queryRunner);
+
     await queryRunner.commitTransaction();
     clearNotificationsForOrder(order.id); // Clear notifications for this order
     const fullOrder = await this.orderRepository.findOne({
@@ -396,8 +406,8 @@ export default class OrderService {
       }
       order.status = OrderStatus.ACTIVE;
       await this.orderRepository.update(orderId, { status: OrderStatus.ACTIVE, startedAt: new Date().toISOString() });
-      // console.log("Order started at:", order.startedAt);
-      // await this.orderRepository.save(order);
+       // Add to order status history
+      await this.orderStatusHistoryService.createOrderStatusHistory(order);
 
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
       // Reload order with relations
@@ -440,6 +450,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     order.completionOtp = null; // Clear OTP after completion
     order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
     await this.orderRepository.save(order);
+    await this.orderStatusHistoryService.createOrderStatusHistory(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
     sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
         console.error("Error sending email to admin:", err);
