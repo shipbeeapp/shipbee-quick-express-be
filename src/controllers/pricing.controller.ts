@@ -68,7 +68,7 @@ export class PricingController {
             res.status(200).json(currentPricing);
         } catch (error) {
             console.error('Error fetching current pricing:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            res.status(400).json({ error: `${error.message}` });
         }
     }
 }

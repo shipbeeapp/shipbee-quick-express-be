@@ -3,8 +3,7 @@ import { Pricing } from "../models/pricing.model.js"
 import { AppDataSource } from "../config/data-source.js";
 import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
-import { LessThanOrEqual, MoreThan } from "typeorm";
-import validateDto from "../middlewares/validation.middleware.js";
+import { LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
     
 @Service()
 export default class PricingService {
@@ -86,7 +85,7 @@ export default class PricingService {
                         serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
                         fromCountry: getPricingDTO.fromCountry,
                         toCountry: getPricingDTO.toCountry,
-                        maxWeight: MoreThan(getPricingDTO.weight),
+                        maxWeight: MoreThanOrEqual(getPricingDTO.weight),
                         isCurrent: true
                     },
                     order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
