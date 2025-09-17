@@ -182,7 +182,9 @@ export class AuthController {
                 vehicleNumber: driverDto.vehicleNumber,
                 vehicleModel: driverDto.vehicleModel // Assuming vehicleModel is part of the driverDto
             }
-            await sendDriverData(driverDto.phoneNumber, plainPassword);
+            //TODO 
+            //UNcomment when twilio is set up
+            // await sendDriverData(driverDto.phoneNumber, plainPassword);
             return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
         } catch (error) {
             console.error('Error during driver signup:', error);
