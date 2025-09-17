@@ -46,7 +46,7 @@ export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension:
     try {
       await twilioClient.messages.create({
         body: `Your Shipbee OTP code is ${otp}`,
-        from: env.TWILIO_PHONE_NUMBER,
+        from: 'ShipBee',
         to: `${phoneExtension}${emailOrPhone}`,
       });
       console.log(`OTP sent to phone number: ${emailOrPhone}`);
@@ -62,7 +62,7 @@ export async function sendOtpToUser(phoneNumber: string, otp: string, phoneExten
   try {
     await twilioClient.messages.create({
       to: `${phoneExtension}${phoneNumber}`,
-      from: env.TWILIO_PHONE_NUMBER,
+      from: 'ShipBee',
       body: `Please provide the driver with this code to complete the order: ${otp}`,
     });
     console.log(`OTP sent to ${phoneNumber}: ${otp}`);
@@ -159,7 +159,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
     console.log("Sending driver data to phone number:", phoneNumber);
     await twilioClient.messages.create({
       body: `Your Shipbee driver account has been created. Your phone number is ${phoneNumber} and your password is ${password}. Here is the link to download the driver app: ${env.DRIVER_APP_LINK}`,
-      from: env.TWILIO_PHONE_NUMBER,
+      from: 'ShipBee',
       to: `+974${phoneNumber}`,
     });
     console.log(`Driver data sent to phone number: ${phoneNumber}`);

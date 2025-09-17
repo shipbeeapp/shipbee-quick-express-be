@@ -442,9 +442,9 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     if (order.status !== OrderStatus.ACTIVE) {
       throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
     }
-    // if (order.completionOtp !== otp) {
-    //   throw new Error(`Invalid OTP for order ${orderId}`);
-    // }
+    if (order.completionOtp !== otp) {
+      throw new Error(`Invalid OTP for order ${orderId}`);
+    }
     order.status = OrderStatus.COMPLETED;
     order.proofOfOrder = proofUrl.split("image/upload/")[1];
     order.completionOtp = null; // Clear OTP after completion
@@ -486,7 +486,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
       if (!order.receiver || !order.receiver.phoneNumber) {
         throw new Error(`Receiver for order ${orderId} does not have a phone number`);
       }
-      await sendOtpToUser(order.receiver.phoneNumber, otp, '+20');
+      await sendOtpToUser(order.receiver.phoneNumber, otp, '+974');
       console.log(`OTP sent to receiver for order ${orderId}: ${otp}`);
     } catch (error) {
       console.error("Error sending OTP to receiver:", error.message);
