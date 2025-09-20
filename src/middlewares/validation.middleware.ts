@@ -24,7 +24,14 @@ export async function validateObject<T extends object>(
 const validateDto = (dtoClass: any, skipMissingProperties = false) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.body = await validateObject(dtoClass, req.body, skipMissingProperties);
+      if (req.body && Object.keys(req.body).length > 0) {
+        console.log("Validating request body:", req.body);
+        req.body = await validateObject(dtoClass, req.body, skipMissingProperties);
+      }
+      if (req.query && Object.keys(req.query).length > 0) {
+        console.log("Validating request query:", req.query);
+        req.query = await validateObject(dtoClass, req.query, skipMissingProperties);
+      }
       next();
     } catch (err) {
       next(err);

@@ -1,6 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { Pricing } from '../models/pricing.model.js';
-import { AppDataSource } from '../config/data-source.js';
 import authenticationMiddleware, { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { CreatePricingDTO } from '../dto/pricing/createPricingDTO.dto.js';
 import { env } from '../config/environment.js';
@@ -13,7 +11,6 @@ export class PricingController {
     public path = '/pricing';
     public router: Router = Router(); 
     private pricingService = Container.get(PricingService);
-    private pricingRepository = AppDataSource.getRepository(Pricing);
 
     constructor() {
 
@@ -63,7 +60,7 @@ export class PricingController {
 
     private async calculatePricing(req: Request, res: Response) {
         try {
-            const getPricingDTO: GetPricingDTO = req.body;
+            const getPricingDTO = req.query as any;
             const currentPricing = await this.pricingService.calculatePricing(getPricingDTO)
             res.status(200).json(currentPricing);
         } catch (error) {
