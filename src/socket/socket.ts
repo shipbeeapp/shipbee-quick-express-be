@@ -41,6 +41,17 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
   const orderService = Container.get(OrderService); // Assuming you have an OrderService to fetch orders
 
   io.on("connection", (socket) => {
+
+    // Customer subscribes to an order's live tracking
+    socket.on("join-order", (data: { orderId: string }) => {
+      socket.join(`order-${data.orderId}`);
+      console.log(`👤 Customer joined order room order-${data.orderId}`);
+    });
+
+    socket.on("leave-order", (data: { orderId: string }) => {
+      socket.leave(`order-${data.orderId}`);
+      console.log(`👤 Customer left order room order-${data.orderId}`);
+    });
     
     socket.on("driver-online", async (data: { driverId: string; vehicleType: VehicleType, currentLocation: string }) => {
       console.log("Driver connected:", socket.id);
@@ -88,8 +99,8 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       }
     });
 
-    socket.on("location-update", async (data: { driverId: string; location: string }) => {
-      const { driverId, location } = data;
+    socket.on("location-update", async (data: { driverId: string; location: string, orderId: string }) => {
+      const { driverId, location, orderId } = data;
 
       const driver = onlineDrivers.get(driverId);
       if (driver) {
@@ -97,6 +108,16 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         onlineDrivers.set(driverId, driver);
         await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
         console.log(`📍 Updated location for driver ${driverId}:`, location);
+      }
+
+      // ✅ If orderId is present (meaning that order is active), forward live location to customers
+      if (orderId) {
+        io.to(`order-${orderId}`).emit("driver-location-update", {
+          driverId,
+          orderId,
+          location,
+        });
+        console.log(`🚕 Sent live location for driver ${driverId} on order ${orderId}`);
       }
 });
 
