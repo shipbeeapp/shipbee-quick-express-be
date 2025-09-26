@@ -95,20 +95,20 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       console.log(`✅ Customer ${socket.id} joined room ${roomName}`);
     });
 
-    socket.on("location-update", async (data: { driverId: string; location: string; orderId: string }) => {
-      const { driverId, location, orderId } = data;
+    socket.on("location-update", async (data: { driverId: string; currentLocation: string; orderId: string }) => {
+      const { driverId, currentLocation, orderId } = data;
 
       const driver = onlineDrivers.get(driverId);
       if (driver) {
-        driver.currentLocation = location;
+        driver.currentLocation = currentLocation;
         onlineDrivers.set(driverId, driver);
         await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
-        console.log(`📍 Updated location for driver ${driverId}:`, location);
+        console.log(`📍 Updated location for driver ${driverId}:`, currentLocation);
       }
 
       if (orderId) {
         io.to(`order-${orderId}`).emit("driver-location", {
-          location: location,
+          location: currentLocation,
         });
     }
 });
