@@ -93,4 +93,7 @@ export class Order extends BaseEntity {
   @OneToOne(() => Shipment, shipment => shipment.order)
   @JoinColumn({ name: "shipmentId" }) // this will create a foreign key in "orders"
   shipment: Shipment;
+
+  @Column({ type: "text", nullable: true })
+  accessToken: string; // access token for secure order access, if applicable
 }

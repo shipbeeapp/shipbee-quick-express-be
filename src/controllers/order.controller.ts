@@ -45,6 +45,7 @@ export class OrderController {
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
     // view order details by orderId
     this.router.get("/orders/:orderId", authenticationMiddleware, this.getOrderDetails.bind(this));
+    this.router.get("/order-details/:orderId", this.viewOrderDetails.bind(this)); // public route to get order details by orderId
     // accept order by driver
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
 
@@ -232,6 +233,24 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Order completed successfully." });
     } catch (error) {
       console.error("Error in order controller completing order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async viewOrderDetails(req: Request, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const accessToken = req.query.token as string;
+      if (!orderId || !accessToken) {
+        return res.status(400).json({ success: false, message: "Order ID and access token are required." });
+      }
+      const orderDetails = await this.orderService.getOrderDetails(orderId, accessToken);
+      if (orderDetails.error) {
+        return res.status(orderDetails.status).json({ success: false, message: orderDetails.error });
+      }
+      res.status(200).json({ success: true, data: orderDetails });
+    } catch (error) {
+      console.error("Error in order controller viewing order details:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

@@ -41,4 +41,6 @@ export const env = {
   RADIUS_KM_MOTORCYCLE: Number(process.env.RADIUS_KM_MOTORCYCLE) || 5,
   RADIUS_KM_SEDAN_CAR: Number(process.env.RADIUS_KM_SEDAN_CAR) || 10,
   RADIUS_KM_OTHER: Number(process.env.RADIUS_KM_OTHER) || 15,
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
+  SEND_SMS: process.env.SEND_SMS === 'true' || false,
 };

@@ -88,8 +88,15 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       }
     });
 
-    socket.on("location-update", async (data: { driverId: string; location: string }) => {
-      const { driverId, location } = data;
+    socket.on("track-order", async (orderId: string) => {
+      const roomName = `order-${orderId}`;
+      console.log('room name: ', roomName);
+      socket.join(roomName);
+      console.log(`✅ Customer ${socket.id} joined room ${roomName}`);
+    });
+
+    socket.on("location-update", async (data: { driverId: string; location: string; orderId: string }) => {
+      const { driverId, location, orderId } = data;
 
       const driver = onlineDrivers.get(driverId);
       if (driver) {
@@ -98,9 +105,22 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
         console.log(`📍 Updated location for driver ${driverId}:`, location);
       }
+
+      if (orderId) {
+        io.to(`order-${orderId}`).emit("driver-location", {
+          location: location,
+        });
+    }
 });
 
+    socket.on("stop-tracking-order", async (orderId: string) => {
+      const roomName = `order-${orderId}`;
+      socket.leave(roomName);
+      console.log(`❌ Customer ${socket.id} left room ${roomName}`);
+    });
+
     socket.on("driver-offline", async (driverId: string) => {
+      console.log("Driver going offline:", driverId);
       onlineDrivers.delete(driverId);
       const now = new Date();
       const sessions = driverSessions.get(driverId);

@@ -5,14 +5,12 @@ import { AddressService } from "./address.service.js";
 import { CreateOrderDto } from "../dto/order/createOrder.dto.js";
 import { AppDataSource } from "../config/data-source.js";
 import { Order } from "../models/order.model.js";
-import {User} from "../models/user.model.js";
 import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
-import { getTripCostBasedOnKg, getTripCostBasedOnKm } from "../utils/trip-cost.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import {sendOrderConfirmation} from "../services/email.service.js";
+import {sendOrderConfirmation, sendOrderDetailsViaSms} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import { Between, MoreThan } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
@@ -29,6 +27,7 @@ import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.j
 import PricingService from "./pricing.service.js";
 import { validateObject } from "../middlewares/validation.middleware.js";
 import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
+import { generateToken } from "../utils/global.utils.js";
 
 
 @Service()
@@ -117,7 +116,7 @@ export default class OrderService {
       const totalCost = await this.pricingService.calculatePricing(pricingInput);
 
       console.log(totalCost);
-
+      const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
         vehicle: orderData.vehicleId ? { id: orderData.vehicleId } : null, // If vehicleId is provided, associate it with the order
@@ -137,6 +136,7 @@ export default class OrderService {
         paymentStatus: orderData.paymentStatus ?? PaymentStatus.PENDING, // Default payment status
         paymentMethod: orderData.paymentMethod ?? PaymentMethod.CASH_ON_DELIVERY, // Default payment method
         shipment,
+        accessToken, // Generate a secure access token for the order
       });
 
      await queryRunner.manager.save(order);
@@ -159,9 +159,11 @@ export default class OrderService {
        
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
-
      // Commit transaction
      await queryRunner.commitTransaction();
+     if (env.SEND_SMS) {
+       sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
+     }
      // Broadcast to online drivers with matching vehicleType
      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) {
        scheduleOrderEmission(order);
@@ -259,15 +261,21 @@ export default class OrderService {
     }
   }
 
-  async getOrderDetails(orderId: string) {
+  async getOrderDetails(orderId: string, accessToken?: string): Promise<any> {
     console.log("Fetching order details for order ID:", orderId);
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment"],
     });
     if (!order) {
       console.log(`Order with ID ${orderId} not found`);
       return null;
+    }
+    if (accessToken && order.accessToken !== accessToken) {
+      return {
+        error: "Invalid access token",
+        status: 403
+      };
     }
     return toOrderResponseDto(order);
   }

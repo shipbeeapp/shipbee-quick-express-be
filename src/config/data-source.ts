@@ -42,6 +42,7 @@ import {MakeDistanceNullable1757840748304} from "../migrations/1757840748304-Mak
 import {AddPricingTable1758011273700} from "../migrations/1758011273700-AddPricingTable.js"; // Import the migration for adding Pricing table
 import { Pricing } from "../models/pricing.model.js"; // Import the Pricing model
 import {AddDriverAndCancellationToOrderStatusHistory1758021504299} from "../migrations/1758021504299-AddDriverAndCancellationToOrderStatusHistory.js"; // Import the migration for adding driver and cancellation reason to OrderStatusHistory
+import { AddAccessTokenToOrder1758457694553 } from "../migrations/1758457694553-AddAccessTokenToOrder.js"; // Import the migration for adding access token to Order
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -96,6 +97,7 @@ export const AppDataSource = new DataSource({
     MakeDistanceNullable1757840748304, // ✅ Add migration for making distance nullable
     AddPricingTable1758011273700, // ✅ Add migration for adding Pricing table
     AddDriverAndCancellationToOrderStatusHistory1758021504299, // ✅ Add migration for adding driver and cancellation reason to OrderStatusHistory
+    AddAccessTokenToOrder1758457694553, // ✅ Add migration for adding access token to Order
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

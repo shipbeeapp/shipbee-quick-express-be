@@ -63,7 +63,16 @@ export class OrderResponseDto {
       status: string;
       timestamp: Date;
     }[];
+
+    shipment: {
+      weight?: number;
+      length?: number;
+      width?: number;
+      height?: number;
+      itemCount?: number;
+      totalValue?: number;
   }
+}
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
     const itemDescription = JSON.parse(order.itemDescription) || null;
@@ -128,6 +137,14 @@ export class OrderResponseDto {
         status: status.status,
         timestamp: status.createdAt,
       })),
+      shipment: {
+        weight: Number(order.shipment?.weight),
+        length: Number(order.shipment?.length),
+        width: Number(order.shipment?.width),
+        height: Number(order.shipment?.height),
+        itemCount: Number(order.shipment?.itemCount),
+        totalValue: Number(order.shipment?.totalValue),
+      },
     };
   }
   

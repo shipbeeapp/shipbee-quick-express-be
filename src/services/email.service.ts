@@ -1,8 +1,5 @@
-import nodemailer from 'nodemailer';
 import Handlebars from "handlebars";
-import { Service } from 'typedi';
 import { env } from '../config/environment.js';
-import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
 import path from 'path';
 import fs from 'fs';
 import { Resend } from 'resend';
@@ -153,6 +150,31 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
     return template(replacements);
   }
 
+export async function sendOrderDetailsViaSms(orderId: string, senderPhoneNumber: string, receiverPhoneNumber: string, token: string) {
+  try {
+  
+    const message = `Shipbee Order Placed. Here is the link to view your order details: ${env.CLIENT_URL}/order-details/${orderId}?token=${token}`;
+    await twilioClient.messages.create({
+      body: message,
+      // from: env.TWILIO_PHONE_NUMBER,
+      from: 'ShipBee', // Your Twilio number or sender ID
+      to: `+974${senderPhoneNumber}`,
+      riskCheck: 'disable'
+    });
+    console.log('Order details SMS sent to:', senderPhoneNumber);
+    await twilioClient.messages.create({
+      body: message,
+      // from: env.TWILIO_PHONE_NUMBER,
+      from: 'ShipBee', // Your Twilio number or sender ID
+      to: `+974${receiverPhoneNumber}`,
+      riskCheck: 'disable'
+    });
+    console.log('Order details SMS sent to:', receiverPhoneNumber);
+  } catch (error) {
+    console.error('Error sending SMS:', error);
+    throw new Error('Failed to send SMS for order details: ' + error.message);
+  }
+}
 
 export async function sendDriverData(phoneNumber: string, password: string) {
   try {
