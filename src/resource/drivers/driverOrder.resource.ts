@@ -1,8 +1,13 @@
 import { itemType } from "../../utils/enums/itemType.enum.js";
+import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
+import { env } from "../../config/environment.js";
 
 export class DriverOrderResource {
     orderId: string;
     itemType: itemType;
+    itemDescription?: string;
+    itemImages?: string[];
+    paymentMethod: PaymentMethod;
     totalCost: number;
     distance: number;
     fromAddress: string;
@@ -23,6 +28,12 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     const resource = new DriverOrderResource();
     resource.orderId = order.id;
     resource.itemType = order.itemType;
+    const itemDescription = order.itemDescription ? JSON.parse(order.itemDescription) : null;
+    if (itemDescription) {
+        resource.itemDescription = itemDescription.text ? itemDescription.text : null;
+        resource.itemImages = itemDescription.images ? itemDescription.images.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : [];
+    }
+    resource.paymentMethod = order.paymentMethod;
     resource.totalCost = order.totalCost;
     resource.distance = order.distance;
     resource.fromAddress = order.fromAddress.city;
