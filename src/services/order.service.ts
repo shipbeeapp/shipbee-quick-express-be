@@ -584,7 +584,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
                 cancellationRequest.status = CancelRequestStatus.APPROVED;
                 await queryRunner.manager.save(cancellationRequest);
                 const order = cancellationRequest.order;
-                order.status = OrderStatus.CANCELED;
+                order.status = OrderStatus.PENDING;
                 order.driver = null;
                 await queryRunner.manager.save(order);
                 await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
