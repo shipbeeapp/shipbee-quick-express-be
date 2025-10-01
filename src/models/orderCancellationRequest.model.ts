@@ -13,7 +13,7 @@ export class OrderCancellationRequest extends BaseEntity {
 
   @ManyToOne(() => Driver, (driver) => driver.cancellationRequests, { onDelete: "CASCADE" })
   @JoinColumn({ name: "driverId" })
-  driver: Driver;
+  driver: any;
 
   @Column({
     type: "enum",
