@@ -108,9 +108,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
 
       if (orderId) {
         console.log(`Emitting location update to room order-${orderId}`);
-        io.to(`order-${orderId}`).emit("driver-location", {
-          location: currentLocation,
-        });
+        io.to(`order-${orderId}`).emit("driver-location", currentLocation);
     }
 });
 
