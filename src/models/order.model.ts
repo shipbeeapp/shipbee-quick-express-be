@@ -11,6 +11,7 @@ import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { Driver } from "./driver.model.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 import { Shipment } from "./shipment.model.js";
+import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
@@ -96,4 +97,7 @@ export class Order extends BaseEntity {
 
   @Column({ type: "text", nullable: true })
   accessToken: string; // access token for secure order access, if applicable
+
+  @OneToMany(() => OrderCancellationRequest, (cancel) => cancel.order)
+  cancellationRequests: OrderCancellationRequest[];
 }

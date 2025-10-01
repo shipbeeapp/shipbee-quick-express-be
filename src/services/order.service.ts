@@ -10,12 +10,12 @@ import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import {sendOrderConfirmation, sendOrderDetailsViaSms} from "../services/email.service.js";
+import {sendOrderConfirmation, sendOrderCancellationEmail, sendOrderDetailsViaSms} from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import { Between, MoreThan } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
-import { clearNotificationsForOrder } from "../utils/notification-tracker.js";
+import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
 // import { getDistanceAndDuration } from "../utils/google-maps/distance-time.js"; // Assuming you have a function to get distance and duration
 import { Driver } from "../models/driver.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
@@ -28,6 +28,10 @@ import PricingService from "./pricing.service.js";
 import { validateObject } from "../middlewares/validation.middleware.js";
 import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 import { generateToken } from "../utils/global.utils.js";
+import DriverService from "./driver.service.js";
+import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
+import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
 
 
 @Service()
@@ -39,6 +43,8 @@ export default class OrderService {
   private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
   private shipmentService = Container.get(ShipmentService);
   private pricingService = Container.get(PricingService);
+  private driverService = Container.get(DriverService);
+  private orderCancellationRequestRepository = AppDataSource.getRepository(OrderCancellationRequest);
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -189,7 +195,7 @@ export default class OrderService {
       where: {
         sender: { id: userId },
       },
-      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment"],
       order: {
         createdAt: "DESC",
       },
@@ -210,7 +216,7 @@ export default class OrderService {
     }
     console.log("Fetching all orders for admin");
     const orders = await this.orderRepository.find({
-      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "driver", "shipment", "cancellationRequests", "cancellationRequests.driver"],
       order: {
         createdAt: "DESC",
       },
@@ -515,4 +521,92 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
             throw error;
         }
     }
-}
+
+    async requestOrderCancellation(driverId: string, orderId: string) {
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId },
+            relations: ["driver"],
+        });
+        if (!order) {
+            throw new Error(`Order with ID ${orderId} not found`);
+        }
+        if (order.driver?.id !== driverId) {
+            throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+        }
+
+        if (order.status !== OrderStatus.ASSIGNED && order.status !== OrderStatus.ACTIVE) {
+            throw new Error(`Order with ID ${orderId} is not assigned or active`);
+        }
+        
+        const existingRequest = await this.orderCancellationRequestRepository.findOne({
+            where: { order: { id: orderId }, driver: { id: driverId }, status: CancelRequestStatus.PENDING }
+        });
+
+        if (existingRequest) {
+            throw new Error(`Cancellation request already exists for order ${orderId}`);
+        }
+
+        const cancellationRequest = this.orderCancellationRequestRepository.create({
+            order: { id: orderId } as any,
+            driver: { id: driverId } as any,
+            status: CancelRequestStatus.PENDING
+        });
+
+        await this.orderCancellationRequestRepository.save(cancellationRequest);
+        console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
+        sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
+            console.error('Error sending order cancellation email:', err);
+        });
+        return;
+    }
+
+    async processOrderCancellation(cancelRequestId: string, action: string) {
+      const queryRunner = AppDataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+        try {
+            const cancellationRequest = await queryRunner.manager.findOne(OrderCancellationRequest, {
+                where: { id: cancelRequestId,  },
+                relations: ["order", "driver", "order.driver", "order.sender", "order.receiver", "order.fromAddress", "order.toAddress", "order.serviceSubcategory", "order.shipment"]
+            });
+            if (!cancellationRequest) {
+                throw new Error(`Cancellation request with ID ${cancelRequestId} not found`);
+            }
+            if (cancellationRequest.status == CancelRequestStatus.APPROVED) {
+                throw new Error(`Cancellation request with ID ${cancelRequestId} has already been approved`);
+            }
+            if (cancellationRequest.status == CancelRequestStatus.DECLINED) {
+                throw new Error(`Cancellation request with ID ${cancelRequestId} has already been declined`);
+            }
+            if (action === "APPROVE") {
+                // Approve the cancellation
+                cancellationRequest.status = CancelRequestStatus.APPROVED;
+                await queryRunner.manager.save(cancellationRequest);
+                const order = cancellationRequest.order;
+                order.status = OrderStatus.CANCELED;
+                order.driver = null;
+                await queryRunner.manager.save(order);
+                await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
+                resetNotifiedDrivers(order.id);
+                await emitOrderToDrivers(order);
+            } else if (action === "DECLINE") {
+                // Decline the cancellation
+                cancellationRequest.status = CancelRequestStatus.DECLINED;
+                await queryRunner.manager.save(cancellationRequest);
+              } else {
+                throw new Error(`Invalid action: ${action}`);
+              }
+            await queryRunner.commitTransaction();
+            emitOrderCancellationUpdate(cancellationRequest.driver.id, cancellationRequest.order.id, cancellationRequest.status);
+            console.log(`Order cancellation request ${cancelRequestId} processed with action: ${action}`);
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error("Error processing order cancellation:", error.message);
+            throw new Error(`Could not process order cancellation: ${error.message}`);
+        }
+        finally {
+            await queryRunner.release();  
+      }
+    }
+  }

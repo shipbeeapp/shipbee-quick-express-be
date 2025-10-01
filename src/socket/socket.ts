@@ -182,6 +182,7 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
   console.log(`📦 Emitting order ${order.id} to online drivers... ${Array.from(onlineDrivers.keys()).join(", ")}`);
   for (const [driverId, { socketId, vehicleType, currentLocation }] of onlineDrivers.entries()) {
     if (vehicleType === order.vehicleType) {
+      console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       if (hasDriverBeenNotified(driverId, order.id)) {
         console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
         continue; // Skip if the driver has already been notified
@@ -202,6 +203,18 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
   }
+}
+
+export function emitOrderCancellationUpdate(driverId: string, orderId: string, status: string): Promise<void> {
+  const io = getSocketInstance();
+  const onlineDrivers = getOnlineDrivers();
+  const driver = onlineDrivers.get(driverId);
+  if (!driver) {
+    console.log(`Driver ${driverId} is not online`);
+    return;
+  }
+  io.to(driver.socketId).emit("order-cancellation-update", { driverId, orderId, status });
+  console.log(`order cancellation update sent to driver id: ${driverId} having order id: ${orderId} with status: ${status} `)
 }
 
 export function calculateActiveHoursToday(driverId: string): number {

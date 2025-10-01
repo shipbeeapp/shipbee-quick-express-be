@@ -43,6 +43,8 @@ import {AddPricingTable1758011273700} from "../migrations/1758011273700-AddPrici
 import { Pricing } from "../models/pricing.model.js"; // Import the Pricing model
 import {AddDriverAndCancellationToOrderStatusHistory1758021504299} from "../migrations/1758021504299-AddDriverAndCancellationToOrderStatusHistory.js"; // Import the migration for adding driver and cancellation reason to OrderStatusHistory
 import { AddAccessTokenToOrder1758457694553 } from "../migrations/1758457694553-AddAccessTokenToOrder.js"; // Import the migration for adding access token to Order
+import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js"; // Import the OrderCancellationRequest model
+import { AddOrderCancellationRequest1759230306609 } from "../migrations/1759230306609-AddOrderCancellationRequest.js"; // Import the migration for adding OrderCancellationRequest
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -68,6 +70,7 @@ export const AppDataSource = new DataSource({
     TermsAndConditions, // ✅ Add TermsAndConditions entity
     Shipment, // ✅ Add Shipment entity
     Pricing, // ✅ Add Pricing entity
+    OrderCancellationRequest, // ✅ Add OrderCancellationRequest entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -98,6 +101,7 @@ export const AppDataSource = new DataSource({
     AddPricingTable1758011273700, // ✅ Add migration for adding Pricing table
     AddDriverAndCancellationToOrderStatusHistory1758021504299, // ✅ Add migration for adding driver and cancellation reason to OrderStatusHistory
     AddAccessTokenToOrder1758457694553, // ✅ Add migration for adding access token to Order
+    AddOrderCancellationRequest1759230306609, // ✅ Add migration for adding OrderCancellationRequest
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

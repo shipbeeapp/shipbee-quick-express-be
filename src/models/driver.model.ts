@@ -34,8 +34,12 @@ export class Driver extends BaseEntity {
 
     @OneToMany(() => OrderStatusHistory, orderStatusHistory => orderStatusHistory.driver)
     orderStatusHistory: OrderStatusHistory[];
+
+    @OneToMany(() => OrderCancellationRequest, (cancel) => cancel.driver)
+    cancellationRequests: OrderCancellationRequest[];
 }
 
 import { Vehicle } from "./vehicle.model.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
-import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
+import { DriverStatus } from "../utils/enums/driverStatus.enum.js";import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
+

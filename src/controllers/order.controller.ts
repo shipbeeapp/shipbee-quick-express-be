@@ -68,6 +68,17 @@ export class OrderController {
     upload.single("proof"),
     this.uploadProofOfOrder.bind(this)
   );
+    this.router.post(
+      "/orders/:orderId/request-cancellation",
+      authenticationMiddleware,
+      this.requestOrderCancellation.bind(this)
+    );
+
+    this.router.post(
+      "/orders/process-cancellation/:cancelRequestId",
+      authenticationMiddleware,
+      this.processOrderCancellation.bind(this)
+    );
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -251,6 +262,37 @@ export class OrderController {
       res.status(200).json({ success: true, data: orderDetails });
     } catch (error) {
       console.error("Error in order controller viewing order details:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async requestOrderCancellation(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+      await this.orderService.requestOrderCancellation(driverId, orderId);
+      res.status(200).json({ success: true, message: "Order cancellation requested successfully." });
+    } catch (error) {
+      console.error("Error in order controller requesting order cancellation:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async processOrderCancellation(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { cancelRequestId } = req.params;
+      const { action } = req.body; // 'APPROVE' or 'DECLINE'
+      if (req.email !== env.ADMIN.EMAIL) {
+          return res.status(403).json({ success: false, message: "You are not authorized to process order cancellations." });
+      }
+      await this.orderService.processOrderCancellation(cancelRequestId, action);
+      res.status(200).json({ success: true, message: "Order cancellation processed successfully." });
+    } catch (error) {
+      console.error("Error in order controller processing order cancellation:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

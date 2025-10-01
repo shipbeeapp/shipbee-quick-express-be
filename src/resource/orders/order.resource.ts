@@ -1,6 +1,7 @@
 import { Order } from '../../models/order.model.js';
 import { env } from '../../config/environment.js';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
+import { CancelRequestStatus } from '../../utils/enums/cancelRequestStatus.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -72,6 +73,15 @@ export class OrderResponseDto {
       itemCount?: number;
       totalValue?: number;
   }
+  cancellationRequests?: {
+    id: string;
+    status: CancelRequestStatus;
+    updatedAt: Date;
+    driver: {
+      name: string;
+      phoneNumber: string;
+    }
+  }[];
 }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
@@ -145,6 +155,15 @@ export class OrderResponseDto {
         itemCount: Number(order.shipment?.itemCount),
         totalValue: Number(order.shipment?.totalValue),
       },
+      cancellationRequests: order.cancellationRequests?.map(request => ({
+        id: request.id,
+        status: request.status,
+        updatedAt: request.updatedAt,
+        driver: {
+          name: request.driver?.name,
+          phoneNumber: request.driver?.phoneNumber,
+        }
+      })) || [],
     };
   }
   

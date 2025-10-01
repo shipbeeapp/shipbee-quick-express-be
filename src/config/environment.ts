@@ -43,4 +43,5 @@ export const env = {
   RADIUS_KM_OTHER: Number(process.env.RADIUS_KM_OTHER) || 15,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
   SEND_SMS: process.env.SEND_SMS === 'true' || false,
+  ADMIN_URL: process.env.ADMIN_URL || 'https://shipbee-admin-fe.vercel.app/dashboard',
 };

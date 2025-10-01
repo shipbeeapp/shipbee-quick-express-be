@@ -190,3 +190,20 @@ export async function sendDriverData(phoneNumber: string, password: string) {
     throw new Error(`Failed to send driver data to ${phoneNumber}: ${error.message}`);
   }
 }
+
+export async function sendOrderCancellationEmail(orderNo: number, driverName: string, driverPhoneNumber: string) {
+  try {
+    await resend.emails.send({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      // to: "basselhalabi17@aucegypt.edu", // Testing email
+      to: env.SMTP.USER, // Admin email from environment variables
+      subject: 'Order Cancellation Request Received',
+      html: `<p>Driver ${driverName} with phone number ${driverPhoneNumber} has requested to cancel order #${orderNo}.
+      You can accept or decline the request from the dashboard <a href="${env.ADMIN_URL}">here</a>.</p>`,
+    });
+    console.log(`Order cancellation email sent to: ${env.ADMIN.EMAIL}`);
+  } catch (error) {
+    console.error('Error sending order cancellation email:', error);
+    throw new Error(`Failed to send order cancellation email to ${env.ADMIN.EMAIL}: ${error.message}`);
+  }
+}
