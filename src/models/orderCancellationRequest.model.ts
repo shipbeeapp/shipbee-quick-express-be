@@ -9,7 +9,7 @@ export class OrderCancellationRequest extends BaseEntity {
 
   @ManyToOne(() => Order, (order) => order.cancellationRequests, { onDelete: "CASCADE" })
   @JoinColumn({ name: "orderId" })
-  order: Order;
+  order: any;
 
   @ManyToOne(() => Driver, (driver) => driver.cancellationRequests, { onDelete: "CASCADE" })
   @JoinColumn({ name: "driverId" })
