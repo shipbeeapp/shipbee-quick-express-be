@@ -1,6 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn} from "typeorm";
 import BaseEntity from "./baseEntity.js";
 import { Driver } from "./driver.model.js";
+import { Order } from "./order.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 
@@ -22,4 +23,3 @@ export class OrderCancellationRequest extends BaseEntity {
   })
   status: CancelRequestStatus;
 }
-import { Order } from "./order.model.js";

@@ -71,14 +71,17 @@ export default class PricingService {
                     throw new Error('No pricing found for the given criteria');
                 }
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
-                  return Number(currentPricing.baseCost);
+                  return {
+                    cost: Number(currentPricing.baseCost)
+                  } 
                 }
             
-                return (
+                return {
+                    cost: (
                   Number(currentPricing.baseCost) +
                   (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
                     Number(currentPricing.additionalPerKm)
-                );
+                )};
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
                 const currentPricing = await this.pricingRepository.findOne({
                     where: {
@@ -94,7 +97,10 @@ export default class PricingService {
                     throw new Error('No pricing found for the given criteria');
                 }
                 const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
-                return Number(cost.toFixed(1));
+                return {
+                    cost: Number(cost.toFixed(1)),
+                    estimatedDeliveryDays: currentPricing.transitTime
+                };
             }
             else {
                 throw new Error('Unsupported service subcategory'); 
