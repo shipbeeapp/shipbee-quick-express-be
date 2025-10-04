@@ -4,6 +4,7 @@ import { AppDataSource } from "../config/data-source.js";
 import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 import { LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
+import { env } from "../config/environment.js";
     
 @Service()
 export default class PricingService {
@@ -72,7 +73,7 @@ export default class PricingService {
                 }
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
                   return {
-                    totalCost: Number(currentPricing.baseCost)
+                    totalCost: Number(currentPricing.baseCost) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                   } 
                 }
             
@@ -80,7 +81,7 @@ export default class PricingService {
                     totalCost: (
                   Number(currentPricing.baseCost) +
                   (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
-                    Number(currentPricing.additionalPerKm)
+                    Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                 )};
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
                 const currentPricing = await this.pricingRepository.findOne({

@@ -32,6 +32,7 @@ import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
+import { broadcastOrderUpdate } from "../controllers/user.controller.js";
 
 
 @Service()
@@ -117,7 +118,8 @@ export default class OrderService {
         distance: orderData.distance,
         fromCountry: orderData.fromAddress.country,
         toCountry: orderData.toAddress.country,
-        weight: orderData.shipment?.weight
+        weight: orderData.shipment?.weight,
+        lifters: orderData.lifters
       });
       const {totalCost} = await this.pricingService.calculatePricing(pricingInput);
 
@@ -150,30 +152,31 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
-     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
-       console.error("Error sending emaill to admin:", err);
-      });
-     console.log('sent mail to admin: ', env.SMTP.USER);
-     if (orderData.senderEmail) {
-      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
-        console.error("Error sending email to user:", err);
-      }
-      );
-      console.log('sent mail to user: ', orderData.senderEmail);
-     }
+    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
+    //    console.error("Error sending emaill to admin:", err);
+    //   });
+    //  console.log('sent mail to admin: ', env.SMTP.USER);
+    //  if (orderData.senderEmail) {
+    //   await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
+    //     console.error("Error sending email to user:", err);
+    //   }
+    //   );
+    //   console.log('sent mail to user: ', orderData.senderEmail);
+    //  }
 
        
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
      // Commit transaction
      await queryRunner.commitTransaction();
-     if (env.SEND_SMS) {
-       sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
-     }
+    //  if (env.SEND_SMS) {
+    //    sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
+    //  }
      // Broadcast to online drivers with matching vehicleType
      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) {
        scheduleOrderEmission(order);
      }
+     broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the new order
      return toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
@@ -254,6 +257,7 @@ export default class OrderService {
 
       // Commit transaction
       await queryRunner.commitTransaction();
+      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       console.log("Order status updated successfully");
     } catch (error) {
       console.error("Error updating order status:", error.message);
@@ -369,6 +373,7 @@ export default class OrderService {
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
     await queryRunner.commitTransaction();
+
     clearNotificationsForOrder(order.id); // Clear notifications for this order
     const fullOrder = await this.orderRepository.findOne({
       where: { id: orderId },
@@ -385,6 +390,7 @@ export default class OrderService {
       console.error("Error sending email to admin:", err);
     });
     console.log('sent mail to admin');
+    broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
   } catch (err) {
     await queryRunner.rollbackTransaction();
     throw err;
@@ -429,6 +435,7 @@ export default class OrderService {
         console.error("Error sending email to admin:", err);
       });
       console.log('sent mail to admin');
+      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
     } catch (error) {
       console.error("Error starting order:", error.message);
       throw new Error(`Could not start order: ${error.message}`);
@@ -470,6 +477,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
         console.error("Error sending email to admin:", err);
       });
     console.log('sent mail to admin');
+    broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
   } catch (error) {
     console.error("Error completing order:", error.message);
     throw new Error(`Could not complete order: ${error.message}`);
@@ -590,6 +598,7 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
                 await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
                 resetNotifiedDrivers(order.id);
                 await emitOrderToDrivers(order);
+                broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
             } else if (action === "DECLINE") {
                 // Decline the cancellation
                 cancellationRequest.status = CancelRequestStatus.DECLINED;

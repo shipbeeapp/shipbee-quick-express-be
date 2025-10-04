@@ -2,7 +2,15 @@ import { NextFunction, Response, Router, Request } from 'express';
 import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
+import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
+let clients: Response[] = [];
 
+ // Call this whenever you want to broadcast updates
+export function broadcastOrderUpdate(orderId, orderStatus: OrderStatus) {
+  clients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ orderId, orderStatus })}\n\n`);
+  });
+}
 export class UserController {
   public router: Router = Router();
   public path = '/users';
@@ -16,6 +24,7 @@ export class UserController {
         // Define your routes here
         //update user endpoint using id
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
+        this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
     }
 
     private updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -37,5 +46,21 @@ export class UserController {
             console.error("Error updating user:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
+    }
+
+    private orderStatusUpdate = async (req: Request, res: Response) => {
+        // 1️⃣ Set SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+
+        // 2️⃣ Add client to clients array
+        clients.push(res);
+
+        // 3️⃣ Remove client on disconnect
+        req.on("close", () => {
+          clients = clients.filter(client => client !== res);
+        });
     }
 }

@@ -1,4 +1,4 @@
-import { IsEnum, ValidateIf, IsPositive } from "class-validator";
+import { IsEnum, ValidateIf, IsPositive, IsOptional } from "class-validator";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
 import { Type } from "class-transformer";
@@ -25,4 +25,9 @@ export class GetPricingDTO {
     @IsPositive()
     @Type(() => Number)
     weight?: number; // Optional, only for INTERNATIONAL
+
+    @IsOptional()
+    @IsPositive()
+    @Type(() => Number)
+    lifters?: number; // Optional, only for Personal Quick
 }
