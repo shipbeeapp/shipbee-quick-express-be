@@ -152,26 +152,26 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
-    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
-    //    console.error("Error sending emaill to admin:", err);
-    //   });
-    //  console.log('sent mail to admin: ', env.SMTP.USER);
-    //  if (orderData.senderEmail) {
-    //   await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
-    //     console.error("Error sending email to user:", err);
-    //   }
-    //   );
-    //   console.log('sent mail to user: ', orderData.senderEmail);
-    //  }
+     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
+       console.error("Error sending emaill to admin:", err);
+      });
+     console.log('sent mail to admin: ', env.SMTP.USER);
+     if (orderData.senderEmail) {
+      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
+        console.error("Error sending email to user:", err);
+      }
+      );
+      console.log('sent mail to user: ', orderData.senderEmail);
+     }
 
        
      //🔹 Step 5: Create Payment
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
      // Commit transaction
      await queryRunner.commitTransaction();
-    //  if (env.SEND_SMS) {
-    //    sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
-    //  }
+     if (env.SEND_SMS) {
+       sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
+     }
      // Broadcast to online drivers with matching vehicleType
      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) {
        scheduleOrderEmission(order);
