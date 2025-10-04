@@ -72,12 +72,12 @@ export default class PricingService {
                 }
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
                   return {
-                    cost: Number(currentPricing.baseCost)
+                    totalCost: Number(currentPricing.baseCost)
                   } 
                 }
             
                 return {
-                    cost: (
+                    totalCost: (
                   Number(currentPricing.baseCost) +
                   (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
                     Number(currentPricing.additionalPerKm)
@@ -98,7 +98,7 @@ export default class PricingService {
                 }
                 const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
                 return {
-                    cost: Number(cost.toFixed(1)),
+                    totalCost: Number(cost.toFixed(1)),
                     estimatedDeliveryDays: currentPricing.transitTime
                 };
             }

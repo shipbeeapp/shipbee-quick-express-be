@@ -119,7 +119,7 @@ export default class OrderService {
         toCountry: orderData.toAddress.country,
         weight: orderData.shipment?.weight
       });
-      const totalCost = await this.pricingService.calculatePricing(pricingInput);
+      const {totalCost} = await this.pricingService.calculatePricing(pricingInput);
 
       console.log(totalCost);
       const accessToken = generateToken();
