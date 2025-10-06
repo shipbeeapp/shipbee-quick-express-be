@@ -12,7 +12,7 @@ import { emitOrderToDrivers } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { sendOrderConfirmation } from "../services/email.service.js";
-import DriverSignupStatus from "../utils/enums/driverSignUpStatus.enum.js";
+import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 
 @Service()
 export default class DriverService {

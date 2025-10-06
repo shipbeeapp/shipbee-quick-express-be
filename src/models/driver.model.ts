@@ -2,7 +2,7 @@ import { Entity, Column, OneToOne, JoinColumn, OneToMany } from "typeorm";
 import BaseEntity from "./baseEntity.js";
 // import { Vehicle } from "./vehicle.model.js";
 import { Order } from "./order.model.js";
-import DriverSignupStatus from "../utils/enums/driverSignUpStatus.enum.js";
+import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 // let Vehicle:  any;
 
 @Entity("drivers")

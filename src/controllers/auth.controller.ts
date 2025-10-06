@@ -10,7 +10,7 @@ import bcrypt from 'bcrypt';
 import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
-import DriverSignupStatus from '../utils/enums/driverSignUpStatus.enum.js';
+import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 
 export class AuthController {
   public router: Router = Router();
