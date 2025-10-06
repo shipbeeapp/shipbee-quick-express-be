@@ -46,6 +46,7 @@ export class OrderResponseDto {
       apartmentNumber: string;
       zone?: string;
       landmarks?: string;
+      coordinates: string;
     };
   
     toAddress: {
@@ -58,6 +59,7 @@ export class OrderResponseDto {
         apartmentNumber: string;
         zone?: string;
         landmarks?: string;
+        coordinates: string;
     };
   
     statusHistory: {
@@ -131,6 +133,7 @@ export class OrderResponseDto {
         apartmentNumber: order.fromAddress.apartmentNumber,
         zone: order.fromAddress.zone,
         landmarks: order.fromAddress.landmarks,
+        coordinates: order.fromAddress.coordinates,
       },
       toAddress: {
         country: order.toAddress.country,
@@ -142,6 +145,7 @@ export class OrderResponseDto {
         apartmentNumber: order.toAddress.apartmentNumber,
         zone: order.toAddress.zone,
         landmarks: order.toAddress.landmarks,
+        coordinates: order.toAddress.coordinates,
       },
       statusHistory: order.orderStatusHistory?.map(status => ({
         status: status.status,
