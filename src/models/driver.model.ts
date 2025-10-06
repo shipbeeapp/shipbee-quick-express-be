@@ -3,7 +3,7 @@ import BaseEntity from "./baseEntity.js";
 // import { Vehicle } from "./vehicle.model.js";
 import { Order } from "./order.model.js";
 import DriverSignupStatus from "../utils/enums/driverSignUpStatus.enum.js";
-// let Vehicle: any;
+// let Vehicle:  any;
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
