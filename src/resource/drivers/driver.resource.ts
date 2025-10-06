@@ -7,6 +7,7 @@ export class DriverResource {
             name: driver.driver_name,
             phoneNumber: driver.driver_phoneNumber,
             status: driver.driver_status,
+            signUpStatus: driver.driver_signUpStatus,
             lastActiveAt: driver.driver_updatedAt,
             vehicle: {
                 type: driver.vehicle_type,

@@ -207,3 +207,20 @@ export async function sendOrderCancellationEmail(orderNo: number, driverName: st
     throw new Error(`Failed to send order cancellation email to ${env.ADMIN.EMAIL}: ${error.message}`);
   }
 }
+
+export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber: string) {
+  try {
+    await resend.emails.send({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      // to: "basselhalabi17@aucegypt.edu",
+      to: env.ADMIN.EMAIL, // Admin email from environment variables
+      subject: 'New Driver Sign-Up Request',
+      html: `<p style="font-size: 24px;">Driver ${driverName} with phone number ${driverPhoneNumber} has signed up as a driver.
+      You can review and approve or reject the request from the dashboard <a href="${env.ADMIN_URL}">here</a>.</p>`,
+    });
+    console.log(`Driver sign-up email sent to: ${env.ADMIN.EMAIL}`);
+  } catch (error) {
+    console.error('Error sending driver sign-up email:', error);
+    throw new Error(`Failed to send driver sign-up email to ${env.ADMIN.EMAIL}: ${error.message}`);
+  } 
+}

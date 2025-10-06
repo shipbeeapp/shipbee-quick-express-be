@@ -12,6 +12,7 @@ import { emitOrderToDrivers } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { sendOrderConfirmation } from "../services/email.service.js";
+import DriverSignupStatus from "../utils/enums/driverSignUpStatus.enum.js";
 
 @Service()
 export default class DriverService {
@@ -83,6 +84,7 @@ export default class DriverService {
         try {
             return await this.driverRepository.findOne({
                 where: { id: driverId },
+                relations: ["vehicle"],
             });
         } catch (error) {
             console.error("Error finding driver by ID:", error);
@@ -163,6 +165,7 @@ export default class DriverService {
                 "driver.phoneNumber",
                 "driver.status",
                 "driver.updatedAt",
+                "driver.signUpStatus",
                 "vehicle.id",
                 "vehicle.type",
                 "vehicle.model",
@@ -469,6 +472,26 @@ export default class DriverService {
             await emitOrderToDrivers(order);
         } catch (error) {
             console.error("Error cancelling order:", error);
+            throw error;
+        }
+    }
+
+    async approveOrRejectDriver(driverId: string, action: 'approve' | 'reject'): Promise<void> {
+        try {
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            if (action === 'approve') {
+                driver.signUpStatus = DriverSignupStatus.APPROVED;
+            } else if (action === 'reject') {
+                driver.signUpStatus = DriverSignupStatus.REJECTED;
+            } else {
+                throw new Error(`Invalid action: ${action}`);
+            }
+            await this.driverRepository.save(driver);
+        } catch (error) {
+            console.error("Error updating driver sign-up status:", error);
             throw error;
         }
     }

@@ -41,6 +41,8 @@ export const env = {
   RADIUS_KM_MOTORCYCLE: Number(process.env.RADIUS_KM_MOTORCYCLE) || 5,
   RADIUS_KM_SEDAN_CAR: Number(process.env.RADIUS_KM_SEDAN_CAR) || 10,
   RADIUS_KM_OTHER: Number(process.env.RADIUS_KM_OTHER) || 15,
+  EMIT_TIME_SEDAN_CAR_MINUTES: Number(process.env.EMIT_TIME_SEDAN_CAR_MINUTES) || 15,
+  EMIT_TIME_OTHER_MINUTES: Number(process.env.EMIT_TIME_OTHER_MINUTES) || 90,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
   SEND_SMS: process.env.SEND_SMS === 'true' || false,
   ADMIN_URL: process.env.ADMIN_URL || 'https://shipbee-admin-fe.vercel.app/dashboard',

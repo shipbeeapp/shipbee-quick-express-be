@@ -442,7 +442,7 @@ export default class OrderService {
     }
 } 
 
-async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: string) {
+async completeOrder(orderId: string, driverId: string, proofUrl: string) {
   try {
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
     const order = await this.orderRepository.findOne({
@@ -463,12 +463,12 @@ async completeOrder(orderId: string, driverId: string, otp: string, proofUrl: st
     if (order.status !== OrderStatus.ACTIVE) {
       throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
     }
-    if (order.completionOtp !== otp) {
-      throw new Error(`Invalid OTP for order ${orderId}`);
-    }
+    // if (order.completionOtp !== otp) {
+    //   throw new Error(`Invalid OTP for order ${orderId}`);
+    // }
     order.status = OrderStatus.COMPLETED;
     order.proofOfOrder = proofUrl.split("image/upload/")[1];
-    order.completionOtp = null; // Clear OTP after completion
+    // order.completionOtp = null; // Clear OTP after completion
     order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
     await this.orderRepository.save(order);
     await this.orderStatusHistoryService.createOrderStatusHistory(order);

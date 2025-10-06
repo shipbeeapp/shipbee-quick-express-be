@@ -10,6 +10,8 @@ import OrderService from '../services/order.service.js';
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
 import multer from "multer";
+import { DriverDto } from '../dto/driver/driver.dto.js';
+import { sendDriverSignUpMail } from '../services/email.service.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -42,6 +44,18 @@ export class DriverController {
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
         this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
         this.router.get(`${this.path}/orders`, authenticationMiddleware, this.getDriverOrders.bind(this));
+        this.router.post(`${this.path}/signup`,
+            upload.fields([
+              { name: "qidFront", maxCount: 1 },
+              { name: "qidBack", maxCount: 1 },
+              { name: "driverRegistrationFront", maxCount: 1 },
+              { name: "driverRegistrationBack", maxCount: 1 },
+              { name: "vehicleRegistrationFront", maxCount: 1 },
+              { name: "vehicleRegistrationBack", maxCount: 1 },
+            ]),
+            this.signupDriver.bind(this));
+        this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
+        this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -138,6 +152,66 @@ export class DriverController {
             res.status(200).json({ success: true, data: orders });
         } catch (error) {
             console.error("Error fetching driver orders:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private signupDriver = async (req: Request, res: Response) => {
+        try {
+            const driverData: DriverDto  = req.body;
+            if (!driverData.phoneNumber || !driverData.name) {
+                return res.status(400).json({ success: false, message: 'Email, phone number and name are required.' });
+            }
+            if (req.files) {
+              const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+              console.log("Files received during driver signup:", files);
+              driverData.qidFront = files['qidFront'] ? files['qidFront'][0].path.split("/upload/")[1] : undefined;
+              driverData.qidBack = files['qidBack'] ? files['qidBack'][0].path.split("/upload/")[1] : undefined;
+              driverData.driverRegistrationFront = files['driverRegistrationFront'] ? files['driverRegistrationFront'][0].path.split("/upload/")[1] : undefined;
+              driverData.driverRegistrationBack = files['driverRegistrationBack'] ? files['driverRegistrationBack'][0].path.split("/upload/")[1] : undefined;
+              driverData.vehicleRegistrationFront = files['vehicleRegistrationFront'] ? files['vehicleRegistrationFront'][0].path.split("/upload/")[1] : undefined;
+              driverData.vehicleRegistrationBack = files['vehicleRegistrationBack'] ? files['vehicleRegistrationBack'][0].path.split("/upload/")[1] : undefined;
+            }
+            const driver = await this.driverService.findOrCreateDriver(driverData);
+            await sendDriverSignUpMail(driverData.name, driverData.phoneNumber);
+            res.status(201).json({ success: true, message: 'Driver signed up successfully', data: DriverResource.toResponse(driver) });
+        }
+        catch (error) {
+            console.error('Error signing up driver:', error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private approveOrRejectDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            const action = req.body.action; // 'approve' or 'reject'
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            await this.driverService.approveOrRejectDriver(paramDriverId, action);
+            res.status(200).json({ success: true, message: "Driver Approved Successfully" });
+        } catch (error) {
+            console.error("Error approving driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    } 
+    
+    private getDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            // Validate that the driver ID matches the authenticated user's ID
+            if (req.email !== env.ADMIN.EMAIL && req.driverId !== paramDriverId) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driver = await this.driverService.findDriverById(paramDriverId);
+            if (!driver) {
+                return res.status(404).json({ success: false, message: "Driver not found" });
+            }
+            res.status(200).json({ success: true, data: DriverResource.toResponse(driver) });
+
+        } catch (error) {
+            console.error("Error fetching driver:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

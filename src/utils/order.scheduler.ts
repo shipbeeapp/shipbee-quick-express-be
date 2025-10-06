@@ -2,13 +2,20 @@ import schedule from "node-schedule";
 import { emitOrderToDrivers } from"../socket/socket.js";
 import { Order } from "../models/order.model.js";
 import OrderService  from "../services/order.service.js";
+import { VehicleType } from "./enums/vehicleType.enum.js";
+import {env} from "../config/environment.js";
 // import { Container } from "typedi";
 
 // const orderService = Container.get(OrderService);
 
 export function scheduleOrderEmission(order: Order): void {
   const pickupTime = new Date(order.pickUpDate);
-  const emitTime = new Date(pickupTime.getTime() - 15 * 60 * 1000); // 15 minutes before
+  let emitTime: Date;
+  if (order.vehicleType === VehicleType.SEDAN_CAR || order.vehicleType === VehicleType.MOTORCYCLE) {
+    emitTime = new Date(pickupTime.getTime() - env.EMIT_TIME_SEDAN_CAR_MINUTES * 60 * 1000); // 15 minutes before
+  } else {
+     emitTime = new Date(pickupTime.getTime() - env.EMIT_TIME_OTHER_MINUTES * 60 * 1000); // 90 minutes before
+  }
   console.log(`📅 Scheduling order ${order.id} for ${emitTime.toISOString()}`);
   const now = new Date();
   console.log(`⏰ Current time is ${now.toISOString()}`);

@@ -10,6 +10,7 @@ import bcrypt from 'bcrypt';
 import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
+import DriverSignupStatus from '../utils/enums/driverSignUpStatus.enum.js';
 
 export class AuthController {
   public router: Router = Router();
@@ -205,6 +206,12 @@ export class AuthController {
 
             if (!isPasswordValid) {
                 return res.status(401).json({ success: false, message: 'Invalid driver credentials.' });
+            }
+            if (driver.signUpStatus === DriverSignupStatus.REJECTED) {
+                return res.status(403).json({ success: false, message: `Driver application was ${driver.signUpStatus}. Please contact admin.` });
+            }
+            if (driver.signUpStatus === DriverSignupStatus.PENDING) {
+                return res.status(403).json({ success: false, message: `Driver application is still ${driver.signUpStatus}. Please wait for admin approval.` });
             }
             const driverData = {
                 driverId: driver.id,

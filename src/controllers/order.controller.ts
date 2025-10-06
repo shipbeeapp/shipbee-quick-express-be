@@ -278,10 +278,10 @@ export class OrderController {
         return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
       await this.orderService.startOrder(orderId, driverId);
-      const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      console.log(`Generated OTP for order ${orderId}: ${otp}`);
-      await this.orderService.sendOtpToReceiver(orderId, otp);
-      await this.orderService.updateCompletionOtp(orderId, otp);
+      // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      // console.log(`Generated OTP for order ${orderId}: ${otp}`);
+      // await this.orderService.sendOtpToReceiver(orderId, otp);
+      // await this.orderService.updateCompletionOtp(orderId, otp);
       res.status(200).json({ success: true, message: "Order started successfully." });
     } catch (error) {
       console.error("Error in order controller starting order:", error.message);
@@ -293,15 +293,15 @@ export class OrderController {
     try {
       const { orderId } = req.params;
       const driverId = req.driverId; // Get driverId from the authenticated request
-      const { otp } = req.body; // Get OTP from request body
-      if (!orderId || !driverId || !otp) {
-      return res.status(400).json({ success: false, message: "Order ID, Driver ID, and OTP are required." });
+      // const { otp } = req.body; // Get OTP from request body
+      if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
       if (!req.file) {
         return res.status(400).json({ success: false, message: "Proof of order file is required." });
       }
       const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      await this.orderService.completeOrder(orderId, driverId, otp, proofUrl);
+      await this.orderService.completeOrder(orderId, driverId, proofUrl);
       res.status(200).json({ success: true, message: "Order completed successfully." });
     } catch (error) {
       console.error("Error in order controller completing order:", error.message);

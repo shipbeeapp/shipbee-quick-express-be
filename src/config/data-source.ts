@@ -45,6 +45,7 @@ import {AddDriverAndCancellationToOrderStatusHistory1758021504299} from "../migr
 import { AddAccessTokenToOrder1758457694553 } from "../migrations/1758457694553-AddAccessTokenToOrder.js"; // Import the migration for adding access token to Order
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js"; // Import the OrderCancellationRequest model
 import { AddOrderCancellationRequest1759230306609 } from "../migrations/1759230306609-AddOrderCancellationRequest.js"; // Import the migration for adding OrderCancellationRequest
+import {AddDriverDocs1759746365678} from "../migrations/1759746365678-AddDriverDocs.js"; // Import the migration for adding driver document fields
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -102,6 +103,7 @@ export const AppDataSource = new DataSource({
     AddDriverAndCancellationToOrderStatusHistory1758021504299, // ✅ Add migration for adding driver and cancellation reason to OrderStatusHistory
     AddAccessTokenToOrder1758457694553, // ✅ Add migration for adding access token to Order
     AddOrderCancellationRequest1759230306609, // ✅ Add migration for adding OrderCancellationRequest
+    AddDriverDocs1759746365678,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
