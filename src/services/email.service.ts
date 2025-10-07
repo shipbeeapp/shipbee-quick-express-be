@@ -224,3 +224,28 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
     throw new Error(`Failed to send driver sign-up email to ${env.SMTP.USER}: ${error.message}`);
   } 
 }
+
+export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
+  try {
+    if (email) {
+      await resend.emails.send({
+        from: `Shipbee <${env.SMTP.USER}>`,
+        to: email,
+        subject: 'Your Driver has Arrived!',
+        html: `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) has arrived at your location with order #${orderNo}. </p>`,
+      });
+      console.log(`Arrival notification email to ${email}`);
+    } 
+    else {
+      await twilioClient.messages.create({
+        body: `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}), has arrived at your location with order ${orderNo}.`,
+        from: 'ShipBee',
+        to: `+974${phoneNumber}`,
+      });
+      console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
+    }
+  } catch (error) {
+    console.error('Error sending arrival notification SMS:', error);
+    throw new Error(`Failed to send arrival notification SMS to ${phoneNumber}: ${error.message}`);
+  }
+}

@@ -91,6 +91,18 @@ export class OrderController {
       "/stop-live-tracking",
       this.stopLiveTracking.bind(this)
     )
+
+    this.router.post(
+      "/orders/:orderId/notify-sender",
+      authenticationMiddleware,
+      this.notifySender.bind(this)
+    )
+
+    this.router.post(
+      "/orders/:orderId/notify-receiver",
+      authenticationMiddleware,
+      this.notifyReceiver.bind(this)
+    )
   }
 
   private async stopLiveTracking(req: Request, res: Response) {
@@ -354,6 +366,38 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Order cancellation processed successfully." });
     } catch (error) {
       console.error("Error in order controller processing order cancellation:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async notifySender(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+
+      await this.orderService.notifySender(orderId, driverId);
+      res.status(200).json({ success: true, message: "Sender notified successfully." });
+    } catch (error) {
+      console.error("Error in order controller notifying sender:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+
+      await this.orderService.notifyReceiver(orderId, driverId);
+      res.status(200).json({ success: true, message: "Receiver notified successfully." });
+    } catch (error) {
+      console.error("Error in order controller notifying sender:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

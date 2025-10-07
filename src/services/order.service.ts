@@ -10,9 +10,13 @@ import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import {sendOrderConfirmation, sendOrderCancellationEmail, sendOrderDetailsViaSms} from "../services/email.service.js";
+import {sendOrderConfirmation, 
+        sendOrderCancellationEmail, 
+        sendOrderDetailsViaSms,
+        sendArrivalNotification
+} from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import { Between, MoreThan } from "typeorm";
+import { Between, MoreThan, In } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
@@ -519,7 +523,15 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
   async getDriverOrders(driverId: string): Promise<myOrderResource[]> {
         try {
             const orders = await this.orderRepository.find({
-                where: { driver: { id: driverId }, status: OrderStatus.COMPLETED },
+                where: { 
+                  driver: { id: driverId }, 
+                  status: In([
+                    OrderStatus.COMPLETED,
+                    OrderStatus.CANCELED,
+                    OrderStatus.ASSIGNED,
+                    OrderStatus.ACTIVE,
+                  ]), 
+                },
                 relations: ["fromAddress", "toAddress", "sender", "receiver"],
                 order: { pickUpDate: "DESC" }
             });
@@ -616,6 +628,51 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
         }
         finally {
             await queryRunner.release();  
+      }
+    }
+    async notifySender(orderId: string, driverId: string) {
+      try {
+        const order = await this.orderRepository.findOne({
+          where: { id: orderId },
+          relations: ["driver", "sender"],
+        });
+        if (!order) {
+          throw new Error(`Order with ID ${orderId} not found`);
+        }
+        if (order.driver?.id !== driverId) {
+          throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+        }
+        if (!order.sender) {
+          throw new Error(`Sender for order ${orderId} does not exist`);
+        }
+        await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        console.log(`Arrival notification sent to sender for order ${orderId}`);
+      } catch (error) {
+        console.error("Error sending arrival notification to sender:", error.message);
+        throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+      }
+    }
+
+    async notifyReceiver(orderId: string, driverId: string) {
+      try {
+        const order = await this.orderRepository.findOne({
+          where: { id: orderId },
+          relations: ["driver", "receiver"],
+        });
+        if (!order) {
+          throw new Error(`Order with ID ${orderId} not found`);
+        }
+        if (order.driver?.id !== driverId) {
+          throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+        }
+        if (!order.receiver) {
+          throw new Error(`Receiver for order ${orderId} does not have a phone number`);
+        }
+        await sendArrivalNotification(order.receiver.phoneNumber, order.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        console.log(`Arrival notification sent to receiver for order ${orderId}`);
+      } catch (error) {
+        console.error("Error sending arrival notification to sender:", error.message);
+        throw new Error(`Could not send arrival notification to sender: ${error.message}`);
       }
     }
   }
