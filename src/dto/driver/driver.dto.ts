@@ -1,5 +1,6 @@
 import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
+import DriverSignupStatus from '../../utils/enums/signupStatus.enum.js';
 
 export class DriverDto {
     @IsString()
@@ -21,6 +22,10 @@ export class DriverDto {
     @IsString()
     @IsOptional()
     vehicleModel: string; // Vehicle model
+
+    @IsEnum(DriverSignupStatus)
+    @IsOptional()
+    signUpStatus: DriverSignupStatus; // Driver's signup status
 
     @IsString()
     qidFront: string; // URL or path to the front side of the QID

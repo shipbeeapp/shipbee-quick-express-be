@@ -174,6 +174,7 @@ export class AuthController {
             const plainPassword = driverDto.password; // Store the plain password for sending to the driver
             // Replace the plain password with the hashed one
             driverDto.password = hashedPassword;
+            driverDto.signUpStatus = DriverSignupStatus.APPROVED; // Set initial status to PENDING
             const {driver, vehicleType} = await this.driverService.findOrCreateDriver(driverDto);
             const driverData = {
                 email: driver.email,
