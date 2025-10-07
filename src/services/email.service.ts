@@ -124,7 +124,15 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       serviceSubcategory: (order.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL || order.serviceSubcategory?.name === ServiceSubcategoryName.INTERNATIONAL) ? 'Express' : (order.serviceSubcategory?.name || order.serviceSubcategory),
       quantity: '01', // Assuming quantity is always 1 for now
       itemType: order.itemType,
-      pickUpDate: new Date(order.pickUpDate).toLocaleString(),
+      pickUpDate: new Date(order.pickUpDate).toLocaleString("en-US", {
+                    timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                    day: "numeric",
+                    month: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+      }),
       lifters: order.lifters ?? null,
       totalCost: Number(totalCost).toFixed(2),
       itemDescription: orderDescription?.text || '',
