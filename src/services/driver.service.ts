@@ -231,7 +231,7 @@ export default class DriverService {
                 (sum, order) => sum + Number(order.totalCost || 0),
                 0
             );
-                        // 2. Query all completed orders for list
+            // 2. Query all completed orders for list
             const allOrders = await this.orderRepository.find({
                 where: {
                     driver: { id: driverId },

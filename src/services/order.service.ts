@@ -573,12 +573,12 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
             reason: reason
         });
 
-        await this.orderCancellationRequestRepository.save(cancellationRequest);
+        const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
         console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
         sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
             console.error('Error sending order cancellation email:', err);
         });
-        return;
+        return cancelRequest.id;
     }
 
     async processOrderCancellation(cancelRequestId: string, action: string) {

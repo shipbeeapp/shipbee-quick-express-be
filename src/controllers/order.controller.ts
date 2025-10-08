@@ -348,8 +348,8 @@ export class OrderController {
       if (!orderId) {
         return res.status(400).json({ success: false, message: "Order ID is required." });
       }
-      await this.orderService.requestOrderCancellation(driverId, orderId, reason);
-      res.status(200).json({ success: true, message: "Order cancellation requested successfully." });
+      const cancellationRequestId = await this.orderService.requestOrderCancellation(driverId, orderId, reason);
+      res.status(200).json({ success: true, message: "Order cancellation requested successfully.", cancellationRequestId });
     } catch (error) {
       console.error("Error in order controller requesting order cancellation:", error.message);
       res.status(400).json({ success: false, message: error.message });
