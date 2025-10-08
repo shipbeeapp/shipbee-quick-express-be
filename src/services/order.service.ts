@@ -542,7 +542,7 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
         }
     }
 
-    async requestOrderCancellation(driverId: string, orderId: string) {
+    async requestOrderCancellation(driverId: string, orderId: string, reason: string) {
         const order = await this.orderRepository.findOne({
             where: { id: orderId },
             relations: ["driver"],
@@ -569,7 +569,8 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
         const cancellationRequest = this.orderCancellationRequestRepository.create({
             order: { id: orderId } as any,
             driver: { id: driverId } as any,
-            status: CancelRequestStatus.PENDING
+            status: CancelRequestStatus.PENDING,
+            reason: reason
         });
 
         await this.orderCancellationRequestRepository.save(cancellationRequest);

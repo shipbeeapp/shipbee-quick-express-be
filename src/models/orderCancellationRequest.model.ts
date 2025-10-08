@@ -22,4 +22,7 @@ export class OrderCancellationRequest extends BaseEntity {
     default: CancelRequestStatus.PENDING,
   })
   status: CancelRequestStatus;
+
+  @Column({ type: "text", nullable: true })
+  reason: string
 }

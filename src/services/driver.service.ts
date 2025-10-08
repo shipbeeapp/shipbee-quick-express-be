@@ -237,7 +237,7 @@ export default class DriverService {
                     driver: { id: driverId },
                     status: OrderStatus.COMPLETED
                 },
-                select: ["id", "pickUpDate", "totalCost", "completedAt"],
+                select: ["id", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
                 order: { completedAt: "DESC" }
             });
             const orders = allOrders.map(order => ({
@@ -254,7 +254,8 @@ export default class DriverService {
                     hour12: true,
                     timeZone: "Asia/Qatar"
                 }),
-                driverShare: Number(order.totalCost) || 0
+                driverShare: Number(order.totalCost) || 0,
+                paymentMethod: order.paymentMethod
             }));
 
             return {

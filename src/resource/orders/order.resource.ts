@@ -162,6 +162,7 @@ export class OrderResponseDto {
       cancellationRequests: order.cancellationRequests?.map(request => ({
         id: request.id,
         status: request.status,
+        reason: request.reason,
         updatedAt: request.updatedAt,
         driver: {
           name: request.driver?.name,
