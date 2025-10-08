@@ -27,7 +27,7 @@ export function scheduleOrderEmission(order: Order): void {
   }
 
   if (emitTime <= now) {
-    console.log(`⏱ Pickup time is soon (within 15 minutes) — emitting order ${order.id} immediately`);
+    console.log(`⏱ Pickup time is soon (within window) — emitting order ${order.id} immediately`);
     emitOrderToDrivers(order);
     return;
   }

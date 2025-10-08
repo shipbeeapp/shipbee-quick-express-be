@@ -62,10 +62,16 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
 
       console.log(`⏰ Current time is ${now.toISOString()}`);
-      const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000);
-      console.log(`⏰ Upcoming orders will be checked until ${fifteenMinutesLater.toISOString()}`);
+      let window: Date;
+      if (vehicleType == VehicleType.SEDAN_CAR || vehicleType == VehicleType.MOTORCYCLE) {
+        window = new Date(now.getTime() + env.EMIT_TIME_SEDAN_CAR_MINUTES * 60 * 1000);
+        console.log(`⏰ Upcoming orders will be checked until ${window.toISOString()}`);
+      } else {
+        window = new Date(now.getTime() + env.EMIT_TIME_OTHER_MINUTES * 60 * 1000);
+        console.log(`⏰ Upcoming orders will be checked until ${window.toISOString()}`);
+      }
 
-      const upcomingOrders = await orderService.getPendingOrdersInWindow(vehicleType, now, fifteenMinutesLater);
+      const upcomingOrders = await orderService.getPendingOrdersInWindow(vehicleType, now, window);
       const maxRadiusKm = RADIUS_BY_VEHICLE_TYPE[vehicleType] ?? env.RADIUS_KM_OTHER; // default 15 km
       for (const order of upcomingOrders) {
         const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
