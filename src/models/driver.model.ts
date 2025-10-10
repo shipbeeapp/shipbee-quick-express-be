@@ -10,8 +10,15 @@ export class Driver extends BaseEntity {
     @Column({ type: "text", nullable: true })
     name: string;
 
+    @Column({type: "text", nullable: true})
+    surname: string;
+
     @Column({ unique: true, type: "text", nullable: true })
     phoneNumber: string;
+
+    //date of birth
+    @Column({type: "date", nullable: false})
+    dateOfBirth: Date;
 
     //password
     @Column({ type: "text", nullable: true })
@@ -26,10 +33,13 @@ export class Driver extends BaseEntity {
     @Column({ type: "enum", enum: DriverSignupStatus, default: DriverSignupStatus.PENDING })
     signUpStatus: DriverSignupStatus;
 
-    @Column({ type: "text", nullable: true })
+    @Column({ type: "text", nullable: false })
     profilePicture: string; // URL to the driver's profile picture
 
     // Document uploads (store file paths or URLs after uploading to S3/local)
+    @Column({type: "text", nullable: false})
+    qid: string; // Qatar ID number
+    
     @Column({type: "text", nullable: false})
     qidFront: string;
     
@@ -37,16 +47,13 @@ export class Driver extends BaseEntity {
     qidBack: string;
     
     @Column({type: "text", nullable: false})
-    driverRegistrationFront: string;
+    licenseFront: string;
     
     @Column({type: "text", nullable: false})
-    driverRegistrationBack: string;
-    
-    @Column({type: "text", nullable: false})
-    vehicleRegistrationFront: string;
-    
-    @Column({type: "text", nullable: false})
-    vehicleRegistrationBack: string;
+    licenseBack: string;
+
+    @Column({type: "date", nullable: false})
+    licenseExpirationDate: Date;
 
     @OneToOne(() => Vehicle, (vehicle: any) => vehicle.driver)
     @JoinColumn({name: "vehicleId"}) // This will create a foreign key in the drivers table

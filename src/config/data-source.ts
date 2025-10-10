@@ -47,6 +47,7 @@ import { OrderCancellationRequest } from "../models/orderCancellationRequest.mod
 import { AddOrderCancellationRequest1759230306609 } from "../migrations/1759230306609-AddOrderCancellationRequest.js"; // Import the migration for adding OrderCancellationRequest
 import {AddDriverDocs1759746365678} from "../migrations/1759746365678-AddDriverDocs.js"; // Import the migration for adding driver document fields
 import {AddReasonInOrderCancellationRequest1759958006098} from "../migrations/1759958006098-AddReasonInOrderCancellationRequest.js"; // Import the migration for adding reason in OrderCancellationRequest
+import { AddExtraFieldsInDriverAndVehicle1760101767713 } from "../migrations/1760101767713-AddExtraFieldsInDriverAndVehicle.js"; // Import the migration for adding extra fields in Driver and Vehicle
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -106,6 +107,7 @@ export const AppDataSource = new DataSource({
     AddOrderCancellationRequest1759230306609, // ✅ Add migration for adding OrderCancellationRequest
     AddDriverDocs1759746365678,
     AddReasonInOrderCancellationRequest1759958006098,
+    AddExtraFieldsInDriverAndVehicle1760101767713,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

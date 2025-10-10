@@ -34,14 +34,42 @@ export class DriverDto {
     qidBack: string; // URL or path to the back side of the QID
 
     @IsString()
-    driverRegistrationFront: string; // URL or path to the front side of the driver's registration
+    licenseFront: string; // URL or path to the front side of the driver's license
 
     @IsString()
-    driverRegistrationBack: string; // URL or path to the back side of the driver's registration
+    licenseBack: string; // URL or path to the back side of the driver's license
 
     @IsString()
-    vehicleRegistrationFront: string; // URL or path to the front side of the vehicle's registration
+    registrationFront: string; // URL or path to the front side of the vehicle's registration
 
     @IsString()
-    vehicleRegistrationBack: string; // URL or path to the back side of the vehicle's registration
+    registrationBack: string; // URL or path to the back side of the vehicle's registration
+
+    @IsString()
+    profilePicture: string; // URL or path to the driver's profile picture
+
+    @IsString()
+    @IsOptional()
+    surname: string;
+
+    @IsString()
+    dateOfBirth: string; // ISO date string
+
+    @IsString()
+    qid: string; // Qatar ID number
+
+    @IsString()
+    licenseExpirationDate: string; // ISO date string
+
+    @IsString()
+    leftPhoto: string; // URL or path to the left side photo of the vehicle
+
+    @IsString()
+    rightPhoto: string; // URL or path to the right side photo of the vehicle
+
+    @IsString()
+    frontPhoto: string; // URL or path to the front side photo of the vehicle
+
+    @IsString()
+    backPhoto: string; // URL or path to the back side photo of the vehicle
 }

@@ -23,6 +23,7 @@ export default class DriverService {
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
+            console.log("Starting findOrCreateDriver with data:", data);
             const manager = queryRunner ? queryRunner.manager.getRepository(Driver) : this.driverRepository;
             const vehicleManager = queryRunner ? queryRunner.manager.getRepository(Vehicle) : this.vehicleRepository;
             let driver;
@@ -47,13 +48,29 @@ export default class DriverService {
                         type: data.vehicleType,
                         number: data.vehicleNumber,
                         model: data.vehicleModel, // Assuming vehicleModel is part of the data
-                        // add other vehicle fields if needed
+                        registrationFront: data.registrationFront,
+                        registrationBack: data.registrationBack,
+                        frontPhoto: data.frontPhoto, // Placeholder if not provided
+                        backPhoto: data.backPhoto, // Placeholder if not provided
+                        leftPhoto: data.leftPhoto, // Placeholder if not provided
+                        rightPhoto: data.rightPhoto // Placeholder if not provided
                     });
                     vehicle = await vehicleManager.save(vehicle);
                 }
                 // Create new driver and assign vehicle
                 const newDriver = manager.create({
-                    ...data,
+                    name: data.name,
+                    surname: data.surname,
+                    phoneNumber: data.phoneNumber,
+                    password: data.password, // In real app, hash the password before saving
+                    dateOfBirth: data.dateOfBirth,
+                    profilePicture: data.profilePicture, // Placeholder if not provided
+                    qid: data.qid,
+                    qidFront: data.qidFront,
+                    qidBack: data.qidBack,
+                    licenseFront: data.licenseFront,
+                    licenseBack: data.licenseBack,
+                    licenseExpirationDate: data.licenseExpirationDate,
                     vehicle: vehicle
                 });
                 driver = await manager.save(newDriver);
