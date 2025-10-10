@@ -11,8 +11,11 @@ import { calculateActiveHoursToday } from "../socket/socket.js";
 import { emitOrderToDrivers } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
-import { sendOrderConfirmation } from "../services/email.service.js";
+import { sendOrderConfirmation, sendOtp } from "../services/email.service.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
+import { env } from "../config/environment.js";
+
+const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
 @Service()
 export default class DriverService {
@@ -510,6 +513,33 @@ export default class DriverService {
             await this.driverRepository.save(driver);
         } catch (error) {
             console.error("Error updating driver sign-up status:", error);
+            throw error;
+        }
+    }
+
+    async sendOtp(phoneNumber: string): Promise<void> {
+        try {
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            otpCache.set(phoneNumber, otp);
+            const phoneExtension = env.PHONE_EXTENSION; // Qatar country code
+            await sendOtp(phoneNumber, otp, phoneExtension);
+            console.log(`OTP ${otp} sent to new driver with phone number ${phoneNumber}`);
+        } catch (error) {
+            console.error("Error sending OTP:", error);
+            throw error;
+        }
+    }
+
+    async verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
+        try {
+            const cachedOtp = otpCache.get(phoneNumber);
+            if (cachedOtp && cachedOtp === otp) {
+                otpCache.delete(phoneNumber); // Invalidate OTP after successful verification
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error("Error verifying OTP:", error);
             throw error;
         }
     }

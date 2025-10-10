@@ -46,4 +46,5 @@ export const env = {
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
   SEND_SMS: process.env.SEND_SMS === 'true' || false,
   ADMIN_URL: process.env.ADMIN_URL || 'https://shipbee-admin-fe.vercel.app/dashboard',
+  PHONE_EXTENSION: process.env.PHONE_EXTENSION || '+974', // Default to Qatar country code
 };

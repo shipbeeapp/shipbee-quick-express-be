@@ -43,7 +43,7 @@ export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension:
     try {
       await twilioClient.messages.create({
         body: `Your Shipbee OTP code is ${otp}`,
-        from: 'ShipBee',
+        from: env.PHONE_EXTENSION === '+974' ? 'ShipBee' : env.TWILIO_PHONE_NUMBER, // Use sender ID for Qatar, else use Twilio number
         to: `${phoneExtension}${emailOrPhone}`,
       });
       console.log(`OTP sent to phone number: ${emailOrPhone}`);

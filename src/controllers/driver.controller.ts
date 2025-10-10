@@ -61,6 +61,8 @@ export class DriverController {
             this.signupDriver.bind(this));
         this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
+        this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
+        this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -227,6 +229,41 @@ export class DriverController {
 
         } catch (error) {
             console.error("Error fetching driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private sendOtp = async (req: Request, res: Response) => {
+        try {
+            const { phoneNumber } = req.body;
+            if (!phoneNumber) {
+                return res.status(400).json({ success: false, message: "Phone number is required." });
+            }
+            const driver = await this.driverService.findDriverByPhone(phoneNumber);
+            if (driver) {
+                return res.status(400).json({ success: false, message: "Driver with this phone number already exists. Please sign in with your password and phone", driverExists: true });
+            }
+            await this.driverService.sendOtp(phoneNumber);
+            res.status(200).json({ success: true, message: "OTP sent successfully.", driverExists: false });
+        } catch (error) {
+            console.error("Error sending OTP:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private verifyOtp = async (req: Request, res: Response) => {
+        try {
+            const { phoneNumber, otp } = req.body;
+            if (!phoneNumber || !otp) {
+                return res.status(400).json({ success: false, message: "Phone number and OTP are required." });
+            }
+            const isValid = await this.driverService.verifyOtp(phoneNumber, otp);
+            if (!isValid) {
+                return res.status(400).json({ success: false, message: "Invalid OTP." });
+            }
+            res.status(200).json({ success: true, message: "OTP verified successfully." });
+        } catch (error) {
+            console.error("Error verifying OTP:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }
