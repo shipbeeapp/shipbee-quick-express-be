@@ -566,6 +566,33 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
             throw new Error(`Cancellation request already exists for order ${orderId}`);
         }
 
+        // Case 1️⃣: ASSIGNED — auto reassign, but store cancellation history
+        if (order.status === OrderStatus.ASSIGNED) {
+          console.log(`Order ${orderId} is ASSIGNED — driver ${driverId} canceled. Creating auto-approved record.`);
+        
+          // 1. Create auto-approved cancellation request
+          const cancellationRequest = this.orderCancellationRequestRepository.create({
+            order: { id: orderId } as any,
+            driver: { id: driverId } as any,
+            status: CancelRequestStatus.APPROVED, // auto approved
+            reason,
+          });
+          await this.orderCancellationRequestRepository.save(cancellationRequest);
+        
+          // 2. Unassign order and reset to pending
+          order.status = OrderStatus.PENDING;
+          order.driver = null;
+          await this.orderRepository.save(order);
+        
+          // 3. Broadcast updates
+          await this.orderStatusHistoryService.createOrderStatusHistory(order, reason);
+          resetNotifiedDrivers(order.id);
+          await emitOrderToDrivers(order);
+          broadcastOrderUpdate(order.id, order.status);
+        
+          return cancellationRequest.id;
+        }
+
         const cancellationRequest = this.orderCancellationRequestRepository.create({
             order: { id: orderId } as any,
             driver: { id: driverId } as any,
