@@ -220,8 +220,8 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
   try {
     await resend.emails.send({
       from: `Shipbee <${env.SMTP.USER}>`,
-      to: "basselhalabi17@aucegypt.edu",
-      // to: env.SMTP.USER, // Admin email from environment variables
+      // to: "basselhalabi17@aucegypt.edu",
+      to: env.SMTP.USER, // Admin email from environment variables
       subject: 'New Driver Sign-Up Request',
       html: `<p style="font-size: 24px;">Driver ${driverName} with phone number ${driverPhoneNumber} has signed up as a driver.
       You can review and approve or reject the request from the dashboard <a href="${env.ADMIN_URL}">here</a>.</p>`,
