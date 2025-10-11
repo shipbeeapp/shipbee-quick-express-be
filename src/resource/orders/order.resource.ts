@@ -84,6 +84,12 @@ export class OrderResponseDto {
       phoneNumber: string;
     }
   }[];
+
+    driver?: {
+      id: string;
+      name: string;
+      phoneNumber: string;
+    } | null;
 }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
@@ -169,6 +175,12 @@ export class OrderResponseDto {
           phoneNumber: request.driver?.phoneNumber,
         }
       })) || [],
+
+      driver: order.driver ? {
+        id: order.driver.id,
+        name: order.driver.name,
+        phoneNumber: order.driver.phoneNumber,
+      } : null,
     };
   }
   

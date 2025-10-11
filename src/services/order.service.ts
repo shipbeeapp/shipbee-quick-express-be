@@ -202,7 +202,9 @@ export default class OrderService {
       where: {
         sender: { id: userId },
       },
-      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
+      "cancellationRequests", "cancellationRequests.driver", "driver"
+      ],
       order: {
         createdAt: "DESC",
       },
