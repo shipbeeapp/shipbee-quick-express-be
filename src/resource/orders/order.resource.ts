@@ -89,6 +89,11 @@ export class OrderResponseDto {
       id: string;
       name: string;
       phoneNumber: string;
+      vehicle?: {
+        type: VehicleType;
+        model: string;
+        number: string;
+      }
     } | null;
 }
 
@@ -180,6 +185,11 @@ export class OrderResponseDto {
         id: order.driver.id,
         name: order.driver.name,
         phoneNumber: order.driver.phoneNumber,
+        vehicle: order.driver.vehicle ? {
+          type: order.driver.vehicle.type,
+          model: order.driver.vehicle.model,
+          number: order.driver.vehicle.number,
+        }: null
       } : null,
     };
   }

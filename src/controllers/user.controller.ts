@@ -6,8 +6,9 @@ import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
 let clients: Response[] = [];
 
  // Call this whenever you want to broadcast updates
-export function broadcastOrderUpdate(orderId, orderStatus: OrderStatus) {
+export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, eventName: string = "order-status-update") {
   clients.forEach(client => {
+    client.write(`event: ${eventName}\n`);
     client.write(`data: ${JSON.stringify({ orderId, orderStatus })}\n\n`);
   });
 }

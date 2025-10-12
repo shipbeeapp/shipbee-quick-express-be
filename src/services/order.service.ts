@@ -203,7 +203,7 @@ export default class OrderService {
         sender: { id: userId },
       },
       relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
-      "cancellationRequests", "cancellationRequests.driver", "driver"
+      "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle"
       ],
       order: {
         createdAt: "DESC",
@@ -225,7 +225,7 @@ export default class OrderService {
     }
     console.log("Fetching all orders for admin");
     const orders = await this.orderRepository.find({
-      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "driver", "shipment", "cancellationRequests", "cancellationRequests.driver"],
+      relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "driver", "driver.vehicle", "shipment", "cancellationRequests", "cancellationRequests.driver"],
       order: {
         createdAt: "DESC",
       },
@@ -604,6 +604,7 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
 
         const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
         console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
+        broadcastOrderUpdate(order.id, order.status, "order-cancel-request"); // Notify all connected clients about the order status update
         sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
             console.error('Error sending order cancellation email:', err);
         });
