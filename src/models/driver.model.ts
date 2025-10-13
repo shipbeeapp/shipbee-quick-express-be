@@ -17,7 +17,7 @@ export class Driver extends BaseEntity {
     phoneNumber: string;
 
     //date of birth
-    @Column({type: "date", nullable: false})
+    @Column({type: "date", nullable: true})
     dateOfBirth: Date;
 
     //password

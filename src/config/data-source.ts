@@ -49,6 +49,7 @@ import {AddDriverDocs1759746365678} from "../migrations/1759746365678-AddDriverD
 import {AddReasonInOrderCancellationRequest1759958006098} from "../migrations/1759958006098-AddReasonInOrderCancellationRequest.js"; // Import the migration for adding reason in OrderCancellationRequest
 import { AddExtraFieldsInDriverAndVehicle1760101767713 } from "../migrations/1760101767713-AddExtraFieldsInDriverAndVehicle.js"; // Import the migration for adding extra fields in Driver and Vehicle
 import { MakeDriverColumnsNullable1760367494628 } from "../migrations/1760367494628-MakeDriverColumnsNullable.js";
+import { MakeDriverDOBnullable1760367798785 } from "../migrations/1760367798785-MakeDriverDOBnullable.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -110,6 +111,7 @@ export const AppDataSource = new DataSource({
     AddReasonInOrderCancellationRequest1759958006098,
     AddExtraFieldsInDriverAndVehicle1760101767713,
     MakeDriverColumnsNullable1760367494628,
+    MakeDriverDOBnullable1760367798785,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
