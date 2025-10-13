@@ -51,6 +51,7 @@ import { AddExtraFieldsInDriverAndVehicle1760101767713 } from "../migrations/176
 import { MakeDriverColumnsNullable1760367494628 } from "../migrations/1760367494628-MakeDriverColumnsNullable.js";
 import { MakeDriverDOBnullable1760367798785 } from "../migrations/1760367798785-MakeDriverDOBnullable.js";
 import {AddMoreFieldsInVehicle1760388514301} from "../migrations/1760388514301-AddMoreFieldsInVehicle.js";
+import {MakeVehicleNumberNotNull1760391271327}  from "../migrations/1760391271327-MakeVehicleNumberNotNull.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -114,6 +115,7 @@ export const AppDataSource = new DataSource({
     MakeDriverColumnsNullable1760367494628,
     MakeDriverDOBnullable1760367798785,
     AddMoreFieldsInVehicle1760388514301,
+    MakeVehicleNumberNotNull1760391271327,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

@@ -12,7 +12,7 @@ export class Vehicle extends BaseEntity {
     @Column("enum", {enum: VehicleType, nullable: false})
     type: VehicleType; // e.g., "car", "bike", etc.
 
-    @Column({ type: "text", nullable: true })
+    @Column({ type: "text", nullable: false })
     number: string; // Vehicle number or license plate
 
     @Column({ type: "text", nullable: true })
