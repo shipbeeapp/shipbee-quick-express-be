@@ -6,7 +6,6 @@ export enum VehicleType {
     CHILLER_TRUCK = "Chiller Truck",
     CANTER_TRUCK = "Canter Truck",
     VAN = "Van",
-    PANEL_VAN = "Panel Van",
     CHILLER_VAN = "Chiller Van",
     FREEZER_VAN = "Freezer Van",
     FLAT_BED_TRUCK = "Flat Bed Truck",
