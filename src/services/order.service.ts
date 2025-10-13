@@ -604,7 +604,7 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
 
         const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
         console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
-        broadcastOrderUpdate(order.id, order.status, "order-cancel-request"); // Notify all connected clients about the order status update
+        broadcastOrderUpdate(order.id, order.status, "order-cancel-request", cancelRequest.id); // Notify all connected clients about the order status update
         sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
             console.error('Error sending order cancellation email:', err);
         });
