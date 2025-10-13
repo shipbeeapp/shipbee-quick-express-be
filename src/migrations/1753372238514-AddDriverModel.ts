@@ -88,7 +88,6 @@ export class AddDriverModel1753372238514 implements MigrationInterface {
                 VehicleType.PICKUP_TRUCK_TWO_TONS,
                 VehicleType.PICKUP_TRUCK_THREE_TONS,
                 VehicleType.CANTER_TRUCK,
-                VehicleType.PANEL_VAN,
                 VehicleType.FLAT_BED_TRUCK,
                 VehicleType.LOW_BED_TRUCK,
                 VehicleType.GARBAGE_REMOVAL_TRUCK,
