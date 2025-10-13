@@ -33,26 +33,26 @@ export class Driver extends BaseEntity {
     @Column({ type: "enum", enum: DriverSignupStatus, default: DriverSignupStatus.PENDING })
     signUpStatus: DriverSignupStatus;
 
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     profilePicture: string; // URL to the driver's profile picture
 
     // Document uploads (store file paths or URLs after uploading to S3/local)
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     qid: string; // Qatar ID number
     
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     qidFront: string;
     
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     qidBack: string;
     
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     licenseFront: string;
     
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     licenseBack: string;
 
-    @Column({type: "date", nullable: false})
+    @Column({type: "date", nullable: true})
     licenseExpirationDate: Date;
 
     @OneToOne(() => Vehicle, (vehicle: any) => vehicle.driver)

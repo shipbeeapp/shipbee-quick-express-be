@@ -16,22 +16,22 @@ export class Vehicle extends BaseEntity {
     @Column({ type: "text", nullable: true })
     model: string; // Vehicle model
 
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     registrationFront: string;
     
-    @Column({type: "text", nullable: false})
+    @Column({type: "text", nullable: true})
     registrationBack: string;
 
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     frontPhoto: string; // URL to the vehicle's front photo
 
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     backPhoto: string; // URL to the vehicle's back photo
 
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     leftPhoto: string; // URL to the vehicle's left side photo
 
-    @Column({ type: "text", nullable: false })
+    @Column({ type: "text", nullable: true })
     rightPhoto: string; // URL to the vehicle's right side photo
     
     @OneToOne(() => Driver, (driver: any) => driver.vehicle)
