@@ -13,7 +13,9 @@ export async function validateObject<T extends object>(
   const errors: ValidationError[] = await validate(dtoInstance, { skipMissingProperties, whitelist: true });
 
   if (errors.length > 0) {
+    console.log("Validation failed. Errors: ", errors);
     const e = errors.map(error => Object.values(error.constraints || {})).flat();
+    console.log("Validation errors:", e);
     throw new HttpException(400, e.join(', '));
   }
 

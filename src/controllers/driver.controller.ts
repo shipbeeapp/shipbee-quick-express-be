@@ -12,6 +12,7 @@ import cloudinary from "../utils/cloudinary.js";
 import multer from "multer";
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import { sendDriverSignUpMail } from '../services/email.service.js';
+import validationMiddleware from '../middlewares/validation.middleware.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -58,6 +59,7 @@ export class DriverController {
               { name: "vehicleFront", maxCount: 1 },
               { name: "vehicleBack", maxCount: 1 },
             ]),
+            validationMiddleware(DriverDto),
             this.signupDriver.bind(this));
         this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser

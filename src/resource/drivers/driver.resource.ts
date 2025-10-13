@@ -23,6 +23,8 @@ export class DriverResource {
                 type: driver.vehicle_type,
                 model: driver.vehicle_model,
                 number: driver.vehicle_number,
+                color: driver.vehicle_color,
+                productionYear: driver.vehicle_productionYear,
                 frontPhoto: generatePhotoLink(driver.vehicle_frontPhoto),
                 backPhoto: generatePhotoLink(driver.vehicle_backPhoto),
                 leftPhoto: generatePhotoLink(driver.vehicle_leftPhoto),

@@ -221,6 +221,8 @@ export class AuthController {
                 vehicleType: driver.vehicle?.type,
                 vehicleModel: driver.vehicle?.model,
                 vehicleNumber: driver.vehicle?.number,
+                vehicleColor: driver.vehicle?.color,
+                vehicleProductionYear: driver.vehicle?.productionYear,
                 qid: driver.qid,
                 surname: driver.surname,
                 dateOfBirth: driver.dateOfBirth,

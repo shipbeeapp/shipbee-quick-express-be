@@ -51,6 +51,8 @@ export default class DriverService {
                         type: data.vehicleType,
                         number: data.vehicleNumber,
                         model: data.vehicleModel, // Assuming vehicleModel is part of the data
+                        color: data.color,
+                        productionYear: data.productionYear,
                         registrationFront: data.registrationFront,
                         registrationBack: data.registrationBack,
                         frontPhoto: data.frontPhoto, // Placeholder if not provided
@@ -199,6 +201,8 @@ export default class DriverService {
                 "vehicle.type",
                 "vehicle.model",
                 "vehicle.number",
+                "vehicle.color",
+                "vehicle.productionYear",
                 "vehicle.frontPhoto",
                 "vehicle.backPhoto",
                 "vehicle.leftPhoto",
