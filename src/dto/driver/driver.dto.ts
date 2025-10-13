@@ -17,7 +17,7 @@ export class DriverDto {
     @IsEnum(VehicleType)
     vehicleType: VehicleType; // Type of vehicle the driver operates
 
-    @IsString()
+    @IsString({message: "Plate number must not be empty"})
     @Matches(/^\d+$/, {
       message: "Plate number must contain only digits",
     })
@@ -34,7 +34,7 @@ export class DriverDto {
     @IsOptional()
     color: string; // Vehicle color
 
-    @IsInt()
+    @IsInt({ message: "Production year must be an integer" })
     @IsOptional()
     @Min(1900, { message: "Production year cannot be before 1900" })
     @Max(new Date().getFullYear() + 1, {
