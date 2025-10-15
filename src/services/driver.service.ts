@@ -70,6 +70,7 @@ export default class DriverService {
                     password: data.password, // In real app, hash the password before saving
                     dateOfBirth: data.dateOfBirth,
                     profilePicture: data.profilePicture, // Placeholder if not provided
+                    signUpStatus: data.signUpStatus || DriverSignupStatus.PENDING,
                     qid: data.qid,
                     qidFront: data.qidFront,
                     qidBack: data.qidBack,

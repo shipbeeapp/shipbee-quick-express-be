@@ -13,6 +13,7 @@ import multer from "multer";
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import { sendDriverSignUpMail } from '../services/email.service.js';
 import validationMiddleware from '../middlewares/validation.middleware.js';
+import bcrypt from 'bcrypt';
 
 export class DriverController {
     public router: Router = Router();
@@ -191,7 +192,10 @@ export class DriverController {
                 driverData.backPhoto = files['vehicleBack'] ? files['vehicleBack'][0].path.split("/upload/")[1] : undefined;
                 console.log("Processed driver data with file paths:", driverData);
             }
-            const driver = await this.driverService.findOrCreateDriver(driverData);
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(driverData.password, saltRounds);
+            driverData.password = hashedPassword;
+            await this.driverService.findOrCreateDriver(driverData);
             await sendDriverSignUpMail(driverData.name, driverData.phoneNumber);
             res.status(201).json({ success: true, message: 'Driver signed up successfully' });
         }
