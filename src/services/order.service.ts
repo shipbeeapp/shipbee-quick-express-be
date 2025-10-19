@@ -36,7 +36,7 @@ import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
-import { broadcastOrderUpdate } from "../controllers/user.controller.js";
+import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
 
 
 @Service()
@@ -397,6 +397,7 @@ export default class OrderService {
     });
     console.log('sent mail to admin');
     broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+    broadcastDriverStatusUpdate(driverId, DriverStatus.ON_DUTY); // Notify all connected clients about the driver status update
   } catch (err) {
     await queryRunner.rollbackTransaction();
     throw err;

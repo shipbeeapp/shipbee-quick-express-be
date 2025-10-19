@@ -12,6 +12,7 @@ import { env } from "../config/environment.js"; // Assuming you have an environm
 import { AppDataSource } from "../config/data-source.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { Driver } from "../models/driver.model.js"; // Assuming you have a Driver model
+import { broadcastDriverStatusUpdate } from "../controllers/user.controller.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -60,6 +61,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         { status: DriverStatus.ACTIVE, updatedAt: new Date()}
       );
       console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
+      broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
 
       console.log(`⏰ Current time is ${now.toISOString()}`);
       let window: Date;
@@ -142,6 +144,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       console.log(`Driver ${driverId} went offline`);
       await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
       console.log("Current online drivers:", Array.from(onlineDrivers.keys()));
+      broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
     });
 
     socket.on("disconnect", async () => {
@@ -149,6 +152,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
           if (info.socketId === socket.id) {
             onlineDrivers.delete(driverId);
             await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
+            broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
             const now = new Date();
             const sessions = driverSessions.get(driverId);
             if (sessions && sessions.length > 0) {

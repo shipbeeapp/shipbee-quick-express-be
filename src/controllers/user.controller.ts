@@ -3,13 +3,22 @@ import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
+import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
 let clients: Response[] = [];
+let driverStatusClients: Response[] = [];
+
 
  // Call this whenever you want to broadcast updates
 export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, eventName: string = "order-status-update", cancellationRequestId: string = null) {
   clients.forEach(client => {
     client.write(`event: ${eventName}\n`);
     client.write(`data: ${JSON.stringify({ orderId, orderStatus, cancellationRequestId })}\n\n`);
+  });
+}
+
+export function broadcastDriverStatusUpdate(driverId: string, driverStatus: DriverStatus) {
+  driverStatusClients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ driverId, driverStatus })}\n\n`);
   });
 }
 export class UserController {
@@ -26,6 +35,7 @@ export class UserController {
         //update user endpoint using id
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
+        this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
     }
 
     private updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -62,6 +72,20 @@ export class UserController {
         // 3️⃣ Remove client on disconnect
         req.on("close", () => {
           clients = clients.filter(client => client !== res);
+        });
+    }
+
+    private driverStatusUpdate = async (req: Request, res: Response) => {
+        // 1️⃣ Set SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+        // 2️⃣ Add client to clients array
+        driverStatusClients.push(res);
+        // 3️⃣ Remove client on disconnect
+        req.on("close", () => {
+          driverStatusClients = driverStatusClients.filter(client => client !== res);
         });
     }
 }

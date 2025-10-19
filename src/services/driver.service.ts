@@ -216,7 +216,6 @@ export default class DriverService {
             .addGroupBy("vehicle.id")
             .getRawMany();
         
-        console.log("Raw driver data:", result);
         return result;
         } catch (error) {
             console.error("Error fetching all drivers:", error);
