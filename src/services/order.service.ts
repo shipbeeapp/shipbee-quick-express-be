@@ -156,7 +156,7 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
-     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, "ship@shipbee.io", 'admin').catch((err) => {
+     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
        console.error("Error sending emaill to admin:", err);
       });
      console.log('sent mail to admin: ', env.SMTP.USER);
@@ -392,7 +392,7 @@ export default class OrderService {
         "toAddress"
       ]
     });
-    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
       console.error("Error sending email to admin:", err);
     });
     console.log('sent mail to admin');
@@ -438,7 +438,7 @@ export default class OrderService {
 
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
       // Reload order with relations
-      sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
         console.error("Error sending email to admin:", err);
       });
       console.log('sent mail to admin');
@@ -480,7 +480,7 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
     await this.orderRepository.save(order);
     await this.orderStatusHistoryService.createOrderStatusHistory(order);
     console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
-    sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+    sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
         console.error("Error sending email to admin:", err);
       });
     console.log('sent mail to admin');

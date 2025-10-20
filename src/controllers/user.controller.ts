@@ -4,6 +4,7 @@ import {Container} from 'typedi';
 import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
 import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
+import { env } from '../config/environment.js';
 let clients: Response[] = [];
 let driverStatusClients: Response[] = [];
 
@@ -33,6 +34,7 @@ export class UserController {
     private initializeRoutes() {
         // Define your routes here
         //update user endpoint using id
+        this.router.get(`/admin${this.path}`, authenticationMiddleware, this.getUsers.bind(this));
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
@@ -56,6 +58,21 @@ export class UserController {
         } catch (error) {
             console.error("Error updating user:", error.message);
             res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getUsers = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        try {
+            const email = req.email;
+            if (email !== env.ADMIN.EMAIL) {
+              return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const users =  await this.userService.getUsers();
+            res.status(200).json({ success: true, data: users });
+        }
+        catch (error) {
+            console.error("Error fetching users:", error.message);
+            res.status(500).json({success: false, message: error.message})
         }
     }
 

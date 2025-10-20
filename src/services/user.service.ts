@@ -1,6 +1,7 @@
 import { Service, Container } from "typedi";
 import { User } from "../models/user.model.js";
 import { AppDataSource } from "../config/data-source.js";
+import { toUserResponseDto, UserResponseDto } from "../resource/users/user.resource.js";
 
 @Service()
 export default class UserService {
@@ -71,6 +72,16 @@ export default class UserService {
       return await this.userRepository.findOneBy({ id: userId });
     } catch (error) {
       console.error("Error fetching user by ID:", error);
+      throw error;
+    }
+  }
+
+  async getUsers(): Promise<UserResponseDto[]> {
+    try {
+      const users = await this.userRepository.find();
+      return users.map(toUserResponseDto); 
+    } catch (error) {
+      console.error("Error fetching users:", error);
       throw error;
     }
   }

@@ -503,7 +503,7 @@ export default class DriverService {
             order.status = OrderStatus.CANCELED; // update status for history record
             await this.orderStatusHistoryService.createOrderStatusHistory(order, cancellationReason);
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
-            sendOrderConfirmation(order, order.totalCost, order.vehicleType, "ship@shipbee.io", 'admin', 'order-status').catch((err) => {
+            sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
               console.error("Error sending email to admin:", err);
             });
             console.log('sent mail to admin');

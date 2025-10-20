@@ -17,7 +17,7 @@ export async function sendOrderConfirmation(orderDetails: any, totalCost: number
   await resend.emails.send({
     from: `Shipbee <${env.SMTP.USER}>`,
     to: recipientMail,
-    subject: emailType === 'order-confirmation' ? 'Your Order Confirmation' : `Order Status Update`,
+    subject: `Order #${orderDetails.orderNo}`,
     html: html,
   });
     console.log(`${emailType} email sent to: ${recipientMail}`);
@@ -205,7 +205,7 @@ export async function sendOrderCancellationEmail(orderNo: number, driverName: st
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu", // Testing email
       to: env.SMTP.USER, // Admin email from environment variables
-      subject: 'Order Cancellation Request Received',
+      subject: `Order #${orderNo}`,
       html: `<p>Driver ${driverName} with phone number ${driverPhoneNumber} has requested to cancel order #${orderNo}.
       You can accept or decline the request from the dashboard <a href="${env.ADMIN_URL}">here</a>.</p>`,
     });
@@ -239,7 +239,7 @@ export async function sendArrivalNotification(phoneNumber: string, email: string
       await resend.emails.send({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
-        subject: 'Your Driver has Arrived!',
+        subject: `Order #${orderNo}`,
         html: `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) has arrived at your location with order #${orderNo}. </p>`,
       });
       console.log(`Arrival notification email to ${email}`);
