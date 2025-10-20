@@ -78,7 +78,7 @@ export default class UserService {
 
   async getUsers(): Promise<UserResponseDto[]> {
     try {
-      const users = await this.userRepository.find();
+      const users = await this.userRepository.find({order: { createdAt: "DESC" }});
       return users.map(toUserResponseDto); 
     } catch (error) {
       console.error("Error fetching users:", error);
