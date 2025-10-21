@@ -58,7 +58,7 @@ export default class VehicleService {
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_3_Tons_nnvyrq.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Truck_qlewn6.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Canter_Truck_l8vhbt.png",
-      // "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Van_eumwn4.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Van_eumwn4.png",
       // "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Van_w8gf6o.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Freezer_Van_e9wzef.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Flat_Bed_Truck_crrd0d.png",
