@@ -40,10 +40,11 @@ export class AlterVehicleTypeEnum1761041771794 implements MigrationInterface {
         `);
 
         // normalize pricing table as well
+        //REMOVE ANY PANEL VAN REFERENCES IF EXIST
         await queryRunner.query(`
-            UPDATE pricing SET "vehicleType" = 'Van' WHERE vehicleType = 'Panel Van';
-            UPDATE pricing SET "vehicleType" = 'Chiller Truck' WHERE vehicleType = 'Chiller Van';
-            UPDATE pricing SET "vehicleType" = 'Freezer Truck' WHERE vehicleType = 'Freezer Van';
+            DELETE FROM pricing WHERE "vehicleType" = 'Panel Van';
+            UPDATE pricing SET "vehicleType" = 'Chiller Truck' WHERE "vehicleType" = 'Chiller Van';
+            UPDATE pricing SET "vehicleType" = 'Freezer Truck' WHERE "vehicleType" = 'Freezer Van';
         `);
 
         // 4️⃣ Create the final enum with only new values
