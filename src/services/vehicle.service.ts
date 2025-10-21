@@ -136,6 +136,13 @@ export default class VehicleService {
         }
       }
 
+      else if (vehicle.name == VehicleType.FLAT_BED_TRAILER || vehicle.name == VehicleType.LOW_BED_TRAILER 
+              || vehicle.name == VehicleType.GARBAGE_REMOVAL_TRUCK || vehicle.name == VehicleType.CHILLER_VAN
+              || vehicle.name == VehicleType.FREEZER_VAN || vehicle.name == VehicleType.CANTER_TRUCK) 
+      {
+        disabled = true;
+        reason = "Currently unavailable";
+      }
       return {
         name: vehicle.name,
         image: vehicle.image,
