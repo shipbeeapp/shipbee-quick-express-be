@@ -53,6 +53,7 @@ import { MakeDriverDOBnullable1760367798785 } from "../migrations/1760367798785-
 import {AddMoreFieldsInVehicle1760388514301} from "../migrations/1760388514301-AddMoreFieldsInVehicle.js";
 import {MakeVehicleNumberNotNull1760391271327}  from "../migrations/1760391271327-MakeVehicleNumberNotNull.js";
 import {AlterVehicleTypeEnum1761041771794} from "../migrations/1761041771794-AlterVehicleTypeEnum.js";
+import {AlterVehicleTypeEnum21761057209124} from "../migrations/1761057209124-AlterVehicleTypeEnum2.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -118,6 +119,7 @@ export const AppDataSource = new DataSource({
     AddMoreFieldsInVehicle1760388514301,
     MakeVehicleNumberNotNull1760391271327,
     AlterVehicleTypeEnum1761041771794,
+    AlterVehicleTypeEnum21761057209124,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

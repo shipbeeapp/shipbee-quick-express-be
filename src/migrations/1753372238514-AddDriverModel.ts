@@ -87,10 +87,12 @@ export class AddDriverModel1753372238514 implements MigrationInterface {
                 VehicleType.PICKUP_TRUCK_TWO_TONS,
                 VehicleType.PICKUP_TRUCK_THREE_TONS,
                 VehicleType.CANTER_TRUCK,
-                VehicleType.FLAT_BED_TRUCK,
-                VehicleType.LOW_BED_TRUCK,
+                VehicleType.FLAT_BED_TRAILER,
+                VehicleType.LOW_BED_TRAILER,
                 VehicleType.GARBAGE_REMOVAL_TRUCK,
                 VehicleType.CHILLER_TRUCK,
+                VehicleType.CHILLER_VAN,
+                VehicleType.FREEZER_VAN
             ], // Adjust this based on your VehicleType enum
             isNullable: true,
         }));
