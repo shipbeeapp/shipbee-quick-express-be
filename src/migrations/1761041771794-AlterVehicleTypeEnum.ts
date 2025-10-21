@@ -39,6 +39,13 @@ export class AlterVehicleTypeEnum1761041771794 implements MigrationInterface {
             UPDATE vehicles SET type = 'Freezer Truck' WHERE type = 'Freezer Van';
         `);
 
+        // normalize pricing table as well
+        await queryRunner.query(`
+            UPDATE pricing SET "vehicleType" = 'Van' WHERE vehicleType = 'Panel Van';
+            UPDATE pricing SET "vehicleType" = 'Chiller Truck' WHERE vehicleType = 'Chiller Van';
+            UPDATE pricing SET "vehicleType" = 'Freezer Truck' WHERE vehicleType = 'Freezer Van';
+        `);
+
         // 4️⃣ Create the final enum with only new values
         await queryRunner.query(`
             CREATE TYPE "vehicle_type_enum_new" AS ENUM(
@@ -61,6 +68,13 @@ export class AlterVehicleTypeEnum1761041771794 implements MigrationInterface {
             ALTER TABLE "vehicles"
             ALTER COLUMN "type" TYPE "vehicle_type_enum_new"
             USING type::text::vehicle_type_enum_new
+        `);
+
+        // alter pricing table column as well
+        await queryRunner.query(`
+            ALTER TABLE "pricing"
+            ALTER COLUMN "vehicleType" TYPE "vehicle_type_enum_new"
+            USING "vehicleType"::text::vehicle_type_enum_new
         `);
 
         // 6️⃣ Drop temporary enum
