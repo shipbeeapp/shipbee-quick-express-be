@@ -32,6 +32,13 @@ export class AlterVehicleTypeEnum1761041771794 implements MigrationInterface {
             USING type::text::vehicle_type_enum_temp
         `);
 
+        // alter pricing table column as well
+        await queryRunner.query(`
+            ALTER TABLE "pricing"
+            ALTER COLUMN "vehicleType" TYPE "vehicle_type_enum_temp"
+            USING "vehicleType"::text::vehicle_type_enum_temp
+        `);
+
         // 3️⃣ Normalize old data to final new values
         await queryRunner.query(`
             UPDATE vehicles SET type = 'Van' WHERE type = 'Panel Van';
