@@ -140,8 +140,7 @@ export default class VehicleService {
               || vehicle.name == VehicleType.GARBAGE_REMOVAL_TRUCK || vehicle.name == VehicleType.CHILLER_VAN
               || vehicle.name == VehicleType.FREEZER_VAN || vehicle.name == VehicleType.CANTER_TRUCK) 
       {
-        disabled = true;
-        reason = "Currently unavailable";
+        reason = "Price at request";
       }
       return {
         name: vehicle.name,
