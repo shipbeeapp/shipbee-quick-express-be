@@ -82,8 +82,8 @@ export class AddDriverModel1753372238514 implements MigrationInterface {
             enum: [
                 VehicleType.SEDAN_CAR,
                 VehicleType.MOTORCYCLE,
-                VehicleType.VAN,
-                VehicleType.CHILLER_VAN,
+                // VehicleType.VAN,
+                // VehicleType.CHILLER_VAN,
                 VehicleType.FREEZER_VAN,
                 VehicleType.PICKUP_TRUCK_TWO_TONS,
                 VehicleType.PICKUP_TRUCK_THREE_TONS,

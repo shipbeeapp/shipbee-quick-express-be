@@ -119,15 +119,15 @@ export function getTripCostBasedOnKm(distance: number, vehicleType: VehicleType)
       } else {
         return Math.ceil(distance); // Cost for very long trips
       }
-    case VehicleType.VAN:
-      if (distance > 0 && distance <= 10) return 35; // Base cost for short trips
-      else if (distance > 10) return Math.ceil(35 + (distance - 10) * 3); // Cost for medium and long trips
+    // case VehicleType.VAN:
+    //   if (distance > 0 && distance <= 10) return 35; // Base cost for short trips
+    //   else if (distance > 10) return Math.ceil(35 + (distance - 10) * 3); // Cost for medium and long trips
     
-    case VehicleType.CHILLER_VAN:
-      if (distance > 0 && distance <= 10) return 125; // Base cost for short trips
-      else if (distance > 10 && distance <= 20) return 145;
-      else if (distance > 20 && distance <= 30) return 205; // Cost for longer trips
-      else return Math.ceil(200 + (distance - 30) * 6); // Cost for very long trips
+    // case VehicleType.CHILLER_VAN:
+    //   if (distance > 0 && distance <= 10) return 125; // Base cost for short trips
+    //   else if (distance > 10 && distance <= 20) return 145;
+    //   else if (distance > 20 && distance <= 30) return 205; // Cost for longer trips
+    //   else return Math.ceil(200 + (distance - 30) * 6); // Cost for very long trips
     
     case VehicleType.FREEZER_VAN:
       if (distance > 0 && distance <= 10) return 125; // Base cost for short trips
