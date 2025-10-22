@@ -155,7 +155,7 @@ export default class OrderService {
 
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
-
+     orderData.orderNo = order.orderNo;
      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
        console.error("Error sending emaill to admin:", err);
       });

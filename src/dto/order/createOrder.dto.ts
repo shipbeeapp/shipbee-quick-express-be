@@ -150,4 +150,8 @@ export class CreateOrderDto {
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => ShipmentDto)
   shipment?: ShipmentDto
+
+  @IsOptional()
+  @IsNumber()
+  orderNo?: number;
 }
