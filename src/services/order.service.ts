@@ -37,7 +37,7 @@ import { OrderCancellationRequest } from "../models/orderCancellationRequest.mod
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
 import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
-
+import PromoCodeService from "./promoCode.service.js";
 
 @Service()
 export default class OrderService {
@@ -50,6 +50,7 @@ export default class OrderService {
   private pricingService = Container.get(PricingService);
   private driverService = Container.get(DriverService);
   private orderCancellationRequestRepository = AppDataSource.getRepository(OrderCancellationRequest);
+  private promoCodeService = Container.get(PromoCodeService);
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -125,9 +126,11 @@ export default class OrderService {
         weight: orderData.shipment?.weight,
         lifters: orderData.lifters
       });
-      const {totalCost} = await this.pricingService.calculatePricing(pricingInput);
+      const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
 
-      console.log(totalCost);
+      console.log("total cost before discount:", costBeforePromo);
+      const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
+      console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
       const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
@@ -156,9 +159,9 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
      orderData.orderNo = order.orderNo;
-     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
-       console.error("Error sending emaill to admin:", err);
-      });
+    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
+    //    console.error("Error sending emaill to admin:", err);
+    //   });
      console.log('sent mail to admin: ', env.SMTP.USER);
      if (orderData.senderEmail) {
       await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
@@ -706,5 +709,9 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
         console.error("Error sending arrival notification to sender:", error.message);
         throw new Error(`Could not send arrival notification to sender: ${error.message}`);
       }
+    }
+
+    async saveOrder(order: Order) {
+      return this.orderRepository.save(order);
     }
   }
