@@ -215,7 +215,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
 
 export async function sendOrderCancellationEmail(orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu", // Testing email
       to: env.SMTP.USER, // Admin email from environment variables
@@ -232,7 +232,7 @@ export async function sendOrderCancellationEmail(orderNo: number, driverName: st
 
 export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber: string) {
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu",
       to: env.SMTP.USER, // Admin email from environment variables
@@ -250,7 +250,7 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
 export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
     if (email) {
-      await transporter.sendMail({
+      await resend.emails.send({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
         subject: `Order #${orderNo}`,

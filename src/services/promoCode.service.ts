@@ -91,9 +91,15 @@ export default class PromoCodeService {
         await this.userPromoCodeRepository.save(userPromo);
     
         return {
+            message: "Promo code applied successfully",
             userId: user.id,
             promoCode: promo.code,
-            message: "Promo code applied successfully"
+            discount: {
+                type: promo.discountType,
+                value: Number(promo.discountValue),
+                description: promo.description,
+                validTo: promo.validTo
+            }
         };
     }
 

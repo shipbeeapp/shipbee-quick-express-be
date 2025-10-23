@@ -37,6 +37,9 @@ export class PromoCode extends BaseEntity {
   @Column({type: "boolean", default: true})
   isActive: boolean;
 
+  @Column({type: "text", nullable: true})
+  description: string;
+
   @OneToMany(() => UserPromoCode, (userPromoCode) => userPromoCode.promoCode)
   userPromoCodes: UserPromoCode[];
 }
