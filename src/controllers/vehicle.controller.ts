@@ -16,6 +16,7 @@ export class VehicleController {
         this.router.get('/vehicles/:id', this.getVehicleById.bind(this));
         this.router.get('/vehicle-types', this.getAllVehicleTypes.bind(this));
         this.router.get('/vehicle-info', this.getVehicleInfo.bind(this));
+        this.router.get('/vehicle-names-images', this.getVehicleNamesImages.bind(this));
         // Additional routes for creating, updating, and deleting vehicles can be added here
     }
 
@@ -57,6 +58,17 @@ export class VehicleController {
             // For now, we'll just fetch all vehicle names and images
             const vehicleInfo = await this.vehicleService.getVehicleInfo(distance, pickUpDate);
             res.status(200).json({ success: true, data: vehicleInfo, lifterCost: Number(env.PER_LIFTER_COST) });
+        }
+        catch (error) {
+            console.error("Error fetching vehicle names and images:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private async getVehicleNamesImages(req, res) {
+        try {
+            const vehicleInfo = await this.vehicleService.getVehicleNamesImages();
+            res.status(200).json({ success: true, data: vehicleInfo });
         }
         catch (error) {
             console.error("Error fetching vehicle names and images:", error.message);

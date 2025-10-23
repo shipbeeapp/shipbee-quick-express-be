@@ -157,4 +157,38 @@ export default class VehicleService {
     throw new Error("Could not fetch vehicle info");
   }
 }
+  async getVehicleNamesImages() {
+    try {
+      const vehicleImages = [
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Motorcycle_dsp9nw.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Sedan_Car_l8w1gn.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_2_Tons_dqmymz.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_3_Tons_nnvyrq.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Truck_qlewn6.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Van_eumwn4.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Truck_qlewn6.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Canter_Truck_l8vhbt.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Flat_Bed_Truck_crrd0d.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Low_Bed_Truck_gopie7.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Garbage_Removal_Truck_vdljnt.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Van_w8gf6o.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Freezer_Van_e9wzef.png",
+
+    ];
+
+    const vehicleNames = Object.values(VehicleType);
+
+    // Combine name and image in a single structure
+    const vehicleData = vehicleNames.map((name, index) => ({
+      name,
+      image: vehicleImages[index],
+    }));
+
+    return vehicleData;
+  }
+  catch (error) {
+      console.error("Error fetching vehicle names and images:", error);
+      throw new Error("Could not fetch vehicle names and images");
+  }
+  }
 }
