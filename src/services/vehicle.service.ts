@@ -4,6 +4,8 @@ import { AppDataSource } from "../config/data-source.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import PricingService from "./pricing.service.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
+import PromoCodeService from "./promoCode.service.js";
+import { env } from "../config/environment.js";
 
 @Service()
 export default class VehicleService {
@@ -11,6 +13,7 @@ export default class VehicleService {
   // such as creating, updating, deleting, and retrieving vehicles.
   private vehicleRepository = AppDataSource.getRepository(Vehicle);
   private pricingService = Container.get(PricingService);
+  private promoCodeService = Container.get(PromoCodeService);
   
   // Example method to get all vehicles
   async getAllVehicles() {
@@ -49,7 +52,7 @@ export default class VehicleService {
     return Object.values(VehicleType);
   }
 
- async getVehicleInfo(distance: number, pickUpDate: string) {
+ async getVehicleInfo(distance: number, pickUpDate: string, lifters: number, userId?: string) {
   try {
     const vehicleImages = [
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Motorcycle_dsp9nw.png",
@@ -84,11 +87,25 @@ export default class VehicleService {
             vehicleType: vehicle.name,
             serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
             distance,
+            lifters
           });
-          return { ...vehicle, pricing: pricing?.totalCost || null };
+          const afterPromoPricing = userId
+            ? await this.promoCodeService.applyPromosToOrder(
+                userId,
+                pricing.totalCost,
+                'view'
+              )
+            : { discount: 0, totalCost: pricing.totalCost };
+          return { 
+                  ...vehicle,
+                  beforePromoPricing: pricing?.totalCost || null, 
+                  afterPromoPricing: afterPromoPricing?.totalCost || null, 
+                  isPromoApplied: afterPromoPricing.discount > 0 ? true : false,
+                  discount: afterPromoPricing.discount || 0 
+                };
         } catch (error) {
           console.warn(`No pricing found for ${vehicle.name}: ${error.message}`);
-          return { ...vehicle, pricing: null };
+          return { ...vehicle, beforePromoPricing: null, afterPromoPricing: null, isPromoApplied: false, discount: 0 };
         }
       })
     );
@@ -142,10 +159,16 @@ export default class VehicleService {
       {
         reason = "Price at request";
       }
+      console.log({vehicle});
       return {
         name: vehicle.name,
         image: vehicle.image,
-        pricing: Number(vehicle.pricing?.toFixed(2)),
+        lifterTotalCost: lifters * Number(env.PER_LIFTER_COST || 0), 
+        vehicleTotalCost: vehicle.afterPromoPricing ? Number((vehicle.beforePromoPricing - (lifters * Number(env.PER_LIFTER_COST || 0))).toFixed(2)) : null,
+        totalbeforePromoPricing: Number(vehicle.beforePromoPricing?.toFixed(2)),
+        afterPromoPricing: Number(vehicle.afterPromoPricing?.toFixed(2)),
+        isPromoApplied: vehicle.isPromoApplied,
+        discount: Number(vehicle.discount?.toFixed(2)),
         disabled,
         reason,
       };

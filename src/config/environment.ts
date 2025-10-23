@@ -14,10 +14,10 @@ export const env = {
     URL: process.env.DATABASE_URL,
   },
   SMTP: {
-    // HOST: process.env.SMTP_HOST,
-    // PORT: Number(process.env.SMTP_PORT) || 587,
+    HOST: process.env.SMTP_HOST,
+    PORT: Number(process.env.SMTP_PORT) || 587,
     USER: process.env.SMTP_USER,
-    // PASS: process.env.SMTP_PASS,
+    PASS: process.env.SMTP_PASS,
   },
   RESEND: {
     API_KEY: process.env.RESEND_API_KEY,
@@ -43,6 +43,8 @@ export const env = {
   RADIUS_KM_OTHER: Number(process.env.RADIUS_KM_OTHER) || 15,
   EMIT_TIME_SEDAN_CAR_MINUTES: Number(process.env.EMIT_TIME_SEDAN_CAR_MINUTES) || 15,
   EMIT_TIME_OTHER_MINUTES: Number(process.env.EMIT_TIME_OTHER_MINUTES) || 90,
+  ACCEPTANCE_TIME_SEDAN_MINUTES: Number(process.env.ACCEPTANCE_TIME_SEDAN_MINUTES) || 15,
+  ACCEPTANCE_TIME_OTHER_MINUTES: Number(process.env.ACCEPTANCE_TIME_OTHER_MINUTES) || 30,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:4200',
   SEND_SMS: process.env.SEND_SMS === 'true' || false,
   ADMIN_URL: process.env.ADMIN_URL || 'https://shipbee-admin-fe.vercel.app/dashboard',

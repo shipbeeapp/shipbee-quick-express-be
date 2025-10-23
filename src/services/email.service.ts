@@ -1,5 +1,6 @@
 import Handlebars from "handlebars";
 import { env } from '../config/environment.js';
+import nodemailer from 'nodemailer';
 import path from 'path';
 import fs from 'fs';
 import { Resend } from 'resend';
@@ -9,6 +10,19 @@ import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.j
 import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
 
 const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
+const transporter = nodemailer.createTransport(
+  { 
+    host: env.SMTP.HOST, 
+    port: env.SMTP.PORT, 
+    secure: true, // true for 465, false for other ports 
+    auth: { 
+      user: env.SMTP.USER, 
+      pass: env.SMTP.PASS, 
+  },
+  tls: {
+    rejectUnauthorized: false
+  } 
+});
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
 export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation') {
@@ -201,7 +215,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
 
 export async function sendOrderCancellationEmail(orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu", // Testing email
       to: env.SMTP.USER, // Admin email from environment variables
@@ -218,7 +232,7 @@ export async function sendOrderCancellationEmail(orderNo: number, driverName: st
 
 export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber: string) {
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu",
       to: env.SMTP.USER, // Admin email from environment variables
@@ -236,7 +250,7 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
 export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
     if (email) {
-      await resend.emails.send({
+      await transporter.sendMail({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
         subject: `Order #${orderNo}`,
