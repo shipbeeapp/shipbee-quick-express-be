@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Container } from 'typedi';
 import VehicleService from '../services/vehicle.service.js';
+import { env } from '../config/environment.js';
 
 export class VehicleController {
   public router: Router = Router();
@@ -55,7 +56,7 @@ export class VehicleController {
             // You can use distance and pickUpDate to filter or customize the response if needed
             // For now, we'll just fetch all vehicle names and images
             const vehicleInfo = await this.vehicleService.getVehicleInfo(distance, pickUpDate);
-            res.status(200).json({ success: true, data: vehicleInfo });
+            res.status(200).json({ success: true, data: vehicleInfo, lifterCost: Number(env.PER_LIFTER_COST) });
         }
         catch (error) {
             console.error("Error fetching vehicle names and images:", error.message);
