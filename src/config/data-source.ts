@@ -122,6 +122,8 @@ export const AppDataSource = new DataSource({
     MakeVehicleNumberNotNull1760391271327,
     AlterVehicleTypeEnum1761041771794,
     AlterVehicleTypeEnum21761057209124,
+    DropRequiredInPlateNumber1761235459302,
+    AddModificationsToPromoCode1761207892348,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
