@@ -24,6 +24,7 @@ export class DriverDto {
     @MaxLength(6, {
       message: "Plate number must be at most 6 digits long",
     })
+    @IsOptional()
     vehicleNumber: string; // Vehicle number or license plate
 
     @IsString()

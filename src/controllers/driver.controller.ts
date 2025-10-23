@@ -249,8 +249,13 @@ export class DriverController {
             if (driver) {
                 return res.status(400).json({ success: false, message: "Driver with this phone number already exists. Please sign in with your password and phone", driverExists: true });
             }
-            await this.driverService.sendOtp(phoneNumber);
-            res.status(200).json({ success: true, message: "OTP sent successfully.", driverExists: false });
+            const otp = await this.driverService.sendOtp(phoneNumber);
+            const result = { success: true, message: "OTP sent successfully.", driverExists: false };
+            if (env.APP_ENV !== 'production') {
+                console.log(`OTP for phone number ${phoneNumber}: ${otp}`);
+                Object.assign(result, { otp }); // Include OTP in response for non-production environments
+            }
+            res.status(200).json(result); // In production, do not send OTP in response
         } catch (error) {
             console.error("Error sending OTP:", error.message);
             res.status(500).json({ success: false, message: error.message });

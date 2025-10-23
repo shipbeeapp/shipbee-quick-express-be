@@ -36,14 +36,14 @@ export default class DriverService {
             
             if (!driver) {
                 // Create new driver
-                vehicle = await vehicleManager.findOne({
-                    where: { type: data.vehicleType, number: data.vehicleNumber },
-                    relations: ["driver"]
-                });
+                // vehicle = await vehicleManager.findOne({
+                //     where: { type: data.vehicleType, number: data.vehicleNumber },
+                //     relations: ["driver"]
+                // });
     
-                if (vehicle && vehicle.driver) {
-                    throw new Error(`Vehicle with number ${data.vehicleNumber} is already linked to another driver`);
-                }
+                // if (vehicle && vehicle.driver) {
+                //     throw new Error(`Vehicle with number ${data.vehicleNumber} is already linked to another driver`);
+                // }
 
                 // If vehicle doesn't exist, create it
                 if (!vehicle) {
@@ -536,16 +536,17 @@ export default class DriverService {
         }
     }
 
-    async sendOtp(phoneNumber: string): Promise<void> {
+    async sendOtp(phoneNumber: string): Promise<string> {
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
         try {
-            const otp = Math.floor(1000 + Math.random() * 9000).toString();
             otpCache.set(phoneNumber, otp);
             const phoneExtension = env.PHONE_EXTENSION; // Qatar country code
             await sendOtp(phoneNumber, otp, phoneExtension);
             console.log(`OTP ${otp} sent to new driver with phone number ${phoneNumber}`);
+            return otp;
         } catch (error) {
             console.error("Error sending OTP:", error);
-            throw error;
+            return otp;
         }
     }
 

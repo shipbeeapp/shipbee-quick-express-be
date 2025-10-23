@@ -195,7 +195,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
     console.log(`Driver data sent to phone number: ${phoneNumber}`);
   } catch (error) {
     console.error('Error sending driver data via SMS:', error);
-    throw new Error(`Failed to send driver data to ${phoneNumber}: ${error.message}`);
+    // throw new Error(`Failed to send driver data to ${phoneNumber}: ${error.message}`);
   }
 }
 
