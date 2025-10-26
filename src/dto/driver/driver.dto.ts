@@ -18,12 +18,12 @@ export class DriverDto {
     vehicleType: VehicleType; // Type of vehicle the driver operates
 
     @IsString({message: "Plate number must not be empty"})
-    @Matches(/^\d+$/, {
-      message: "Plate number must contain only digits",
-    })
-    @MaxLength(6, {
-      message: "Plate number must be at most 6 digits long",
-    })
+    // @Matches(/^\d+$/, {
+    //   message: "Plate number must contain only digits",
+    // })
+    // @MaxLength(6, {
+    //   message: "Plate number must be at most 6 digits long",
+    // })
     @IsOptional()
     vehicleNumber: string; // Vehicle number or license plate
 
