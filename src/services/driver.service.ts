@@ -577,11 +577,11 @@ export default class DriverService {
                     const driverDetails = await this.driverRepository.findOne({
                         where: { id: driverId }
                     });
-                    const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
-                        driver.currentLocation,
-                        pickUpCoordinates
-                    );
                     if (driverDetails) {
+                        const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
+                            driver.currentLocation,
+                            pickUpCoordinates
+                        );
                         filteredDrivers.push({
                             id: driverId,
                             name: driverDetails.name,
@@ -593,6 +593,8 @@ export default class DriverService {
                         });
                     }
                 }
+            // Sort by distanceMeters ascending (nearest first)
+            filteredDrivers.sort((a, b) => a.distanceMeters - b.distanceMeters);
             return filteredDrivers;
         }
     }
