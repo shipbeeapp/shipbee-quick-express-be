@@ -1,6 +1,7 @@
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { env } from "../../config/environment.js";
+import { Payer } from "../../utils/enums/payer.enum.js";
 
 export class DriverOrderResource {
     orderId: string;
@@ -22,6 +23,7 @@ export class DriverOrderResource {
     receiverPhoneNumber: string;
     distanceToPickup: number;
     timeToPickup: number;
+    payer: Payer;
 }
 
 export function createDriverOrderResource(order: any, distanceToPickup: number, timeToPickup: number): DriverOrderResource {
@@ -48,6 +50,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.receiverPhoneNumber = order.receiver.phoneNumber;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
+    resource.payer = order.payer;
     return resource;
 }
 

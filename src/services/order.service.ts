@@ -152,6 +152,7 @@ export default class OrderService {
         paymentMethod: orderData.paymentMethod ?? PaymentMethod.CASH_ON_DELIVERY, // Default payment method
         shipment,
         accessToken, // Generate a secure access token for the order
+        payer: orderData.payer
       });
 
      await queryRunner.manager.save(order);

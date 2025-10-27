@@ -6,6 +6,7 @@ import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
 import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { PaymentStatus } from "../../utils/enums/paymentStatus.enum.js";
+import { Payer } from "../../utils/enums/payer.enum.js";
 
 
 class AddressDto {
@@ -154,4 +155,8 @@ export class CreateOrderDto {
   @IsOptional()
   @IsNumber()
   orderNo?: number;
+
+  @IsEnum(Payer)
+  @IsOptional()
+  payer: Payer;
 }

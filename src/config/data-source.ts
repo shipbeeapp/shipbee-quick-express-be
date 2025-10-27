@@ -57,6 +57,7 @@ import {AlterVehicleTypeEnum21761057209124} from "../migrations/1761057209124-Al
 import {DropRequiredInPlateNumber1761235459302} from "../migrations/1761235459302-DropRequiredInPlateNumber.js";
 import {AddModificationsToPromoCode1761207892348} from "../migrations/1761207892348-AddModificationsToPromoCode.js";
 import {AddDescriptionInPromocode1761240108086} from "../migrations/1761240108086-AddDescriptionInPromocode.js";
+import {AddPayerOptionInOrder1761577063081} from "../migrations/1761577063081-AddPayerOptionInOrder.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -126,6 +127,7 @@ export const AppDataSource = new DataSource({
     DropRequiredInPlateNumber1761235459302,
     AddModificationsToPromoCode1761207892348,
     AddDescriptionInPromocode1761240108086,
+    AddPayerOptionInOrder1761577063081,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

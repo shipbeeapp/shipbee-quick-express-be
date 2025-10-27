@@ -2,6 +2,7 @@ import { Order } from '../../models/order.model.js';
 import { env } from '../../config/environment.js';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 import { CancelRequestStatus } from '../../utils/enums/cancelRequestStatus.enum.js';
+import { Payer } from '../../utils/enums/payer.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -15,6 +16,7 @@ export class OrderResponseDto {
     updatedAt: Date;
     orderNo: number;
     vehicleType: VehicleType;
+    payer: Payer;
   
     sender: {
       id: string;
@@ -117,6 +119,7 @@ export class OrderResponseDto {
       totalCost: Number(order.totalCost),
       currentStatus: order.status,
       vehicleType: order.vehicleType,
+      payer: order.payer,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,

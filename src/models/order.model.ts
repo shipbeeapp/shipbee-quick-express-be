@@ -12,6 +12,7 @@ import { Driver } from "./driver.model.js";
 import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 import { Shipment } from "./shipment.model.js";
 import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
+import { Payer } from "../utils/enums/payer.enum.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
@@ -100,4 +101,7 @@ export class Order extends BaseEntity {
 
   @OneToMany(() => OrderCancellationRequest, (cancel) => cancel.order)
   cancellationRequests: OrderCancellationRequest[];
+
+  @Column({ type: "enum", nullable: false, enum: Payer, default: Payer.SENDER })
+  payer: Payer; // who will pay for the order: sender or receiver
 }
