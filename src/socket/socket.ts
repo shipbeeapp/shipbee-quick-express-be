@@ -248,3 +248,20 @@ export function calculateActiveHoursToday(driverId: string): number {
 
   return totalMilliseconds / (1000 * 60 * 60); // convert ms to hours, rounded to 1 decimal
 }
+
+export async function emitOrderToDriver(driverId: string, order: Order) {
+  const io = getSocketInstance();
+  const onlineDrivers = getOnlineDrivers();
+  const driver = onlineDrivers.get(driverId);
+
+  if (driver) {
+    const {distanceMeters, durationMinutes} = await getDrivingDistanceInKm(
+      driver.currentLocation,
+      order.fromAddress.coordinates
+    );
+    io.to(driver.socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
+    console.log(`📦 Sent order ${order.id} by assignment to driver ${driverId}`);
+  } else {
+    console.log(`❌ Driver ${driverId} is not online when trying to assign order ${order.id}`);
+  }
+}

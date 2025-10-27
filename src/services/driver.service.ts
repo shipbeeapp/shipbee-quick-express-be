@@ -8,12 +8,15 @@ import { Between } from "typeorm";
 import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { calculateActiveHoursToday } from "../socket/socket.js";
-import { emitOrderToDrivers } from "../socket/socket.js";
+import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { sendOrderConfirmation, sendOtp } from "../services/email.service.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import { env } from "../config/environment.js";
+import { getOnlineDrivers } from "../socket/socket.js";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -563,4 +566,66 @@ export default class DriverService {
             throw error;
         }
     }
+
+    async getNearestActiveDrivers(vehicleType: VehicleType, pickUpCoordinates: string): Promise<any> {
+        try {
+            const onlineDrivers = getOnlineDrivers();
+            //loop over a map and filter by vehicle type
+            const filteredDrivers = [];
+            for (const [driverId, driver] of onlineDrivers) {
+                if (driver.vehicleType === vehicleType) {
+                    const driverDetails = await this.driverRepository.findOne({
+                        where: { id: driverId }
+                    });
+                    const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
+                        driver.currentLocation,
+                        pickUpCoordinates
+                    );
+                    if (driverDetails) {
+                        filteredDrivers.push({
+                            id: driverId,
+                            name: driverDetails.name,
+                            phoneNumber: driverDetails.phoneNumber,
+                            currentLocation: driver.currentLocation,
+                            vehicleType: driver.vehicleType,
+                            distanceMeters,
+                            durationMinutes
+                        });
+                    }
+                }
+            return filteredDrivers;
+        }
+    }
+    catch (error) {
+        console.error("Error fetching nearest active drivers:", error);
+        throw error;
+    }
+  }
+
+  async assignDriverToOrder(driverId: string, orderId: string): Promise<void> {
+    try {
+        const driver = await this.driverRepository.findOneBy({ id: driverId });
+        if (!driver) {
+            throw new Error(`Driver with ID ${driverId} not found`);
+        }
+        const order = await this.orderRepository.findOne({
+            where: { id: orderId },
+            relations: ["driver", "fromAddress", "toAddress", "sender", "receiver"]
+        });
+        if (!order) {
+            throw new Error(`Order with ID ${orderId} not found`);
+        }
+        if (order.driver) {
+            throw new Error(`Order with ID ${orderId} is already assigned to a driver`);
+        }
+        if (order.status !== OrderStatus.PENDING) {
+            throw new Error(`Order with ID ${orderId} has status ${order.status} and cannot be assigned`);
+        }
+        await emitOrderToDriver(driverId, order);
+    }
+    catch (error) {
+        console.error("Error assigning driver to order:", error);
+        throw error;
+    }
+  }
 }

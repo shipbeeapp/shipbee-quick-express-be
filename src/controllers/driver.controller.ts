@@ -14,6 +14,7 @@ import { DriverDto } from '../dto/driver/driver.dto.js';
 import { sendDriverSignUpMail } from '../services/email.service.js';
 import validationMiddleware from '../middlewares/validation.middleware.js';
 import bcrypt from 'bcrypt';
+import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -66,6 +67,8 @@ export class DriverController {
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
         this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
+        this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
+        this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -275,6 +278,36 @@ export class DriverController {
             res.status(200).json({ success: true, message: "OTP verified successfully." });
         } catch (error) {
             console.error("Error verifying OTP:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getNearestActiveDrivers = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const { vehicleType, pickUpCoordinates } = req.query;
+            const drivers = await this.driverService.getNearestActiveDrivers(vehicleType as VehicleType, pickUpCoordinates as string);
+            res.status(200).json({ success: true, data: drivers });
+        }
+        catch (error) {
+            console.error("Error fetching nearest active drivers:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private assignDriverToOrder = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const { driverId, orderId } = req.body;
+            await this.driverService.assignDriverToOrder(driverId, orderId);
+            res.status(200).json({ success: true, message: "Driver assigned to order successfully." });
+        }
+        catch (error) {
+            console.error("Error assigning driver to order:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }
