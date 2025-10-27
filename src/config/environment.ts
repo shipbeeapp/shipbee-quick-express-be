@@ -49,4 +49,9 @@ export const env = {
   SEND_SMS: process.env.SEND_SMS === 'true' || false,
   ADMIN_URL: process.env.ADMIN_URL || 'https://shipbee-admin-fe.vercel.app/dashboard',
   PHONE_EXTENSION: process.env.PHONE_EXTENSION || '+974', // Default to Qatar country code
+  OAUTH: {
+    GOOGLE_CLIENT_ID: process.env.OAUTH_GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.OAUTH_GOOGLE_CLIENT_SECRET,
+    REFRESH_TOKEN: process.env.OAUTH_REFRESH_TOKEN,
+  }
 };

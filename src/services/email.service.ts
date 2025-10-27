@@ -3,37 +3,51 @@ import { env } from '../config/environment.js';
 import nodemailer from 'nodemailer';
 import path from 'path';
 import fs from 'fs';
-import { Resend } from 'resend';
 import twilio from 'twilio';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
 import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
+import { google } from 'googleapis';
 
-const resend = new Resend(env.RESEND.API_KEY); // keep API key in env 
-const transporter = nodemailer.createTransport(
-  { 
-    host: env.SMTP.HOST, 
-    port: env.SMTP.PORT, 
-    secure: true, // true for 465, false for other ports 
-    auth: { 
-      user: env.SMTP.USER, 
-      pass: env.SMTP.PASS, 
+const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
+const REFRESH_TOKEN = env.OAUTH.REFRESH_TOKEN;
+
+
+const oAuth2Client = new google.auth.OAuth2(
+  env.OAUTH.GOOGLE_CLIENT_ID,
+  env.OAUTH.GOOGLE_CLIENT_SECRET,
+  REDIRECT_URI
+);
+
+oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+const accessToken = await oAuth2Client.getAccessToken();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: 'ship@shipbee.io',
+    clientId: env.OAUTH.GOOGLE_CLIENT_ID,
+    clientSecret: env.OAUTH.GOOGLE_CLIENT_SECRET,
+    refreshToken: REFRESH_TOKEN,
+    accessToken: accessToken.token,
   },
   tls: {
     rejectUnauthorized: false
-  } 
+  }
 });
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
 export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation') {
   const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType);
   console.log("sending order confirmation email to:", recipientMail);
-  await resend.emails.send({
+  await transporter.sendMail({
     from: `Shipbee <${env.SMTP.USER}>`,
     to: recipientMail,
     subject: `Order #${orderDetails.orderNo}`,
     html: html,
   });
+  
     console.log(`${emailType} email sent to: ${recipientMail}`);
 }
 
@@ -41,7 +55,7 @@ export async function sendOtp(emailOrPhone: string, otp: string, phoneExtension:
   if (emailOrPhone.includes('@')) {
     // Handle email case
     try {
-      await resend.emails.send({
+      await transporter.sendMail({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: emailOrPhone,
         subject: 'Your Shipbee OTP Code',
@@ -215,7 +229,7 @@ export async function sendDriverData(phoneNumber: string, password: string) {
 
 export async function sendOrderCancellationEmail(orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu", // Testing email
       to: env.SMTP.USER, // Admin email from environment variables
@@ -232,7 +246,7 @@ export async function sendOrderCancellationEmail(orderNo: number, driverName: st
 
 export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber: string) {
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: `Shipbee <${env.SMTP.USER}>`,
       // to: "basselhalabi17@aucegypt.edu",
       to: env.SMTP.USER, // Admin email from environment variables
@@ -250,7 +264,7 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
 export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
   try {
     if (email) {
-      await resend.emails.send({
+      await transporter.sendMail({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
         subject: `Order #${orderNo}`,
