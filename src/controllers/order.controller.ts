@@ -9,8 +9,6 @@ import cloudinary from "../utils/cloudinary.js";
 import { AuthenticatedRequest, authenticationMiddleware } from "../middlewares/authentication.middleware.js";
 import { env } from "../config/environment.js";
 import jwt from 'jsonwebtoken';
-import { getSocketInstance } from "../socket/socket.js";
-const simulationIntervals = new Map<string, NodeJS.Timeout>();
 
 export class OrderController {
   public router: Router = Router();
@@ -83,16 +81,6 @@ export class OrderController {
     );
 
     this.router.post(
-      "/simulate-live-tracking",
-      this.simulateLiveTracking.bind(this)
-    )
-
-    this.router.post(
-      "/stop-live-tracking",
-      this.stopLiveTracking.bind(this)
-    )
-
-    this.router.post(
       "/orders/:orderId/notify-sender",
       authenticationMiddleware,
       this.notifySender.bind(this)
@@ -103,55 +91,6 @@ export class OrderController {
       authenticationMiddleware,
       this.notifyReceiver.bind(this)
     )
-  }
-
-  private async stopLiveTracking(req: Request, res: Response) {
-    const { orderId } = req.body;
-    if (!orderId) return res.status(400).send("orderId is required");
-    const key = `${orderId}`;
-    if (simulationIntervals.has(key)) {
-      clearInterval(simulationIntervals.get(key)!);
-      simulationIntervals.delete(key);
-      return res.json({ message: "Simulation stopped", orderId });
-    }
-    res.status(400).json({ message: "No active simulation for this orderId" });
-  }
-
-   private async simulateLiveTracking(req: Request, res: Response) {
-      const {orderId, intervalSec = 5 } = req.body;
-      if (!orderId) return res.status(400).send("orderId is required");
-
-      const io = getSocketInstance();
-
-      // Dummy path: array of coordinates (lat, lng)
-      const path = [
-        { lat: 25.2854, lng: 51.5310 },
-        { lat: 25.2860, lng: 51.5320 },
-        { lat: 25.2870, lng: 51.5330 },
-        { lat: 25.2880, lng: 51.5340 },
-      ];
-    
-      let index = 0;
-      const key = `${orderId}`;
-
-      // Stop previous simulation if exists
-      if (simulationIntervals.has(key)) {
-        clearInterval(simulationIntervals.get(key)!);
-      }
-    
-      // Continuous interval
-      const intervalId = setInterval(() => {
-        const location = path[index];
-        index = (index + 1) % path.length; // loop back to start
-      
-        io.to(`order-${orderId}`).emit("driver-location", `${location.lat},${location.lng}`);
-      
-        console.log(`Simulated location on order ${orderId}:`, location);
-      }, intervalSec * 1000);
-    
-
-      simulationIntervals.set(key, intervalId);
-      res.json({ message: "Continuous simulation started", orderId, intervalSec });
   }
 
   private async createOrder(req: Request, res: Response) {

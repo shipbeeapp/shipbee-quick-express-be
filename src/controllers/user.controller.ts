@@ -7,6 +7,8 @@ import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
 import { env } from '../config/environment.js';
 let clients: Response[] = [];
 let driverStatusClients: Response[] = [];
+let orderTrackingClients: Response[] = [];
+let driverTrackingClients: Response[] = [];
 
 
  // Call this whenever you want to broadcast updates
@@ -20,6 +22,18 @@ export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, 
 export function broadcastDriverStatusUpdate(driverId: string, driverStatus: DriverStatus) {
   driverStatusClients.forEach(client => {
     client.write(`data: ${JSON.stringify({ driverId, driverStatus })}\n\n`);
+  });
+}
+
+export function broadcastOrderTrackingUpdate(orderId: string, driverLocation: string) {
+  orderTrackingClients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
+  });
+}
+
+export function broadcastDriverTrackingUpdate(driverId: string, driverLocation: string) {
+  driverTrackingClients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ driverId, driverLocation })}\n\n`);
   });
 }
 export class UserController {
@@ -38,6 +52,8 @@ export class UserController {
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
+        this.router.get("/order-tracking", this.orderTracking.bind(this));
+        this.router.get("/driver-tracking", this.driverTracking.bind(this));
     }
 
     private updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -105,4 +121,34 @@ export class UserController {
           driverStatusClients = driverStatusClients.filter(client => client !== res);
         });
     }
+
+    private orderTracking = async (req: Request, res: Response) => {
+        // 1️⃣ Set SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+
+        // 2️⃣ Add client to clients array
+        orderTrackingClients.push(res);
+        // 3️⃣ Remove client on disconnect
+        req.on("close", () => {
+          orderTrackingClients = orderTrackingClients.filter(client => client !== res);
+        });
+      }
+
+      private driverTracking = async (req: Request, res: Response) => {
+        // 1️⃣ Set SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+
+        // 2️⃣ Add client to clients array
+        driverTrackingClients.push(res);
+        // 3️⃣ Remove client on disconnect
+        req.on("close", () => {
+          driverTrackingClients = driverTrackingClients.filter(client => client !== res);
+        });
+      }
 }

@@ -12,7 +12,7 @@ import { env } from "../config/environment.js"; // Assuming you have an environm
 import { AppDataSource } from "../config/data-source.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { Driver } from "../models/driver.model.js"; // Assuming you have a Driver model
-import { broadcastDriverStatusUpdate } from "../controllers/user.controller.js";
+import { broadcastDriverStatusUpdate, broadcastOrderTrackingUpdate, broadcastDriverTrackingUpdate } from "../controllers/user.controller.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -112,11 +112,12 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         onlineDrivers.set(driverId, driver);
         await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
         console.log(`📍 Updated location for driver ${driverId}:`, currentLocation);
+        broadcastDriverTrackingUpdate(driverId, currentLocation); // Notify all connected clients about the driver location update
       }
 
       if (orderId) {
-        console.log(`Emitting location update to room order-${orderId}`);
-        io.to(`order-${orderId}`).emit("driver-location", currentLocation);
+        console.log(`Emitting location update for order ID: ${orderId}`);
+        broadcastOrderTrackingUpdate(orderId, currentLocation);
     }
 });
 
