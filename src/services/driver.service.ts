@@ -567,42 +567,56 @@ export default class DriverService {
         }
     }
 
-    async getNearestActiveDrivers(vehicleType: VehicleType, pickUpCoordinates: string): Promise<any> {
+    async getNearestActiveDrivers(
+        vehicleType: VehicleType,
+        pickUpCoordinates: string
+    ): Promise<any[]> {
         try {
-            const onlineDrivers = getOnlineDrivers();
-            //loop over a map and filter by vehicle type
-            const filteredDrivers = [];
-            for (const [driverId, driver] of onlineDrivers) {
-                if (driver.vehicleType === vehicleType) {
-                    const driverDetails = await this.driverRepository.findOne({
-                        where: { id: driverId }
-                    });
-                    if (driverDetails) {
-                        const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
-                            driver.currentLocation,
-                            pickUpCoordinates
-                        );
-                        filteredDrivers.push({
-                            id: driverId,
-                            name: driverDetails.name,
-                            phoneNumber: driverDetails.phoneNumber,
-                            currentLocation: driver.currentLocation,
-                            vehicleType: driver.vehicleType,
-                            distanceMeters,
-                            durationMinutes
-                        });
-                    }
-                }
-            // Sort by distanceMeters ascending (nearest first)
-            filteredDrivers.sort((a, b) => a.distanceMeters - b.distanceMeters);
-            return filteredDrivers;
+          const onlineDrivers = getOnlineDrivers();
+        
+          // Convert map to array and filter by vehicle type first
+          const candidates = Array.from(onlineDrivers.entries())
+            .filter(([_, driver]) => driver.vehicleType === vehicleType);
+        
+          // Run all lookups + distance calculations in parallel
+          const driverPromises = candidates.map(async ([driverId, driver]) => {
+            const driverDetails = await this.driverRepository.findOne({
+              where: { id: driverId }
+            });
+        
+            if (!driverDetails) return null;
+        
+            const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
+              driver.currentLocation,
+              pickUpCoordinates
+            );
+        
+            return {
+              id: driverId,
+              name: driverDetails.name,
+              phoneNumber: driverDetails.phoneNumber,
+              currentLocation: driver.currentLocation,
+              vehicleType: driver.vehicleType,
+              distanceMeters,
+              durationMinutes
+            };
+          });
+      
+          // Wait for all promises to finish
+          const results = await Promise.all(driverPromises);
+      
+          // Filter out any null results
+          const filteredDrivers = results.filter(Boolean);
+      
+          // Sort by distance (nearest first)
+          filteredDrivers.sort((a, b) => a.distanceMeters - b.distanceMeters);
+          console.log("Nearest active drivers:", filteredDrivers);
+          return filteredDrivers;
+        } catch (error) {
+          console.error("Error fetching nearest active drivers:", error);
+          throw error;
         }
-    }
-    catch (error) {
-        console.error("Error fetching nearest active drivers:", error);
-        throw error;
-    }
-  }
+}
 
   async assignDriverToOrder(driverId: string, orderId: string): Promise<void> {
     try {
