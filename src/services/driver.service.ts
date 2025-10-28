@@ -20,6 +20,7 @@ import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
 import { DriverType } from "../utils/enums/driverType.enum.js";
 import { DriverResource } from "../resource/drivers/driver.resource.js";
 import { generatePhotoLink } from "../utils/global.utils.js";
+import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -666,6 +667,7 @@ export default class DriverService {
             });
         
             if (!driverDetails) return null;
+            if (driverDetails.status !== DriverStatus.ACTIVE) return null;
         
             const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
               driver.currentLocation,
