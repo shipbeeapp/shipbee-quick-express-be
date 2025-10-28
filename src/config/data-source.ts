@@ -58,6 +58,7 @@ import {DropRequiredInPlateNumber1761235459302} from "../migrations/176123545930
 import {AddModificationsToPromoCode1761207892348} from "../migrations/1761207892348-AddModificationsToPromoCode.js";
 import {AddDescriptionInPromocode1761240108086} from "../migrations/1761240108086-AddDescriptionInPromocode.js";
 import {AddPayerOptionInOrder1761577063081} from "../migrations/1761577063081-AddPayerOptionInOrder.js";
+import {AddCreatedByUser1761643526306} from "../migrations/1761643526306-AddCreatedByUser.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -128,6 +129,7 @@ export const AppDataSource = new DataSource({
     AddModificationsToPromoCode1761207892348,
     AddDescriptionInPromocode1761240108086,
     AddPayerOptionInOrder1761577063081,
+    AddCreatedByUser1761643526306,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

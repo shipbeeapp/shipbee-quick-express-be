@@ -38,6 +38,7 @@ import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js"
 import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
 import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
 import PromoCodeService from "./promoCode.service.js";
+import { User } from "../models/user.model.js";
 
 @Service()
 export default class OrderService {
@@ -71,23 +72,23 @@ export default class OrderService {
 
     try {
       // 🔹 Step 1: Get or Create Users
-      let sender;
-      if (userId) {
-        sender = await this.userService.getUserById(userId);
-        if (!sender) {
-          throw new Error(`Sender with ID ${userId} not found`);
-        }
-        orderData.senderName = sender.name;
-        orderData.senderEmail = sender.email;
-        orderData.senderPhoneNumber = sender.phoneNumber;
-      }
-      else {
+      let createdByUser: User;
+      let sender: User;
       const senderData = {
         email: orderData.senderEmail,
         name: orderData.senderName,
         phoneNumber: orderData.senderPhoneNumber
       };
-      sender = await this.userService.findOrCreateUser(senderData, queryRunner);
+      if (userId) {
+        createdByUser = await this.userService.getUserById(userId);
+        if (!createdByUser) {
+          throw new Error(`No signed in user with ID ${userId} not found`);
+        }
+        sender = await this.userService.findOrCreateUser(senderData, queryRunner); 
+      }
+      else {
+        sender = await this.userService.findOrCreateUser(senderData, queryRunner);
+        createdByUser = sender;
     }
       const receiverData = {
         email: orderData.receiverEmail,
@@ -140,6 +141,7 @@ export default class OrderService {
         itemDescription: orderData.itemDescription ?? null,
         lifters: orderData.lifters ?? 0,   
         vehicleType: orderData.vehicleType,
+        createdBy: createdByUser,
         sender,
         receiver,
         fromAddress,
@@ -164,12 +166,12 @@ export default class OrderService {
        console.error("Error sending emaill to admin:", err);
       });
      console.log('sent mail to admin: ', env.SMTP.USER);
-     if (orderData.senderEmail) {
-      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, orderData.senderEmail).catch((err) => {
+     if (createdByUser.email) {
+      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, createdByUser.email).catch((err) => {
         console.error("Error sending email to user:", err);
       }
       );
-      console.log('sent mail to user: ', orderData.senderEmail);
+      console.log('sent mail to user: ', createdByUser.email);
      }
 
        
@@ -204,7 +206,7 @@ export default class OrderService {
     }
     const orders = await this.orderRepository.find({
       where: {
-        sender: { id: userId },
+        createdBy: { id: userId },
       },
       relations: ["sender", "receiver", "fromAddress", "toAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
       "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle"
