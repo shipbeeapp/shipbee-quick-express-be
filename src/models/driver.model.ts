@@ -1,9 +1,9 @@
-import { Entity, Column, OneToOne, JoinColumn, OneToMany } from "typeorm";
+import { Entity, Column, OneToOne, JoinColumn, OneToMany, ManyToOne } from "typeorm";
 import BaseEntity from "./baseEntity.js";
 // import { Vehicle } from "./vehicle.model.js";
 import { Order } from "./order.model.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
-// let Vehicle:  any;
+import { DriverType } from "../utils/enums/driverType.enum.js";
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
@@ -67,6 +67,35 @@ export class Driver extends BaseEntity {
 
     @OneToMany(() => OrderCancellationRequest, (cancel) => cancel.driver)
     cancellationRequests: OrderCancellationRequest[];
+
+    @Column({ type: "enum", enum: DriverType, default: DriverType.INDIVIDUAL })
+    type: DriverType; // 'INDIVIDUAL' or 'BUSINESS'
+
+    @Column({ type: "text", nullable: true })
+    businessName: string; // only for BUSINESS
+
+    @Column({ type: "text", nullable: true })
+    businessLocation: string; // address or coordinates
+
+    @Column({ type: "text", nullable: true })
+    companyRepresentativeName: string; // CR name
+
+    @Column({ type: "text", nullable: true })
+    crPhoto: string; // URL
+
+    @Column({ type: "text", nullable: true })
+    taxId: string; // URL
+
+    /**
+     * Self-referencing relation
+     * If this driver belongs to a business, this points to the business owner
+     */
+    @ManyToOne(() => Driver, (driver) => driver.invitedDrivers, { nullable: true })
+    @JoinColumn({ name: "businessOwnerId" })
+    businessOwner: Driver;
+
+    @OneToMany(() => Driver, (driver) => driver.businessOwner)
+    invitedDrivers: Driver[];
 }
 
 import { Vehicle } from "./vehicle.model.js";

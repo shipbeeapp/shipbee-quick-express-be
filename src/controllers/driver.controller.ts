@@ -60,15 +60,19 @@ export class DriverController {
               { name: "vehicleRight", maxCount: 1 },
               { name: "vehicleFront", maxCount: 1 },
               { name: "vehicleBack", maxCount: 1 },
+              { name: "crPhoto", maxCount: 1 },
+              { name: "taxId", maxCount: 1 },
             ]),
             validationMiddleware(DriverDto),
             this.signupDriver.bind(this));
         this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
-        this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
+        this.router.get(`${this.path}/invited-drivers`, authenticationMiddleware, this.getInvitedDriversByBusinessOwner.bind(this));
         this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
         this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
         this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
+        this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
+        this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -193,6 +197,9 @@ export class DriverController {
                 driverData.rightPhoto = files['vehicleRight'] ? files['vehicleRight'][0].path.split("/upload/")[1] : undefined;
                 driverData.frontPhoto = files['vehicleFront'] ? files['vehicleFront'][0].path.split("/upload/")[1] : undefined;
                 driverData.backPhoto = files['vehicleBack'] ? files['vehicleBack'][0].path.split("/upload/")[1] : undefined;
+
+                driverData.crPhoto = files['crPhoto'] ? files['crPhoto'][0].path.split("/upload/")[1] : undefined;
+                driverData.taxId = files['taxId'] ? files['taxId'][0].path.split("/upload/")[1] : undefined;
                 console.log("Processed driver data with file paths:", driverData);
             }
             const saltRounds = 10;
@@ -275,7 +282,8 @@ export class DriverController {
             if (!isValid) {
                 return res.status(400).json({ success: false, message: "Invalid OTP." });
             }
-            res.status(200).json({ success: true, message: "OTP verified successfully." });
+            const driver = await this.driverService.findDriverByPhone(phoneNumber);
+            res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver.type, invitedByBusiness: driver.businessOwner ? true : false, businessOwnerId: driver.businessOwner ? driver.businessOwner?.id : null });
         } catch (error) {
             console.error("Error verifying OTP:", error.message);
             res.status(500).json({ success: false, message: error.message });
@@ -308,6 +316,39 @@ export class DriverController {
         }
         catch (error) {
             console.error("Error assigning driver to order:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private inviteDriverByBusinessOwner = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const businessOwnerId = req.driverId;
+            const { phoneNumber } = req.body;
+            if (!businessOwnerId) {
+                return res.status(400).json({ success: false, message: "Business owner ID is required." });
+            }
+            await this.driverService.inviteDriverByBusinessOwner(businessOwnerId, phoneNumber);
+            res.status(200).json({ success: true, message: "Driver invited successfully." });
+        }
+        catch (error) {
+            console.error("Error inviting driver by business owner:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getInvitedDriversByBusinessOwner = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            console.log("Fetching invited drivers by business owner");
+            const businessOwnerId = req.driverId;
+            console.log("Business Owner ID:", businessOwnerId);
+            if (!businessOwnerId) {
+                return res.status(400).json({ success: false, message: "Business owner ID is required." });
+            }
+            const drivers = await this.driverService.getInvitedDriversByBusinessOwner(businessOwnerId);
+            res.status(200).json({ success: true, data: drivers });
+        }
+        catch (error) {
+            console.error("Error fetching invited drivers by business owner:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

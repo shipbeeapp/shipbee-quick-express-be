@@ -59,6 +59,7 @@ import {AddModificationsToPromoCode1761207892348} from "../migrations/1761207892
 import {AddDescriptionInPromocode1761240108086} from "../migrations/1761240108086-AddDescriptionInPromocode.js";
 import {AddPayerOptionInOrder1761577063081} from "../migrations/1761577063081-AddPayerOptionInOrder.js";
 import {AddCreatedByUser1761643526306} from "../migrations/1761643526306-AddCreatedByUser.js";
+import {AddNewDriverFields1761645175717} from "../migrations/1761645175717-AddNewDriverFields.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -130,6 +131,7 @@ export const AppDataSource = new DataSource({
     AddDescriptionInPromocode1761240108086,
     AddPayerOptionInOrder1761577063081,
     AddCreatedByUser1761643526306,
+    AddNewDriverFields1761645175717,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

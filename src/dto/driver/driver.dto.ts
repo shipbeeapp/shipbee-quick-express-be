@@ -2,6 +2,7 @@ import { IsString, IsOptional, IsEnum, IsInt, MaxLength } from 'class-validator'
 import { Max, Min, Matches } from 'class-validator';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 import DriverSignupStatus from '../../utils/enums/signupStatus.enum.js';
+import { DriverType } from '../../utils/enums/driverType.enum.js';
 
 export class DriverDto {
     @IsString()
@@ -107,4 +108,32 @@ export class DriverDto {
     @IsString()
     @IsOptional()
     backPhoto: string; // URL or path to the back side photo of the vehicle
+
+    @IsString()
+    @IsOptional()
+    type: DriverType; // INDIVIDUAL or BUSINESS
+
+    @IsString()
+    @IsOptional()
+    businessName: string; // Name of the company if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
+    businessLocation: string; // Location of the business if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
+    companyRepresentativeName: string; // Name of the company representative if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
+    crPhoto: string; // URL or path to the commercial registration photo if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
+    taxId: string; // Tax ID if driverType is BUSINESS
+
+    @IsOptional()
+    @IsString()
+    businessOwnerId: string; // ID of the business owner driver if this driver is invited by a business
 }

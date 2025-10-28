@@ -11,6 +11,7 @@ import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
+import { sign } from 'crypto';
 
 export class AuthController {
   public router: Router = Router();
@@ -226,6 +227,15 @@ export class AuthController {
                 qid: driver.qid,
                 surname: driver.surname,
                 dateOfBirth: driver.dateOfBirth,
+                signUpStatus: driver.signUpStatus,
+                type: driver.type,
+                invitedByBusiness: driver.businessOwner ? true : false,
+                businessOwnerName: driver.businessOwner?.name,
+                businessName: driver.businessOwner ? driver.businessOwner.businessName : driver.businessName,
+                businessLocation: driver.businessOwner ? driver.businessOwner.businessLocation : driver.businessLocation,
+                companyRepresentativeName: driver.businessOwner ? driver.businessOwner.companyRepresentativeName : driver.companyRepresentativeName,
+                crPhoto: driver.crPhoto ? `${env.CLOUDINARY_BASE_URL}${driver.crPhoto}` : null,
+                taxId:  driver.taxId ? `${env.CLOUDINARY_BASE_URL}${driver.taxId}` : null   ,
                 profilePicture: `${env.CLOUDINARY_BASE_URL}${driver.profilePicture}` // Assuming profilePicture is a field in the Driver model
             }
             const token = jwt.sign(driverData, env.JWT_SECRET);

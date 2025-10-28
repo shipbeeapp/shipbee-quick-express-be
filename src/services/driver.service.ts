@@ -17,6 +17,9 @@ import { env } from "../config/environment.js";
 import { getOnlineDrivers } from "../socket/socket.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
+import { DriverType } from "../utils/enums/driverType.enum.js";
+import { DriverResource } from "../resource/drivers/driver.resource.js";
+import { generatePhotoLink } from "../utils/global.utils.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -35,7 +38,10 @@ export default class DriverService {
             let driver;
             let vehicle;
             console.log("findOrCreateDriver called with data:", data);
-            driver = await this.driverRepository.findOneBy({ phoneNumber: data.phoneNumber });
+            driver = await this.driverRepository.findOne({
+                where: { phoneNumber: data.phoneNumber },
+                relations: ["vehicle", "businessOwner"]
+            });
             
             if (!driver) {
                 // Create new driver
@@ -80,12 +86,71 @@ export default class DriverService {
                     licenseFront: data.licenseFront,
                     licenseBack: data.licenseBack,
                     licenseExpirationDate: data.licenseExpirationDate,
+                    type: data.type,
+                    businessName: data.businessName,
+                    businessLocation: data.businessLocation,
+                    companyRepresentativeName: data.companyRepresentativeName,
+                    crPhoto: data.crPhoto,
+                    taxId: data.taxId,
+                    businessOwner: data.type === DriverType.BUSINESS ? null : { id: data.businessOwnerId },
                     vehicle: vehicle
                 });
                 driver = await manager.save(newDriver);
               }
               else {
-                throw new Error(`Driver with phone number ${data.phoneNumber} already exists`);
+                // if (driver.type === DriverType.BUSINESS) {
+
+                // }
+                //checked if he has a business owner and it matches the one in the request
+                if (driver.businessOwner && data.businessOwnerId && driver.businessOwner?.id !== data.businessOwnerId) {
+                    throw new Error(`Driver with phone number ${data.phoneNumber} already linked to another business owner`);
+                }
+                if (driver.businessOwner && data.businessOwnerId && driver.businessOwner?.id === data.businessOwnerId) {
+                    // Driver already linked to this business owner, set this vehicle and driver details
+                    if (driver.vehicle) {
+                        throw new Error(`Driver with phone number ${data.phoneNumber} is already linked to this business owner and has a vehicle assigned`);
+                    }
+                    if (driver.signUpStatus !== DriverSignupStatus.APPROVED) {
+                        console.log(`Driver with phone number ${data.phoneNumber} is already linked to this business owner`);
+                        vehicle = vehicleManager.create({
+                            type: data.vehicleType,
+                            number: data.vehicleNumber,
+                            model: data.vehicleModel, // Assuming vehicleModel is part of the data
+                            color: data.color,
+                            productionYear: data.productionYear,
+                            registrationFront: data.registrationFront,
+                            registrationBack: data.registrationBack,
+                            frontPhoto: data.frontPhoto, // Placeholder if not provided
+                            backPhoto: data.backPhoto, // Placeholder if not provided
+                            leftPhoto: data.leftPhoto, // Placeholder if not provided
+                            rightPhoto: data.rightPhoto // Placeholder if not provided
+                        });
+                        vehicle = await vehicleManager.save(vehicle);
+                        driver.name = data.name ?? driver.name;
+                        driver.surname = data.surname ?? driver.surname;
+                        driver.password = data.password ?? driver.password;
+                        driver.dateOfBirth = data.dateOfBirth ?? driver.dateOfBirth;
+                        driver.profilePicture = data.profilePicture ?? driver.profilePicture;
+                        driver.qid = data.qid ?? driver.qid;
+                        driver.qidFront = data.qidFront ?? driver.qidFront;
+                        driver.qidBack = data.qidBack ?? driver.qidBack;
+                        driver.licenseFront = data.licenseFront ?? driver.licenseFront;
+                        driver.licenseBack = data.licenseBack ?? driver.licenseBack;
+                        driver.licenseExpirationDate = data.licenseExpirationDate ?? driver.licenseExpirationDate;
+                        driver.type = data.type ?? driver.type;
+                        driver.businessName = data.businessName ?? driver.businessName;
+                        driver.businessLocation = data.businessLocation ?? driver.businessLocation;
+                        driver.companyRepresentativeName = data.companyRepresentativeName ?? driver.companyRepresentativeName;
+                        driver.crPhoto = data.crPhoto ?? driver.crPhoto;
+                        driver.taxId = data.taxId ?? driver.taxId;
+                        driver.vehicle = vehicle;
+                        driver = await manager.save(driver);
+                   }
+                   else throw new Error(`Driver with phone number ${data.phoneNumber} is already linked to this business owner and approved`);
+                }
+                else {
+                    throw new Error(`Driver with phone number ${data.phoneNumber} already exists`);
+                }
               }
             return {driver, vehicleType: vehicle.type};
         } catch (error) {
@@ -98,7 +163,7 @@ export default class DriverService {
         try {
             return await this.driverRepository.findOne({
                 where: { phoneNumber },
-                relations: ["vehicle"],
+                relations: ["vehicle", "businessOwner"],
             });
         } catch (error) {
             console.error("Error finding driver by phone:", error);
@@ -185,6 +250,7 @@ export default class DriverService {
             .createQueryBuilder("driver")
             .leftJoinAndSelect("driver.vehicle", "vehicle")
             .leftJoin("driver.orders", "order")
+            .leftJoinAndSelect("driver.businessOwner", "businessOwner")
             .select([
                 "driver.id",
                 "driver.name",
@@ -201,6 +267,20 @@ export default class DriverService {
                 "driver.licenseFront",
                 "driver.licenseBack",
                 "driver.licenseExpirationDate",
+                "driver.type",
+                "driver.businessName",
+                "driver.businessLocation",
+                "driver.companyRepresentativeName",
+                "driver.crPhoto",
+                "driver.taxId",
+                "businessOwner.id",
+                "businessOwner.name",
+                "businessOwner.phoneNumber",
+                "businessOwner.businessName",
+                "businessOwner.businessLocation",
+                "businessOwner.companyRepresentativeName",
+                "businessOwner.crPhoto",
+                "businessOwner.taxId",
                 "vehicle.id",
                 "vehicle.type",
                 "vehicle.model",
@@ -217,6 +297,7 @@ export default class DriverService {
             .addSelect("COUNT(order.id)", "orderCount")
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
+            .addGroupBy("businessOwner.id")
             .getRawMany();
         
         return result;
@@ -641,6 +722,53 @@ export default class DriverService {
     }
     catch (error) {
         console.error("Error assigning driver to order:", error);
+        throw error;
+    }
+  }
+
+  async inviteDriverByBusinessOwner(businessOwnerId: string, phoneNumber: string): Promise<void> {
+    try {
+        const businessOwner = await this.driverRepository.findOneBy({ id: businessOwnerId });
+        if (!businessOwner) {
+            throw new Error(`Business owner with ID ${businessOwnerId} not found`);
+        }
+        if (businessOwner.type !== DriverType.BUSINESS) {
+            throw new Error(`Driver with ID ${businessOwnerId} is not a business owner`);
+        }
+        let driver = await this.driverRepository.findOne({ where: { phoneNumber }, relations: ["businessOwner"] });
+        if (!driver) {
+            driver = this.driverRepository.create({
+                phoneNumber,
+                type: DriverType.INDIVIDUAL,
+                businessOwner: { id: businessOwnerId },
+            });
+            await this.driverRepository.save(driver);
+        } else {
+            if (driver.businessOwner && driver.businessOwner.id === businessOwnerId) {
+                throw new Error(`Driver with phone number ${phoneNumber} is already invited by this business owner`);
+            }
+            else throw new Error(`Driver with phone number ${phoneNumber} already linked to another business owner`);
+        }
+    } catch (error) {
+        console.error("Error inviting driver by business owner:", error);
+        throw error;
+    }
+ }
+
+ async getInvitedDriversByBusinessOwner(businessOwnerId: string): Promise<Partial<Driver>[]> {
+    try {
+        const businessOwner = await this.driverRepository.findOneBy({ id: businessOwnerId });
+        if (!businessOwner) {
+            throw new Error(`Business owner with ID ${businessOwnerId} not found`);
+        }
+
+        const invitedDrivers = await this.driverRepository.find({
+            where: { businessOwner: { id: businessOwnerId } },
+            relations: ["vehicle"]
+        });
+        return DriverResource.mapInvitedDriversResponse(invitedDrivers);
+    } catch (error) {
+        console.error("Error fetching invited drivers by business owner:", error);
         throw error;
     }
   }
