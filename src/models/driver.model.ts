@@ -4,6 +4,7 @@ import BaseEntity from "./baseEntity.js";
 import { Order } from "./order.model.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import { DriverType } from "../utils/enums/driverType.enum.js";
+import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
@@ -96,6 +97,19 @@ export class Driver extends BaseEntity {
 
     @OneToMany(() => Driver, (driver) => driver.businessOwner)
     invitedDrivers: Driver[];
+
+
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    qidApprovalStatus: ApprovalStatus;
+    
+    @Column({ type: "text", nullable: true })
+    qidRejectionReason: string;
+    
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    licenseApprovalStatus: ApprovalStatus;
+    
+    @Column({ type: "text", nullable: true })
+    licenseRejectionReason: string;
 }
 
 import { Vehicle } from "./vehicle.model.js";

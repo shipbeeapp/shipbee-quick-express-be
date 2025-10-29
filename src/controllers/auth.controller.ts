@@ -11,7 +11,6 @@ import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
-import { sign } from 'crypto';
 
 export class AuthController {
   public router: Router = Router();
@@ -209,12 +208,6 @@ export class AuthController {
             if (!isPasswordValid) {
                 return res.status(401).json({ success: false, message: 'Invalid driver credentials.' });
             }
-            if (driver.signUpStatus === DriverSignupStatus.REJECTED) {
-                return res.status(403).json({ success: false, message: `Driver application was ${driver.signUpStatus}. Please contact admin.` });
-            }
-            if (driver.signUpStatus === DriverSignupStatus.PENDING) {
-                return res.status(403).json({ success: false, message: `Driver application is still ${driver.signUpStatus}. Please wait for admin approval.` });
-            }
             const driverData = {
                 driverId: driver.id,
                 name: driver.name,
@@ -224,7 +217,18 @@ export class AuthController {
                 vehicleNumber: driver.vehicle?.number,
                 vehicleColor: driver.vehicle?.color,
                 vehicleProductionYear: driver.vehicle?.productionYear,
+                infoApprovalStatus: driver.vehicle?.infoApprovalStatus,
+                infoRejectionReason: driver.vehicle?.infoRejectionReason,
                 qid: driver.qid,
+                qidFront: driver.qidFront ? `${env.CLOUDINARY_BASE_URL}${driver.qidFront}` : null,
+                qidBack: driver.qidBack ? `${env.CLOUDINARY_BASE_URL}${driver.qidBack}` : null,
+                licenseFront: driver.licenseFront ? `${env.CLOUDINARY_BASE_URL}${driver.licenseFront}` : null,
+                licenseBack: driver.licenseBack ? `${env.CLOUDINARY_BASE_URL}${driver.licenseBack}` : null,
+                licenseExpirationDate: driver.licenseExpirationDate,
+                qidApprovalStatus: driver.qidApprovalStatus,
+                qidRejectionReason: driver.qidRejectionReason,
+                licenseApprovalStatus: driver.licenseApprovalStatus,
+                licenseRejectionReason: driver.licenseRejectionReason,
                 surname: driver.surname,
                 dateOfBirth: driver.dateOfBirth,
                 signUpStatus: driver.signUpStatus,

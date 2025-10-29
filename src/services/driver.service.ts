@@ -21,6 +21,7 @@ import { DriverType } from "../utils/enums/driverType.enum.js";
 import { DriverResource } from "../resource/drivers/driver.resource.js";
 import { generatePhotoLink } from "../utils/global.utils.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
+import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -773,5 +774,148 @@ export default class DriverService {
         console.error("Error fetching invited drivers by business owner:", error);
         throw error;
     }
+  }
+
+  async updateDriverSignUpStatus(driverId: string) {
+    const driver = await this.driverRepository.findOne({
+      where: { id: driverId },
+      relations: ["vehicle"],
+    });
+
+    if (!driver) throw new Error("Driver not found");
+
+    // Evaluate combined approval
+    const allApproved =
+      driver.qidApprovalStatus === ApprovalStatus.APPROVED &&
+      driver.licenseApprovalStatus === ApprovalStatus.APPROVED &&
+      driver.vehicle?.approvalStatus === ApprovalStatus.APPROVED;
+
+    const anyRejected =
+      driver.qidApprovalStatus === ApprovalStatus.REJECTED ||
+      driver.licenseApprovalStatus === ApprovalStatus.REJECTED ||
+      driver.vehicle?.approvalStatus === ApprovalStatus.REJECTED;
+
+    if (anyRejected) {
+      driver.signUpStatus = DriverSignupStatus.REJECTED;
+    } else if (allApproved) {
+      driver.signUpStatus = DriverSignupStatus.APPROVED;
+    } else {
+      driver.signUpStatus = DriverSignupStatus.PENDING;
+    }
+
+    await this.driverRepository.save(driver);
+}
+
+  async approveQid(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    driver.qidApprovalStatus = status;
+    driver.qidRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    await this.driverRepository.save(driver);
+
+    await this.updateDriverSignUpStatus(driverId);
+
+  }
+
+  async approveLicense(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    driver.licenseApprovalStatus = status;
+    driver.licenseRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    await this.driverRepository.save(driver);
+
+    await this.updateDriverSignUpStatus(driverId);
+  }
+
+  
+  async approveVehicleInfo(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
+    const driver = await this.driverRepository.findOne({
+      where: { id: driverId },
+      relations: ["vehicle"],
+    });
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    if (!driver.vehicle) {
+      throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
+    }
+
+    driver.vehicle.infoApprovalStatus = status;
+    driver.vehicle.infoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
+
+    await this.updateDriverSignUpStatus(driverId);
+  }
+
+  async editQid(driverId: string, qidData: any): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    driver.qid = qidData.qid;
+    driver.qidFront = qidData.qidFront;
+    driver.qidBack = qidData.qidBack;
+
+    // Reset approval status to pending on edit
+    driver.qidApprovalStatus = ApprovalStatus.PENDING;
+    driver.qidRejectionReason = null;
+
+    await this.driverRepository.save(driver);
+    await this.updateDriverSignUpStatus(driverId);
+  }
+  
+   async editLicense(driverId: string, licenseData: any): Promise<void> {
+      const driver = await this.driverRepository.findOneBy({ id: driverId });
+
+        if (!driver) {
+            throw new Error(`Driver with ID ${driverId} not found`);
+        }
+
+        driver.licenseFront = licenseData.licenseFront;
+        driver.licenseBack = licenseData.licenseBack;
+        driver.licenseExpirationDate = licenseData.licenseExpirationDate;
+
+        // Reset approval status to pending on edit
+        driver.licenseApprovalStatus = ApprovalStatus.PENDING;
+        driver.licenseRejectionReason = null;
+        await this.driverRepository.save(driver);
+        await this.updateDriverSignUpStatus(driverId);
+    }
+
+  async editVehicleInfo(driverId: string, vehicleData: any): Promise<void> {
+    const driver = await this.driverRepository.findOne({
+      where: { id: driverId },
+      relations: ["vehicle"],
+    });
+
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    if (!driver.vehicle) {
+      throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
+    }
+
+    driver.vehicle.model = vehicleData.model;
+    driver.vehicle.number = vehicleData.number;
+    driver.vehicle.color = vehicleData.color;
+    driver.vehicle.productionYear = vehicleData.productionYear;
+
+    // Reset approval status to pending on edit
+    driver.vehicle.infoApprovalStatus = ApprovalStatus.PENDING;
+    driver.vehicle.infoRejectionReason = null;
+
+    await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
+    await this.updateDriverSignUpStatus(driverId);
   }
 }
