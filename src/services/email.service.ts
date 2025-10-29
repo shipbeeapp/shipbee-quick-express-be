@@ -285,3 +285,19 @@ export async function sendArrivalNotification(phoneNumber: string, email: string
     throw new Error(`Failed to send arrival notification SMS to ${phoneNumber}: ${error.message}`);
   }
 }
+
+export async function sendDriverUpdateInfoMail(driverName: string, driverPhoneNumber: string, updatedInfo: string) {
+  try {
+    await transporter.sendMail({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      to: env.SMTP.USER, // Admin email from environment variables
+      subject: 'Driver Information Update Request',
+      html: `<p style="font-size: 24px;">Driver ${driverName} with phone number ${driverPhoneNumber} has requested to update the following information: ${updatedInfo}.
+      You can review and approve or reject the request from the dashboard <a href="${env.ADMIN_URL}">here</a>.</p>`,
+    });
+    console.log(`Driver update info email sent to: ${env.SMTP.USER}`);
+  } catch (error) {
+    console.error('Error sending driver update info email:', error);
+    throw new Error(`Failed to send driver update info email to ${env.SMTP.USER}: ${error.message}`);
+  }
+}

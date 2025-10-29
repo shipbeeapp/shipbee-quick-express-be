@@ -11,7 +11,7 @@ import { calculateActiveHoursToday } from "../socket/socket.js";
 import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
 import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
-import { sendOrderConfirmation, sendOtp } from "../services/email.service.js";
+import { sendDriverUpdateInfoMail, sendOrderConfirmation, sendOtp } from "../services/email.service.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import { env } from "../config/environment.js";
 import { getOnlineDrivers } from "../socket/socket.js";
@@ -878,7 +878,10 @@ export default class DriverService {
 
     await this.driverRepository.save(driver);
     await this.updateDriverSignUpStatus(driverId);
-  }
+    await sendDriverUpdateInfoMail(driver.name, driver.phoneNumber, 'QID').catch((err) => {
+        console.error("Error sending driver QID update email:", err);
+    });
+  } 
   
    async editLicense(driverId: string, licenseData: any): Promise<void> {
       const driver = await this.driverRepository.findOneBy({ id: driverId });
@@ -896,6 +899,10 @@ export default class DriverService {
         driver.licenseRejectionReason = null;
         await this.driverRepository.save(driver);
         await this.updateDriverSignUpStatus(driverId);
+
+        await sendDriverUpdateInfoMail(driver.name, driver.phoneNumber, 'License').catch((err) => {
+            console.error("Error sending driver license update email:", err);
+        });
     }
 
   async editVehicleInfo(driverId: string, vehicleData: any): Promise<void> {
@@ -923,5 +930,9 @@ export default class DriverService {
 
     await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
     await this.updateDriverSignUpStatus(driverId);
+
+    await sendDriverUpdateInfoMail(driver.name, driver.phoneNumber, 'Vehicle Information').catch((err) => {
+        console.error("Error sending driver vehicle info update email:", err);
+    });
   }
 }
