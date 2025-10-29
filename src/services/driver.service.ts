@@ -275,6 +275,10 @@ export default class DriverService {
                 "driver.companyRepresentativeName",
                 "driver.crPhoto",
                 "driver.taxId",
+                "driver.qidApprovalStatus",
+                "driver.qidRejectionReason",
+                "driver.licenseApprovalStatus",
+                "driver.licenseRejectionReason",
                 "businessOwner.id",
                 "businessOwner.name",
                 "businessOwner.phoneNumber",
@@ -295,6 +299,8 @@ export default class DriverService {
                 "vehicle.rightPhoto",
                 "vehicle.registrationFront",
                 "vehicle.registrationBack",
+                "vehicle.infoApprovalStatus",
+                "vehicle.infoRejectionReason"
             ])
             .addSelect("COUNT(order.id)", "orderCount")
             .groupBy("driver.id")

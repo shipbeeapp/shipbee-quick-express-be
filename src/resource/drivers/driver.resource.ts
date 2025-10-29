@@ -27,6 +27,10 @@ export class DriverResource {
             crPhoto: driver.driver_type === DriverType.BUSINESS ? generatePhotoLink(driver.driver_crPhoto) : driver.businessOwner_crPhoto ? generatePhotoLink(driver.businessOwner_crPhoto): null,
             taxId: driver.driver_type === DriverType.BUSINESS ? generatePhotoLink(driver.driver_taxId) : driver.businessOwner_taxId ? generatePhotoLink(driver.businessOwner_taxId) : null,
             invitedByBusiness: driver.businessOwner_id ? true : false,
+            qidApprovalStatus: driver.driver_qidApprovalStatus,
+            qidRejectionReason: driver.driver_qidRejectionReason,
+            licenseApprovalStatus: driver.driver_licenseApprovalStatus,
+            licenseRejectionReason: driver.driver_licenseRejectionReason,
             vehicle: {
                 type: driver.vehicle_type,
                 model: driver.vehicle_model,
@@ -39,6 +43,8 @@ export class DriverResource {
                 rightPhoto: generatePhotoLink(driver.vehicle_rightPhoto),
                 registrationFront: generatePhotoLink(driver.vehicle_registrationFront),
                 registrationBack: generatePhotoLink(driver.vehicle_registrationBack),
+                infoApprovalStatus: driver.vehicle_infoApprovalStatus,
+                infoRejectionReason: driver.vehicle_infoRejectionReason,
             },
             ordersCount: Number(driver.orderCount),
         };
