@@ -717,4 +717,15 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
     async saveOrder(order: Order) {
       return this.orderRepository.save(order);
     }
+
+    async updateOrder(orderId: string) {
+      const order = await this.orderRepository.findOne({ where: { id: orderId } });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+
+      order.isViewed = true;
+      order.viewedAt = new Date();
+      return this.orderRepository.save(order);
+    }
   }

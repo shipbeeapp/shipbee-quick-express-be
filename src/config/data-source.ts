@@ -61,6 +61,7 @@ import {AddPayerOptionInOrder1761577063081} from "../migrations/1761577063081-Ad
 import {AddCreatedByUser1761643526306} from "../migrations/1761643526306-AddCreatedByUser.js";
 import {AddNewDriverFields1761645175717} from "../migrations/1761645175717-AddNewDriverFields.js";
 import {AddApprovalColumnsForDriverAndVehicle1761729766887} from "../migrations/1761729766887-AddApprovalColumnsForDriverAndVehicle.js";
+import {AddIsViewedAndViewedAtInOrder1761827413501} from "../migrations/1761827413501-AddIsViewedAndViewedAtInOrder.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -134,6 +135,7 @@ export const AppDataSource = new DataSource({
     AddCreatedByUser1761643526306,
     AddNewDriverFields1761645175717,
     AddApprovalColumnsForDriverAndVehicle1761729766887,
+    AddIsViewedAndViewedAtInOrder1761827413501,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

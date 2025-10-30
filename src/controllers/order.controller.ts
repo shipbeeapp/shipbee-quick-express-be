@@ -91,6 +91,12 @@ export class OrderController {
       authenticationMiddleware,
       this.notifyReceiver.bind(this)
     )
+
+    this.router.put(
+      "/orders/:orderId",
+      authenticationMiddleware,
+      this.updateOrder.bind(this)
+    )
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -338,6 +344,25 @@ export class OrderController {
       res.status(200).json({ success: true, message: "Receiver notified successfully." });
     } catch (error) {
       console.error("Error in order controller notifying sender:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async updateOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (req.email !== env.ADMIN.EMAIL) {
+          return res.status(403).json({ success: false, message: "You are not authorized to update orders." });
+      }
+      const { orderId } = req.params;
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+
+      await this.orderService.updateOrder(orderId);
+      res.status(200).json({ success: true, message: "Order updated successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller updating order:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

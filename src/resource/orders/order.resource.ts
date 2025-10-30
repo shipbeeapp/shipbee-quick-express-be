@@ -17,6 +17,8 @@ export class OrderResponseDto {
     orderNo: number;
     vehicleType: VehicleType;
     payer: Payer;
+    isViewed: boolean;
+    viewedAt: Date | null;
   
     sender: {
       id: string;
@@ -120,6 +122,8 @@ export class OrderResponseDto {
       currentStatus: order.status,
       vehicleType: order.vehicleType,
       payer: order.payer,
+      isViewed: order.isViewed,
+      viewedAt: order.viewedAt,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,

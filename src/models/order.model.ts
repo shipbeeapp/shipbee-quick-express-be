@@ -109,4 +109,11 @@ export class Order extends BaseEntity {
 
   @Column({ type: "enum", nullable: false, enum: Payer, default: Payer.SENDER })
   payer: Payer; // who will pay for the order: sender or receiver
+
+  @Column({type: "boolean", default: false})
+  isViewed: boolean; // whether the order has been viewed by admin
+
+  //viewed at
+  @Column({type: "timestamptz", nullable: true})
+  viewedAt: Date;
 }
