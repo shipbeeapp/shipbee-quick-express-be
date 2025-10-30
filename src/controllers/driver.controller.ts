@@ -311,7 +311,7 @@ export class DriverController {
                 return res.status(400).json({ success: false, message: "Invalid OTP." });
             }
             const driver = await this.driverService.findDriverByPhone(phoneNumber);
-            res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver.type, invitedByBusiness: driver.businessOwner ? true : false, businessOwnerId: driver.businessOwner ? driver.businessOwner?.id : null });
+            res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver?.type, invitedByBusiness: driver?.businessOwner ? true : false, businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null });
         } catch (error) {
             console.error("Error verifying OTP:", error.message);
             res.status(500).json({ success: false, message: error.message });
