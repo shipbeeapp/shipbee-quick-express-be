@@ -74,8 +74,8 @@ export class DriverController {
         this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
         this.router.put(`/admin${this.path}/:id/approve-qid`, authenticationMiddleware, this.approveQid.bind(this));
-        this.router.put(`/admin/${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
-        this.router.put(`/admin/${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
         this.router.put(`${this.path}/:id/edit-qid`, 
             authenticationMiddleware, 
             upload.fields([
