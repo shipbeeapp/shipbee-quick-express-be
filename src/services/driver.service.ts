@@ -794,12 +794,12 @@ export default class DriverService {
     const allApproved =
       driver.qidApprovalStatus === ApprovalStatus.APPROVED &&
       driver.licenseApprovalStatus === ApprovalStatus.APPROVED &&
-      driver.vehicle?.approvalStatus === ApprovalStatus.APPROVED;
+      driver.vehicle?.infoApprovalStatus === ApprovalStatus.APPROVED;
 
     const anyRejected =
       driver.qidApprovalStatus === ApprovalStatus.REJECTED ||
       driver.licenseApprovalStatus === ApprovalStatus.REJECTED ||
-      driver.vehicle?.approvalStatus === ApprovalStatus.REJECTED;
+      driver.vehicle?.infoApprovalStatus === ApprovalStatus.REJECTED;
 
     if (anyRejected) {
       driver.signUpStatus = DriverSignupStatus.REJECTED;
