@@ -120,11 +120,11 @@ export class OrderResponseDto {
 }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
-    console.log("Order entity in toOrderResponseDto:", order);
     const stops = order.stops?.map(stop => {
     let itemDesc;
     try {
       itemDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : { text: "", images: [] };
+      itemDesc.images = itemDesc.images.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`);
     } catch {
       itemDesc = { text: stop.itemDescription || "", images: [] };
     }

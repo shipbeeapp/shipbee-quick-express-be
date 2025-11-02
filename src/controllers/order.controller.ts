@@ -129,7 +129,7 @@ export class OrderController {
           if (!orderData.stops[index].images) {
             orderData.stops[index].images = [];
           }
-          orderData.stops[index].images.push(file.path); // use URL from Cloudinary
+          orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
         }
       });
 

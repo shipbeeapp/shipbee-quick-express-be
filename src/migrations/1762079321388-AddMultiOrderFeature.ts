@@ -30,6 +30,13 @@ export class AddMultiOrderFeature1762079321388 implements MigrationInterface {
                 CONSTRAINT "FK_order_stop_to_address" FOREIGN KEY ("toAddressId") REFERENCES "addresses"("id")
             );
         `);
+
+        //populate order_stops for existing orders
+        await queryRunner.query(`
+            INSERT INTO "order_stops" ("orderId", "receiverUserId", "toAddressId", "sequence", "itemDescription", "itemType", "distance", "status", "createdAt", "updatedAt")
+            SELECT o.id, o."receiverUserId", o."toAddressId", 1, o."itemDescription", o."itemType", o.distance, o.status, o."createdAt", o."updatedAt"
+            FROM "orders" o;
+        `);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
