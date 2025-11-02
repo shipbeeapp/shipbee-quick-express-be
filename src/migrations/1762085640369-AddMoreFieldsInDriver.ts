@@ -6,7 +6,7 @@ export class AddMoreFieldsInDriver1762085640369 implements MigrationInterface {
         await queryRunner.query(`
             ALTER TABLE "drivers"
             ADD COLUMN "email" TEXT,
-            ADD COLUMN "businessType" TEXT,
+            ADD COLUMN "businessType" TEXT
         `);
     }
 
@@ -14,7 +14,7 @@ export class AddMoreFieldsInDriver1762085640369 implements MigrationInterface {
         await queryRunner.query(`
             ALTER TABLE "drivers"
             DROP COLUMN "email",
-            DROP COLUMN "businessType",
+            DROP COLUMN "businessType"
         `);
     }
 
