@@ -3,6 +3,7 @@ import BaseEntity  from  "./baseEntity.js";
 import { Order } from "./order.model.js";
 import { UserPromoCode } from "./userPromoCode.model.js";
 import { userType } from "../utils/enums/userType.enum.js";
+import { OrderStop } from "./orderStops.model.js";
 
 @Entity("users")
 export class User extends BaseEntity {
@@ -32,9 +33,9 @@ export class User extends BaseEntity {
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];
 
-  // 👇 New: orders where the user is the receiver
-  @OneToMany(() => Order, (order) => order.receiver)
-  receivedOrders: Order[];
+ // Orders where the user is a receiver in a stop
+  @OneToMany(() => OrderStop, (stop) => stop.receiver)
+  receivedStops: OrderStop[];
 
   @OneToMany(() => UserPromoCode, (userPromoCode) => userPromoCode.user)
   promoCodeUsages: UserPromoCode[];

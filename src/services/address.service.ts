@@ -4,16 +4,14 @@ import { Address } from "../models/address.model.js";
 export class AddressService {
 //   private addressRepository = AppDataSource.getRepository(Address);
 
-  async createAddresses(fromAddr: any, toAddr: any, queryRunner: any): Promise<{ fromAddress: Address; toAddress: Address }> {
+  async createAddress(address: any, queryRunner: any): Promise<any> {
     try {
-       console.log("Creating addresses");
-        const fromAddress = queryRunner.manager.create(Address, { ...fromAddr });
-        const toAddress = toAddr ? queryRunner.manager.create(Address, { ...toAddr }): null;
-
-        if (toAddress) await queryRunner.manager.save([fromAddress, toAddress]);
-        else await queryRunner.manager.save(fromAddress);
-        console.log("Addresses created successfully");
-        return { fromAddress, toAddress };
+       console.log("Creating address");
+       console.log("address data:", address);
+        const addr = queryRunner.manager.create(Address, address);
+        await queryRunner.manager.save(addr);
+        console.log("address created:", addr);
+        return addr;
     } catch (error) {
         console.log(error);
         throw new Error(`Error creating addresses: ${error.message}`);

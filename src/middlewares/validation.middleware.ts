@@ -14,7 +14,7 @@ export async function validateObject<T extends object>(
 
   if (errors.length > 0) {
     console.log("Validation failed. Errors: ", errors);
-    const e = errors.map(error => Object.values(error.constraints || {})).flat();
+    const e = errors.map(error => Object.values(error.children || {})).flat();
     console.log("Validation errors:", e);
     throw new HttpException(400, e.join(', '));
   }

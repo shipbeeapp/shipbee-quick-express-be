@@ -1,6 +1,7 @@
 import { Entity, Column, OneToMany } from "typeorm";
 import BaseEntity from "./baseEntity.js";
 import { Order } from "./order.model.js";
+import { OrderStop } from "./orderStops.model.js";
 
 @Entity("addresses")
 export class Address extends BaseEntity {
@@ -40,6 +41,6 @@ export class Address extends BaseEntity {
   sentOrders: Order[];
 
   // One-to-Many with Orders where this address is the receiver
-  @OneToMany(() => Order, (order) => order.toAddress)
-  receivedOrders: Order[];
+  @OneToMany(() => OrderStop, (stop) => stop.toAddress)
+  receivedStops: OrderStop[];
 }

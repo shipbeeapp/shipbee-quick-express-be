@@ -62,6 +62,8 @@ import {AddCreatedByUser1761643526306} from "../migrations/1761643526306-AddCrea
 import {AddNewDriverFields1761645175717} from "../migrations/1761645175717-AddNewDriverFields.js";
 import {AddApprovalColumnsForDriverAndVehicle1761729766887} from "../migrations/1761729766887-AddApprovalColumnsForDriverAndVehicle.js";
 import {AddIsViewedAndViewedAtInOrder1761827413501} from "../migrations/1761827413501-AddIsViewedAndViewedAtInOrder.js";
+import {AddMultiOrderFeature1762079321388} from "../migrations/1762079321388-AddMultiOrderFeature.js";
+import { OrderStop } from "../models/orderStops.model.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -88,6 +90,7 @@ export const AppDataSource = new DataSource({
     Shipment, // ✅ Add Shipment entity
     Pricing, // ✅ Add Pricing entity
     OrderCancellationRequest, // ✅ Add OrderCancellationRequest entity
+    OrderStop, // ✅ Add OrderStop entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -136,6 +139,7 @@ export const AppDataSource = new DataSource({
     AddNewDriverFields1761645175717,
     AddApprovalColumnsForDriverAndVehicle1761729766887,
     AddIsViewedAndViewedAtInOrder1761827413501,
+    AddMultiOrderFeature1762079321388,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
