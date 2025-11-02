@@ -85,7 +85,13 @@ export class Driver extends BaseEntity {
     businessLocation: string; // address or coordinates
 
     @Column({ type: "text", nullable: true })
+    businessPhoneNumber: string; // contact number
+
+    @Column({ type: "text", nullable: true })
     companyRepresentativeName: string; // CR name
+
+    @Column( {type: "text", nullable: true })
+    companyLogo: string; // URL
 
     @Column({ type: "text", nullable: true })
     crPhoto: string; // URL

@@ -239,7 +239,9 @@ export class AuthController {
                 businessOwnerName: driver.businessOwner?.name,
                 businessName: driver.businessOwner ? driver.businessOwner.businessName : driver.businessName,
                 businessLocation: driver.businessOwner ? driver.businessOwner.businessLocation : driver.businessLocation,
+                businessPhoneNumber: driver.businessOwner ? driver.businessOwner.businessPhoneNumber : driver.businessPhoneNumber,
                 companyRepresentativeName: driver.businessOwner ? driver.businessOwner.companyRepresentativeName : driver.companyRepresentativeName,
+                companyLogo: driver.companyLogo ? `${env.CLOUDINARY_BASE_URL}${driver.companyLogo}` : null,
                 crPhoto: driver.crPhoto ? `${env.CLOUDINARY_BASE_URL}${driver.crPhoto}` : null,
                 taxId:  driver.taxId ? `${env.CLOUDINARY_BASE_URL}${driver.taxId}` : null   ,
                 profilePicture: `${env.CLOUDINARY_BASE_URL}${driver.profilePicture}` // Assuming profilePicture is a field in the Driver model

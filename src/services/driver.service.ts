@@ -91,9 +91,11 @@ export default class DriverService {
                     type: data.type,
                     businessName: data.businessName,
                     businessLocation: data.businessLocation,
+                    businessPhoneNumber: data.businessPhoneNumber,
                     companyRepresentativeName: data.companyRepresentativeName,
                     crPhoto: data.crPhoto,
                     taxId: data.taxId,
+                    companyLogo: data.companyLogo,
                     businessOwner: data.type === DriverType.BUSINESS ? null : { id: data.businessOwnerId },
                     vehicle: vehicle,
                     email: data.email,
@@ -144,9 +146,11 @@ export default class DriverService {
                         driver.type = data.type ?? driver.type;
                         driver.businessName = data.businessName ?? driver.businessName;
                         driver.businessLocation = data.businessLocation ?? driver.businessLocation;
+                        driver.businessPhoneNumber = data.businessPhoneNumber ?? driver.businessPhoneNumber;
                         driver.companyRepresentativeName = data.companyRepresentativeName ?? driver.companyRepresentativeName;
                         driver.crPhoto = data.crPhoto ?? driver.crPhoto;
                         driver.taxId = data.taxId ?? driver.taxId;
+                        driver.companyLogo = data.companyLogo ?? driver.companyLogo;
                         driver.vehicle = vehicle;
                         driver.email = data.email ?? driver.email;
                         driver.businessType = data.businessType ?? driver.businessType;

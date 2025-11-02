@@ -123,6 +123,10 @@ export class DriverDto {
 
     @IsString()
     @IsOptional()
+    businessPhoneNumber: string; // Contact number of the business if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
     companyRepresentativeName: string; // Name of the company representative if driverType is BUSINESS
 
     @IsString()
@@ -132,6 +136,10 @@ export class DriverDto {
     @IsString()
     @IsOptional()
     taxId: string; // Tax ID if driverType is BUSINESS
+
+    @IsString()
+    @IsOptional()
+    companyLogo: string; // URL or path to the company logo if driverType is BUSINESS
 
     @IsOptional()
     @IsString()

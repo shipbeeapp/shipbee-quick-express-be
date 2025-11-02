@@ -62,6 +62,7 @@ export class DriverController {
               { name: "vehicleBack", maxCount: 1 },
               { name: "crPhoto", maxCount: 1 },
               { name: "taxId", maxCount: 1 },
+              { name: "companyLogo", maxCount: 1 },
             ]),
             validationMiddleware(DriverDto),
             this.signupDriver.bind(this));
@@ -228,6 +229,7 @@ export class DriverController {
 
                 driverData.crPhoto = files['crPhoto'] ? files['crPhoto'][0].path.split("/upload/")[1] : undefined;
                 driverData.taxId = files['taxId'] ? files['taxId'][0].path.split("/upload/")[1] : undefined;
+                driverData.companyLogo = files['companyLogo'] ? files['companyLogo'][0].path.split("/upload/")[1] : undefined;
                 console.log("Processed driver data with file paths:", driverData);
             }
             const saltRounds = 10;
