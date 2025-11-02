@@ -21,6 +21,8 @@ export class DriverResource {
             licenseBack: generatePhotoLink(driver.driver_licenseBack),
             licenseExpirationDate: driver.driver_licenseExpirationDate,
             type: driver.driver_type,
+            email: driver.driver_email,
+            businessType: driver.driver_businessType,
             businessName: driver.driver_type === DriverType.BUSINESS ? driver.driver_businessName : driver.businessOwner_businessName,
             businessLocation: driver.driver_type === DriverType.BUSINESS ? driver.driver_businessLocation : driver.businessOwner_businessLocation,
             companyRepresentativeName: driver.driver_type === DriverType.BUSINESS ? driver.driver_companyRepresentativeName : driver.businessOwner_companyRepresentativeName,

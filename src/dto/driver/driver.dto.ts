@@ -136,4 +136,12 @@ export class DriverDto {
     @IsOptional()
     @IsString()
     businessOwnerId: string; // ID of the business owner driver if this driver is invited by a business
+
+    @IsOptional()
+    @IsString()
+    email: string;
+
+    @IsOptional()
+    @IsString()
+    businessType: string; // only for BUSINESS
 }

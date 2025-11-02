@@ -95,7 +95,9 @@ export default class DriverService {
                     crPhoto: data.crPhoto,
                     taxId: data.taxId,
                     businessOwner: data.type === DriverType.BUSINESS ? null : { id: data.businessOwnerId },
-                    vehicle: vehicle
+                    vehicle: vehicle,
+                    email: data.email,
+                    businessType: data.businessType,
                 });
                 driver = await manager.save(newDriver);
               }
@@ -146,6 +148,8 @@ export default class DriverService {
                         driver.crPhoto = data.crPhoto ?? driver.crPhoto;
                         driver.taxId = data.taxId ?? driver.taxId;
                         driver.vehicle = vehicle;
+                        driver.email = data.email ?? driver.email;
+                        driver.businessType = data.businessType ?? driver.businessType;
                         driver = await manager.save(driver);
                    }
                    else throw new Error(`Driver with phone number ${data.phoneNumber} is already linked to this business owner and approved`);
@@ -270,6 +274,8 @@ export default class DriverService {
                 "driver.licenseBack",
                 "driver.licenseExpirationDate",
                 "driver.type",
+                "driver.email",
+                "driver.businessType",
                 "driver.businessName",
                 "driver.businessLocation",
                 "driver.companyRepresentativeName",

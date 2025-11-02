@@ -73,6 +73,12 @@ export class Driver extends BaseEntity {
     type: DriverType; // 'INDIVIDUAL' or 'BUSINESS'
 
     @Column({ type: "text", nullable: true })
+    email: string;
+
+    @Column( { type: "text", nullable: true })
+    businessType: string; // only for BUSINESS
+
+    @Column({ type: "text", nullable: true })
     businessName: string; // only for BUSINESS
 
     @Column({ type: "text", nullable: true })

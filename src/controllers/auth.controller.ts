@@ -233,6 +233,8 @@ export class AuthController {
                 dateOfBirth: driver.dateOfBirth,
                 signUpStatus: driver.signUpStatus,
                 type: driver.type,
+                email: driver.email,
+                businessType: driver.businessType,
                 invitedByBusiness: driver.businessOwner ? true : false,
                 businessOwnerName: driver.businessOwner?.name,
                 businessName: driver.businessOwner ? driver.businessOwner.businessName : driver.businessName,
