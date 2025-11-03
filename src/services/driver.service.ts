@@ -180,13 +180,77 @@ export default class DriverService {
             throw error;
         }
     }
+    constructDriverQuery() {
+        return this.driverRepository.createQueryBuilder("driver")
+                .leftJoinAndSelect("driver.vehicle", "vehicle")
+                .leftJoin("driver.orders", "order")
+                .leftJoinAndSelect("driver.businessOwner", "businessOwner")
+                .select([
+                    "driver.id",
+                    "driver.name",
+                    "driver.phoneNumber",
+                    "driver.status",
+                    "driver.password",
+                    "driver.updatedAt",
+                    "driver.signUpStatus",
+                    "driver.dateOfBirth",
+                    "driver.surname",
+                    "driver.profilePicture",
+                    "driver.qid",
+                    "driver.qidFront",
+                    "driver.qidBack",
+                    "driver.licenseFront",
+                    "driver.licenseBack",
+                    "driver.licenseExpirationDate",
+                    "driver.type",
+                    "driver.email",
+                    "driver.businessType",
+                    "driver.businessName",
+                    "driver.businessLocation",
+                    "driver.companyRepresentativeName",
+                    "driver.businessPhoneNumber",
+                    "driver.companyLogo",
+                    "driver.crPhoto",
+                    "driver.taxId",
+                    "driver.qidApprovalStatus",
+                    "driver.qidRejectionReason",
+                    "driver.licenseApprovalStatus",
+                    "driver.licenseRejectionReason",
+                    "businessOwner.id",
+                    "businessOwner.name",
+                    "businessOwner.phoneNumber",
+                    "businessOwner.businessName",
+                    "businessOwner.businessLocation",
+                    "businessOwner.businessPhoneNumber",
+                    "businessOwner.companyRepresentativeName",
+                    "businessOwner.crPhoto",
+                    "businessOwner.taxId",
+                    "businessOwner.companyLogo",
+                    "vehicle.id",
+                    "vehicle.type",
+                    "vehicle.model",
+                    "vehicle.number",
+                    "vehicle.color",
+                    "vehicle.productionYear",
+                    "vehicle.frontPhoto",
+                    "vehicle.backPhoto",
+                    "vehicle.leftPhoto",
+                    "vehicle.rightPhoto",
+                    "vehicle.registrationFront",
+                    "vehicle.registrationBack",
+                    "vehicle.infoApprovalStatus",
+                    "vehicle.infoRejectionReason"
+                ])
+    }
 
-    async findDriverById(driverId: string): Promise<Driver | null> {
+    async findDriverById(driverId: string, type?: string): Promise<Driver | null> {
         try {
-            return await this.driverRepository.findOne({
-                where: { id: driverId },
-                relations: ["vehicle"],
-            });
+            if (type) return await this.constructDriverQuery()
+                    .where("driver.id = :driverId", { driverId })
+                    .getOne();
+            else return await this.constructDriverQuery()
+                    .where("driver.id = :driverId", { driverId })
+                    .getRawOne();
         } catch (error) {
             console.error("Error finding driver by ID:", error);
             throw error;
@@ -256,66 +320,7 @@ export default class DriverService {
     }
     async findAllDrivers(): Promise<any> {
         try {
-            const result = await this.driverRepository
-            .createQueryBuilder("driver")
-            .leftJoinAndSelect("driver.vehicle", "vehicle")
-            .leftJoin("driver.orders", "order")
-            .leftJoinAndSelect("driver.businessOwner", "businessOwner")
-            .select([
-                "driver.id",
-                "driver.name",
-                "driver.phoneNumber",
-                "driver.status",
-                "driver.updatedAt",
-                "driver.signUpStatus",
-                "driver.dateOfBirth",
-                "driver.surname",
-                "driver.profilePicture",
-                "driver.qid",
-                "driver.qidFront",
-                "driver.qidBack",
-                "driver.licenseFront",
-                "driver.licenseBack",
-                "driver.licenseExpirationDate",
-                "driver.type",
-                "driver.email",
-                "driver.businessType",
-                "driver.businessName",
-                "driver.businessLocation",
-                "driver.companyRepresentativeName",
-                "driver.businessPhoneNumber",
-                "driver.companyLogo",
-                "driver.crPhoto",
-                "driver.taxId",
-                "driver.qidApprovalStatus",
-                "driver.qidRejectionReason",
-                "driver.licenseApprovalStatus",
-                "driver.licenseRejectionReason",
-                "businessOwner.id",
-                "businessOwner.name",
-                "businessOwner.phoneNumber",
-                "businessOwner.businessName",
-                "businessOwner.businessLocation",
-                "businessOwner.businessPhoneNumber",
-                "businessOwner.companyRepresentativeName",
-                "businessOwner.crPhoto",
-                "businessOwner.taxId",
-                "businessOwner.companyLogo",
-                "vehicle.id",
-                "vehicle.type",
-                "vehicle.model",
-                "vehicle.number",
-                "vehicle.color",
-                "vehicle.productionYear",
-                "vehicle.frontPhoto",
-                "vehicle.backPhoto",
-                "vehicle.leftPhoto",
-                "vehicle.rightPhoto",
-                "vehicle.registrationFront",
-                "vehicle.registrationBack",
-                "vehicle.infoApprovalStatus",
-                "vehicle.infoRejectionReason"
-            ])
+            const result = await this.constructDriverQuery()
             .addSelect("COUNT(order.id)", "orderCount")
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")

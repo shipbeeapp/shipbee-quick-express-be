@@ -317,7 +317,7 @@ export class AuthController {
             }
             // Verify the token
             const decodedToken = jwt.verify(token, env.JWT_SECRET) as { driverId: string };
-            const driver = await this.driverService.findDriverById(decodedToken.driverId);
+            const driver = await this.driverService.findDriverById(decodedToken.driverId, "reset-password");
             if (!driver) {
                 return res.status(404).json({ success: false, message: 'Driver not found.' });
             }
