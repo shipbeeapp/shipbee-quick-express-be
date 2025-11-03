@@ -35,7 +35,7 @@ import { generateToken } from "../utils/global.utils.js";
 import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
-import { emitOrderCancellationUpdate, emitOrderToDrivers } from "../socket/socket.js";
+import { emitOrderCancellationUpdate, emitOrderCompletionUpdate, emitOrderToDrivers, getCurrentLocationOfDriver } from "../socket/socket.js";
 import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
 import PromoCodeService from "./promoCode.service.js";
 import { User } from "../models/user.model.js";
@@ -253,7 +253,7 @@ export default class OrderService {
       const orderRepository = queryRunner.manager.getRepository(Order);
       const order = await orderRepository.findOne({
         where: { id: orderId },
-        relations: ["orderStatusHistory"],
+        relations: ["orderStatusHistory", "driver"],
       });
 
       if (!order) {
@@ -270,6 +270,10 @@ export default class OrderService {
       // Commit transaction
       await queryRunner.commitTransaction();
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+      if (status === OrderStatus.CANCELED)
+        emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
+      else if (status === OrderStatus.COMPLETED)
+        emitOrderCompletionUpdate(order.driver.id, order.id);
       console.log("Order status updated successfully");
     } catch (error) {
       console.error("Error updating order status:", error.message);
@@ -639,6 +643,8 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
             }
             if (action === "APPROVE") {
                 // Approve the cancellation
+                const driverCurrentLocation = getCurrentLocationOfDriver(cancellationRequest.driver.id);
+                console.log(`Driver current location when cancellation request approved for driver ${cancellationRequest.driver.id}:`, driverCurrentLocation);
                 cancellationRequest.status = CancelRequestStatus.APPROVED;
                 await queryRunner.manager.save(cancellationRequest);
                 const order = cancellationRequest.order;
@@ -647,7 +653,7 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
                 await queryRunner.manager.save(order);
                 await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
                 resetNotifiedDrivers(order.id);
-                await emitOrderToDrivers(order);
+                await emitOrderToDrivers(order, driverCurrentLocation);
                 broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
             } else if (action === "DECLINE") {
                 // Decline the cancellation

@@ -20,8 +20,8 @@ export async function getDrivingDistanceInKm(
     const distanceMeters = response.data.rows?.[0]?.elements?.[0]?.distance?.value;
     const durationMinutes = Math.ceil(response.data.rows?.[0]?.elements?.[0]?.duration?.value / 60);
     return {
-        distanceMeters: distanceMeters ? distanceMeters / 1000 : null,
-        durationMinutes: durationMinutes ? durationMinutes : null
+        distanceMeters: distanceMeters != null ? distanceMeters / 1000 : null,
+        durationMinutes: durationMinutes != null ? durationMinutes : null
     };
   } catch (error) {
     console.error("Failed to fetch distance from Google Maps:", error);

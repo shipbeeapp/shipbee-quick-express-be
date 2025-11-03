@@ -185,20 +185,21 @@ export function getOnlineDrivers(): Map<string, OnlineDriver> {
   return onlineDrivers;
 }
 
-export async function emitOrderToDrivers(order: Order): Promise<void> {
+export async function emitOrderToDrivers(order: Order, locationOnCancel?: string): Promise<void> {
   const io = getSocketInstance();
   const onlineDrivers = getOnlineDrivers();
   console.log(`📦 Emitting order ${order.id} to online drivers... ${Array.from(onlineDrivers.keys()).join(", ")}`);
   for (const [driverId, { socketId, vehicleType, currentLocation }] of onlineDrivers.entries()) {
     if (vehicleType === order.vehicleType) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
+      console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);
       if (hasDriverBeenNotified(driverId, order.id)) {
         console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
         continue; // Skip if the driver has already been notified
       }
       const {distanceMeters, durationMinutes} = await getDrivingDistanceInKm(
         currentLocation,
-        order.fromAddress.coordinates
+        locationOnCancel ? locationOnCancel : order.fromAddress.coordinates
       );
       console.log(`📦 Distance of pickup from driver ${driverId}: ${distanceMeters} km`);
       const maxRadiusKm = RADIUS_BY_VEHICLE_TYPE[vehicleType] ?? env.RADIUS_KM_OTHER; // default 15 km
@@ -207,6 +208,7 @@ export async function emitOrderToDrivers(order: Order): Promise<void> {
         console.log(`❌ Driver ${driverId} too far (${distanceMeters} km) or distance unavailable`);
         continue;
       }
+      order.fromAddress.coordinates = locationOnCancel ? locationOnCancel : order.fromAddress.coordinates;
       io.to(socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
       markDriverNotified(order.id, driverId);
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
@@ -224,6 +226,19 @@ export function emitOrderCancellationUpdate(driverId: string, orderId: string, s
   }
   io.to(driver.socketId).emit("order-cancellation-update", { driverId, orderId, status });
   console.log(`order cancellation update sent to driver id: ${driverId} having order id: ${orderId} with status: ${status} `)
+}
+
+export function emitOrderCompletionUpdate(driverId: string, orderId: string): Promise<void> {
+  const io = getSocketInstance();
+  const onlineDrivers = getOnlineDrivers();
+  const driver = onlineDrivers.get(driverId);
+
+  if (!driver) {
+    console.log(`Driver ${driverId} is not online`);
+    return;
+  }
+  io.to(driver.socketId).emit("order-completion-update", { driverId, orderId });
+  console.log(`order completion update sent to driver id: ${driverId} having order id: ${orderId} `)
 }
 
 export function calculateActiveHoursToday(driverId: string): number {
@@ -263,5 +278,16 @@ export async function emitOrderToDriver(driverId: string, order: Order) {
     console.log(`📦 Sent order ${order.id} by assignment to driver ${driverId}`);
   } else {
     console.log(`❌ Driver ${driverId} is not online when trying to assign order ${order.id}`);
+  }
+}
+
+export function getCurrentLocationOfDriver(driverId: string): string | null {
+  const onlineDrivers = getOnlineDrivers();
+  const driver = onlineDrivers.get(driverId);
+
+  if (driver) {
+    return driver.currentLocation;
+  } else {
+    return null;
   }
 }
