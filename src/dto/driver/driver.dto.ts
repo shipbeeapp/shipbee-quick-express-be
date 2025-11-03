@@ -1,5 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsInt, MaxLength } from 'class-validator';
-import { Max, Min, Matches } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt } from 'class-validator';
+import { Max, Min, ValidateIf } from 'class-validator';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 import DriverSignupStatus from '../../utils/enums/signupStatus.enum.js';
 import { DriverType } from '../../utils/enums/driverType.enum.js';
@@ -15,6 +15,7 @@ export class DriverDto {
     @IsString()
     password: string;
 
+    @ValidateIf(d => d.type === DriverType.INDIVIDUAL)
     @IsEnum(VehicleType)
     vehicleType: VehicleType; // Type of vehicle the driver operates
 

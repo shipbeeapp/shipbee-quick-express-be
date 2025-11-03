@@ -34,6 +34,9 @@ export default class DriverService {
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
+            queryRunner = AppDataSource.createQueryRunner();
+            await queryRunner.connect();
+            await queryRunner.startTransaction();
             console.log("Starting findOrCreateDriver with data:", data);
             const manager = queryRunner ? queryRunner.manager.getRepository(Driver) : this.driverRepository;
             const vehicleManager = queryRunner ? queryRunner.manager.getRepository(Vehicle) : this.vehicleRepository;
@@ -57,7 +60,7 @@ export default class DriverService {
                 // }
 
                 // If vehicle doesn't exist, create it
-                if (!vehicle) {
+                if (!vehicle && data.type === DriverType.INDIVIDUAL) {
                     vehicle = vehicleManager.create({
                         type: data.vehicleType,
                         number: data.vehicleNumber,
@@ -162,11 +165,16 @@ export default class DriverService {
                     throw new Error(`Driver with phone number ${data.phoneNumber} already exists`);
                 }
               }
-            return {driver, vehicleType: vehicle.type};
+            await queryRunner.commitTransaction();
+            return {driver, vehicleType: vehicle?.type};
         } catch (error) {
             console.error("Error in findOrCreateDriver:", error);
+            await queryRunner.rollbackTransaction();
             throw error;
         }
+        finally {
+            await queryRunner.release();  
+      }
     }
 
     async findDriverByPhone(phoneNumber: string): Promise<Driver | null> {
