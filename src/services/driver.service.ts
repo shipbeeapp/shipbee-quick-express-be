@@ -783,6 +783,13 @@ export default class DriverService {
             if (driver.businessOwner && driver.businessOwner.id === businessOwnerId) {
                 throw new Error(`Driver with phone number ${phoneNumber} is already invited by this business owner`);
             }
+            else if (driver.businessOwner && driver.businessOwner.id !== businessOwnerId) {
+                throw new Error(`Driver with phone number ${phoneNumber} already linked to another business owner`);
+            }
+            else if (!driver.businessOwner) {
+                driver.businessOwner = { id: businessOwnerId } as Driver;
+                await this.driverRepository.save(driver);
+            }
             else throw new Error(`Driver with phone number ${phoneNumber} already linked to another business owner`);
         }
     } catch (error) {
