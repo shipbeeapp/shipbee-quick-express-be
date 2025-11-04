@@ -60,7 +60,7 @@ export default class DriverService {
                 // }
 
                 // If vehicle doesn't exist, create it
-                if (!vehicle && data.type === DriverType.INDIVIDUAL) {
+                if (!vehicle && (data.type === DriverType.INDIVIDUAL || data.vehicleType)) {
                     vehicle = vehicleManager.create({
                         type: data.vehicleType,
                         number: data.vehicleNumber,
