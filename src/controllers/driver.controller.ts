@@ -15,6 +15,8 @@ import { sendDriverSignUpMail } from '../services/email.service.js';
 import validationMiddleware from '../middlewares/validation.middleware.js';
 import bcrypt from 'bcrypt';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
+import { Driver } from '../models/driver.model.js';
+import { DriverType } from '../utils/enums/driverType.enum.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -292,7 +294,7 @@ export class DriverController {
             }
             else {
                 if (driver.businessOwner) result.invitedByBusiness = true;
-                if (driver.vehicle) result.alreadyRegistered = true;
+                if (driver.vehicle || driver.type === DriverType.BUSINESS) result.alreadyRegistered = true;
             }
     
             if (result.newDriver || (result.invitedByBusiness && !result.alreadyRegistered)) {
