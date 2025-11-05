@@ -798,18 +798,42 @@ export default class DriverService {
     }
  }
 
- async getInvitedDriversByBusinessOwner(businessOwnerId: string): Promise<Partial<Driver>[]> {
+  async getInvitedDriversByBusinessOwner(businessOwnerId: string): 
+    Promise<{ drivers: Partial<Driver>[], stats: { Total: number; Active: number; Offline: number; OnDelivery: number } 
+    }> {
     try {
         const businessOwner = await this.driverRepository.findOneBy({ id: businessOwnerId });
         if (!businessOwner) {
             throw new Error(`Business owner with ID ${businessOwnerId} not found`);
         }
 
+         // 2️⃣ Fetch invited drivers with vehicle relation
         const invitedDrivers = await this.driverRepository.find({
-            where: { businessOwner: { id: businessOwnerId } },
-            relations: ["vehicle"]
+          where: { businessOwner: { id: businessOwnerId } },
+          relations: ["vehicle"],
         });
-        return DriverResource.mapInvitedDriversResponse(invitedDrivers);
+
+        // 3️⃣ Aggregate counts by driver.status directly from DB
+        const rawCounts = await this.driverRepository
+          .createQueryBuilder("driver")
+          .select("driver.status", "status")
+          .addSelect("COUNT(driver.id)", "count")
+          .where("driver.businessOwnerId = :businessOwnerId", { businessOwnerId })
+          .groupBy("driver.status")
+          .getRawMany();
+
+        // 4️⃣ Normalize results (defaulting to 0)
+        const stats = {
+          Total: invitedDrivers.length,
+          Active: Number(rawCounts.find(r => r.status === DriverStatus.ACTIVE)?.count || 0),
+          Offline: Number(rawCounts.find(r => r.status === DriverStatus.OFFLINE)?.count || 0),
+          OnDelivery: Number(rawCounts.find(r => r.status === DriverStatus.ON_DUTY)?.count || 0),
+        };
+
+        return {
+          drivers: DriverResource.mapInvitedDriversResponse(invitedDrivers),
+          stats,
+        };
     } catch (error) {
         console.error("Error fetching invited drivers by business owner:", error);
         throw error;
