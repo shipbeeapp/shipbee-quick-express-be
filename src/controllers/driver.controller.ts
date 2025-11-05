@@ -285,16 +285,25 @@ export class DriverController {
             if (!phoneNumber) {
                 return res.status(400).json({ success: false, message: "Phone number is required." });
             }
+            const result: any = {};
             const driver = await this.driverService.findDriverByPhone(phoneNumber);
-            if (driver) {
-                return res.status(400).json({ success: false, message: "Driver with this phone number already exists. Please sign in with your password and phone", driverExists: true });
+            if (!driver) {
+                result.newDriver = true;
             }
-            const otp = await this.driverService.sendOtp(phoneNumber);
-            const result = { success: true, message: "OTP sent successfully.", driverExists: false };
-            if (env.APP_ENV !== 'production') {
-                console.log(`OTP for phone number ${phoneNumber}: ${otp}`);
-                Object.assign(result, { otp }); // Include OTP in response for non-production environments
+            else {
+                if (driver.businessOwner) result.invitedByBusiness = true;
+                if (driver.vehicle) result.alreadyRegistered = true;
             }
+    
+            if (result.newDriver || (result.invitedByBusiness && !result.alreadyRegistered)) {
+                const otp = await this.driverService.sendOtp(phoneNumber);
+                if (env.APP_ENV !== 'production') {
+                    console.log(`OTP for phone number ${phoneNumber}: ${otp}`);
+                    Object.assign(result, { otp }); // Include OTP in response for non-production environments
+                }
+                result.message = "OTP sent successfully.";
+            }
+            result.success = true;
             res.status(200).json(result); // In production, do not send OTP in response
         } catch (error) {
             console.error("Error sending OTP:", error.message);
