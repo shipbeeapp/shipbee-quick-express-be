@@ -34,8 +34,8 @@ export class AddMultiOrderFeature1762079321388 implements MigrationInterface {
 
         //populate order_stops for existing orders
         await queryRunner.query(`
-            INSERT INTO "order_stops" ("orderId", "receiverUserId", "toAddressId", "sequence", "itemDescription", "itemType", "distance", "status", "createdAt", "updatedAt")
-            SELECT o.id, o."receiverUserId", o."toAddressId", 1, o."itemDescription", o."itemType", o.distance, o.status, o."createdAt", o."updatedAt"
+            INSERT INTO "order_stops" ("orderId", "receiverUserId", "toAddressId", "sequence", "itemDescription", "itemType", "distance", "status", "createdAt", "updatedAt", "proofOfOrder", "deliveredAt")
+            SELECT o.id, o."receiverUserId", o."toAddressId", 1, o."itemDescription", o."itemType", o.distance, o.status, o."createdAt", o."updatedAt", o."proofOfOrder", o."updatedAt"
             FROM "orders" o;
         `);
     }
