@@ -249,11 +249,12 @@ export class OrderController {
   private async startOrder(req: AuthenticatedRequest, res: Response) {
     try {
       const { orderId } = req.params;
+      const { stopId } = req.query as { stopId: string };
       const driverId = req.driverId; // Get driverId from the authenticated request
       if (!orderId || !driverId) {
         return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
-      await this.orderService.startOrder(orderId, driverId);
+      await this.orderService.startOrder(orderId, driverId, stopId);
       // const otp = Math.floor(1000 + Math.random() * 9000).toString();
       // console.log(`Generated OTP for order ${orderId}: ${otp}`);
       // await this.orderService.sendOtpToReceiver(orderId, otp);
@@ -268,6 +269,7 @@ export class OrderController {
   private async completeOrder(req: AuthenticatedRequest, res: Response) {
     try {
       const { orderId } = req.params;
+      const { stopId } = req.query as { stopId: string };
       const driverId = req.driverId; // Get driverId from the authenticated request
       // const { otp } = req.body; // Get OTP from request body
       if (!orderId || !driverId) {
@@ -277,7 +279,7 @@ export class OrderController {
         return res.status(400).json({ success: false, message: "Proof of order file is required." });
       }
       const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      await this.orderService.completeOrder(orderId, driverId, proofUrl);
+      await this.orderService.completeOrder(orderId, driverId, stopId, proofUrl);
       res.status(200).json({ success: true, message: "Order completed successfully." });
     } catch (error) {
       console.error("Error in order controller completing order:", error.message);

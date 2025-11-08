@@ -40,6 +40,7 @@ import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controller
 import PromoCodeService from "./promoCode.service.js";
 import { User } from "../models/user.model.js";
 import { OrderStop } from "../models/orderStops.model.js";
+import { OrderType } from "../utils/enums/orderType.enum.js";
 
 @Service()
 export default class OrderService {
@@ -53,6 +54,7 @@ export default class OrderService {
   private driverService = Container.get(DriverService);
   private orderCancellationRequestRepository = AppDataSource.getRepository(OrderCancellationRequest);
   private promoCodeService = Container.get(PromoCodeService);
+  private orderStopRepository = AppDataSource.getRepository(OrderStop);
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -456,7 +458,7 @@ export default class OrderService {
     await this.orderRepository.update(orderId, { proofOfOrder: proofUrl });
   }
 
-  async startOrder(orderId: string, driverId: string) {
+  async startOrder(orderId: string, driverId: string, stopId: string) {
     try {
       console.log("Starting order for order ID:", orderId, "by driver ID:", driverId);
       const order = await this.orderRepository.findOne({
@@ -471,17 +473,25 @@ export default class OrderService {
       if (order.driver?.id !== driverId) {
         throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
       }
-      if (order.status === OrderStatus.ACTIVE) {
-        throw new Error(`Order with ID ${orderId} has already started`);
-      }
-      if (order.status !== OrderStatus.ASSIGNED) {
+  
+      if (order.status !== OrderStatus.ASSIGNED && order.type == OrderType.SINGLE_STOP) {
         throw new Error(`Order with ID ${orderId} is not in ASSIGNED status`);
       }
+      const currentStop = order.stops.find(stop => stop.id === stopId);
+      if (!currentStop) throw new Error(`Stop with ID ${stopId} not found for order ${orderId}`);
+
+      if (currentStop.status === OrderStatus.COMPLETED)
+        throw new Error(`Stop ${stopId} already completed`);
+      if (currentStop.status === OrderStatus.ACTIVE)
+        throw new Error(`Stop ${stopId} is already active`);
+  
+      currentStop.status = OrderStatus.ACTIVE;
+      await this.orderStopRepository.save(currentStop);
+      
       order.status = OrderStatus.ACTIVE;
       await this.orderRepository.update(orderId, { status: OrderStatus.ACTIVE, startedAt: new Date().toISOString() });
        // Add to order status history
       await this.orderStatusHistoryService.createOrderStatusHistory(order);
-
       console.log(`Order ${orderId} started successfully by driver ${driverId}`);
       // Reload order with relations
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
@@ -495,7 +505,7 @@ export default class OrderService {
     }
 } 
 
-async completeOrder(orderId: string, driverId: string, proofUrl: string) {
+async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl: string) {
   try {
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
     const order = await this.orderRepository.findOne({
@@ -521,18 +531,38 @@ async completeOrder(orderId: string, driverId: string, proofUrl: string) {
     // if (order.completionOtp !== otp) {
     //   throw new Error(`Invalid OTP for order ${orderId}`);
     // }
-    order.status = OrderStatus.COMPLETED;
-    order.proofOfOrder = proofUrl.split("image/upload/")[1];
+
+    // Find the stop being completed
+    const stop = order.stops.find((s) => s.id === stopId);
+    if (!stop) throw new Error(`Stop ${stopId} not found in order ${orderId}`);
+    if (stop.status === OrderStatus.COMPLETED)
+      throw new Error(`Stop ${stopId} is already completed`);
+
+    stop.status = OrderStatus.COMPLETED;
+    stop.deliveredAt = new Date();
+    stop.proofOfOrder = proofUrl.split("image/upload/")[1];
+    await this.orderStopRepository.save(stop);
+
+    // Check if all stops are completed
+    const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED);
+    if (allCompleted) {
+      order.status = OrderStatus.COMPLETED;
+      order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
+      await this.orderRepository.save(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory(order);
+      console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
+          console.error("Error sending email to admin:", err);
+        });
+      console.log('sent mail to admin');
+      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+    }
+    else {
+      console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
+    }
+
+    // order.proofOfOrder = proofUrl.split("image/upload/")[1];
     // order.completionOtp = null; // Clear OTP after completion
-    order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
-    await this.orderRepository.save(order);
-    await this.orderStatusHistoryService.createOrderStatusHistory(order);
-    console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
-    sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
-        console.error("Error sending email to admin:", err);
-      });
-    console.log('sent mail to admin');
-    broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
   } catch (error) {
     console.error("Error completing order:", error.message);
     throw new Error(`Could not complete order: ${error.message}`);

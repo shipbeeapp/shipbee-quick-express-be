@@ -1,6 +1,9 @@
+import { OrderType } from "../../utils/enums/orderType.enum.js";
+
 export class myOrderResource {
     totalCost: number;
     distance: number;
+    type: OrderType;
     fromAddress: string;
     pickUpDate: string; // Assuming this is a date string
     pickUpTime: string; // Assuming this is a time string
@@ -17,6 +20,7 @@ export function createMyOrderResource(order: any): myOrderResource {
     const resource = new myOrderResource();
     resource.totalCost = order.totalCost;
     resource.distance = order.distance;
+    resource.type = order.type;
     resource.fromAddress = order.fromAddress.city;
     resource.pickUpDate = order.pickUpDate.toLocaleDateString("en-US", {
         weekday: "long",

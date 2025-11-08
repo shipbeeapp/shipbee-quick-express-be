@@ -36,6 +36,9 @@ export class OrderStop extends BaseEntity {
   @Column({ type: "enum", enum: OrderStatus, nullable: true, default: OrderStatus.PENDING })
   status: OrderStatus;
 
+  @Column({type: "text", nullable: true})
+  proofOfOrder: string;
+
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;
 }

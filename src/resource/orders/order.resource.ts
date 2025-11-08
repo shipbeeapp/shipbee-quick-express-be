@@ -5,9 +5,11 @@ import { CancelRequestStatus } from '../../utils/enums/cancelRequestStatus.enum.
 import { Payer } from '../../utils/enums/payer.enum.js';
 import { itemType } from '../../utils/enums/itemType.enum.js';
 import { OrderStatus } from '../../utils/enums/orderStatus.enum.js';
+import { OrderType } from '../../utils/enums/orderType.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
+    type: OrderType;
     // itemType: string;
     // itemDescription: string | null;
     lifters: number;
@@ -164,6 +166,7 @@ export class OrderResponseDto {
       updatedAt: order.updatedAt,
       orderNo: order.orderNo,
       pickUpDate: order.pickUpDate,
+      type: order.type,
       // itemType: order.itemType,
       // itemDescription: itemDescription,
       lifters: order.lifters,

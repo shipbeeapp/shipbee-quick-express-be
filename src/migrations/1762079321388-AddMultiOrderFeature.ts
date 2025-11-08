@@ -23,6 +23,7 @@ export class AddMultiOrderFeature1762079321388 implements MigrationInterface {
                 "itemType" VARCHAR(255),
                 "distance" FLOAT,
                 "status" "orderStatus" DEFAULT 'Pending',
+                "proofOfOrder" TEXT,
                 "deliveredAt" TIMESTAMPTZ,
                 PRIMARY KEY ("id"),
                 CONSTRAINT "FK_order_stop_order" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE,
