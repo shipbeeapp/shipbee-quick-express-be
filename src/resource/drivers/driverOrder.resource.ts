@@ -2,6 +2,7 @@ import { itemType } from "../../utils/enums/itemType.enum.js";
 import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { env } from "../../config/environment.js";
 import { Payer } from "../../utils/enums/payer.enum.js";
+import { OrderType } from "../../utils/enums/orderType.enum.js";
 
 
 export class DriverOrderStopResource {
@@ -21,6 +22,7 @@ export class DriverOrderResource {
     itemDescription?: string;
     itemImages?: string[];
     paymentMethod: PaymentMethod;
+    type: OrderType;
     totalCost: number;
     distance: number;
     fromAddress: string;
@@ -46,6 +48,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.paymentMethod = order.paymentMethod;
     resource.totalCost = order.totalCost;
     resource.distance = order.distance;
+    resource.type = order.type;
     resource.fromAddress = order.fromAddress?.city;
     resource.fromCoordinates = order.fromAddress.coordinates;
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
