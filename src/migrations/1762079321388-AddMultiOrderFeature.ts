@@ -41,9 +41,9 @@ export class AddMultiOrderFeature1762079321388 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP TABLE "order_stops";`);
-        await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "type";`);
-        await queryRunner.query(`DROP TYPE "order_type_enum";`);
+        // await queryRunner.query(`DROP TABLE "order_stops";`);
+        // await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "type";`);
+        // await queryRunner.query(`DROP TYPE "order_type_enum";`);
     }
 
 }
