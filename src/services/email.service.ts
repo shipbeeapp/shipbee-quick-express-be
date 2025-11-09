@@ -169,9 +169,9 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       fromAddress: formatAddress(order.fromAddress),
       toAddress: formatAddress(order.toAddress),
       sender: {
-        name: order.senderName,
-        email: order.senderEmail,
-        phoneNumber: order.senderPhoneNumber,
+        name: order.senderName || order.sender?.name,
+        email: order.senderEmail || order.sender?.email,
+        phoneNumber: order.senderPhoneNumber || order.sender?.phoneNumber,
       },
       // receiver: {
       //   name: order.receiverName,
@@ -181,8 +181,8 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       stops: order.stops.map((stop: any) => ({
         sequence: stop.sequence,
         toAddress: formatAddress(stop.toAddress),
-        receiverName: stop.receiverName,
-        receiverPhoneNumber: stop.receiverPhoneNumber,
+        receiverName: stop.receiverName || stop.receiver?.name,
+        receiverPhoneNumber: stop.receiverPhoneNumber || stop.receiver?.phoneNumber,
         itemDescription: stop.itemDescription ? JSON.parse(stop.itemDescription).text : '',
         images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
       })),
