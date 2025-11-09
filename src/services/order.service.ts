@@ -630,7 +630,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     async requestOrderCancellation(driverId: string, orderId: string, reason: string) {
         const order = await this.orderRepository.findOne({
             where: { id: orderId },
-            relations: ["driver"],
+            relations: ["driver", "fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"],
         });
         if (!order) {
             throw new Error(`Order with ID ${orderId} not found`);
