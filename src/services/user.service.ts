@@ -13,15 +13,18 @@ export default class UserService {
       let user;
       console.log("findOrCreateUser called with data:", data);
       if (data.email && data.phoneNumber) {
-        user = await this.userRepository
+        user = await manager
           .createQueryBuilder('user')
           .where('user.email = :email', { email: data.email })
           .orWhere('user.phoneNumber = :phoneNumber', { phoneNumber: data.phoneNumber })
           .getOne();
+          console.log("User lookup by email and phoneNumber result:", user);
       } else if (data.email) {
-        user = await this.userRepository.findOneBy({ email: data.email });
+        user = await manager.findOneBy({ email: data.email });
+        console.log("User lookup by email result:", user);
       } else if (data.phoneNumber) {
-        user = await this.userRepository.findOneBy({ phoneNumber: data.phoneNumber });
+        user = await manager.findOneBy({ phoneNumber: data.phoneNumber });
+        console.log("User lookup by phoneNumber result:", user);
       } else {
         throw new Error('Either email or phoneNumber must be provided');
       }
@@ -35,10 +38,15 @@ export default class UserService {
     console.log(error);
     if (error.code === '23505') {
       // Duplicate key error: try to fetch the user again
-      return await manager.findOneBy([
+      console.log("Duplicate key error encountered, fetching existing user");
+      const user =  await manager.findOneBy([
         { email: data.email },
         { phoneNumber: data.phoneNumber }
       ]);
+      console.log("Fetched user after duplicate key error:", user);
+      if (user) {
+        return user;
+      }
     }
     throw new Error(`Error in findOrCreateUser: ${error.message}`);
   }
