@@ -1,6 +1,9 @@
+import { OrderType } from "../../utils/enums/orderType.enum.js";
+
 export class myOrderResource {
     totalCost: number;
     distance: number;
+    type: OrderType;
     fromAddress: string;
     pickUpDate: string; // Assuming this is a date string
     pickUpTime: string; // Assuming this is a time string
@@ -10,12 +13,14 @@ export class myOrderResource {
     senderName: string;
     senderPhoneNumber: string;
     receiverName: string;
+    stops: any;
 }
 
 export function createMyOrderResource(order: any): myOrderResource {
     const resource = new myOrderResource();
     resource.totalCost = order.totalCost;
     resource.distance = order.distance;
+    resource.type = order.type;
     resource.fromAddress = order.fromAddress.city;
     resource.pickUpDate = order.pickUpDate.toLocaleDateString("en-US", {
         weekday: "long",
@@ -30,9 +35,17 @@ export function createMyOrderResource(order: any): myOrderResource {
         hour12: true,
         timeZone: "UTC" // or your desired timezone
     }).toLowerCase(); // "6:17 pm"    resource.additionalFromAddressInfo = order.fromAddress.landmarks || '';
-    resource.toAddress = order.toAddress.city;
-    resource.additionalToAddressInfo = order.toAddress.landmarks || '';
+    // resource.toAddress = order.toAddress?.city;
+    // resource.additionalToAddressInfo = order.toAddress?.landmarks || '';
+    resource.stops = order.stops.map((stop: any) => {
+        return {
+            toAddress: stop.toAddress.city,
+            additionalToAddressInfo: stop.toAddress.landmarks || '',
+            receiverName: stop.receiver.name,
+            sequence: stop.sequence
+        };
+    });
     resource.senderName = order.sender.name;
-    resource.receiverName = order.receiver.name;
+    // resource.receiverName = order.receiver.name;
     return resource;
 }

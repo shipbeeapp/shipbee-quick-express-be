@@ -119,11 +119,12 @@ function formatAddress(address: any): string {
 export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', `${emailType}.html`);
     const html = fs.readFileSync(templatePath, 'utf8');
+    console.log("order stops:", order.stops);
   
     const template = Handlebars.compile(html);
-    const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
-    const imageUrls = orderDescription?.images || null;
-    const images = imageUrls ? imageUrls.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
+    // const orderDescription = order.itemDescription ? JSON.parse(order.itemDescription): null;
+    // const imageUrls = orderDescription?.images || null;
+    // const images = imageUrls ? imageUrls.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
     const category = (order.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK || order.serviceSubcategory?.name === ServiceSubcategoryName.PERSONAL_QUICK) ? 'Quick shipBee' : 'Express shipBee';
     let orderStatus = '';
     switch (order.status) {
@@ -163,8 +164,8 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       }),
       lifters: order.lifters ?? null,
       totalCost: Number(totalCost).toFixed(2),
-      itemDescription: orderDescription?.text || '',
-      imageUrls: images,
+      // itemDescription: orderDescription?.text || '',
+      // imageUrls: images,
       fromAddress: formatAddress(order.fromAddress),
       toAddress: formatAddress(order.toAddress),
       sender: {
@@ -172,17 +173,25 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
         email: order.senderEmail,
         phoneNumber: order.senderPhoneNumber,
       },
-      receiver: {
-        name: order.receiverName,
-        email: order.receiverEmail,
-        phoneNumber: order.receiverPhoneNumber,
-      },
+      // receiver: {
+      //   name: order.receiverName,
+      //   email: order.receiverEmail,
+      //   phoneNumber: order.receiverPhoneNumber,
+      // },
+      stops: order.stops.map((stop: any) => ({
+        sequence: stop.sequence,
+        toAddress: formatAddress(stop.toAddress),
+        receiverName: stop.receiverName,
+        receiverPhoneNumber: stop.receiverPhoneNumber,
+        itemDescription: stop.itemDescription ? JSON.parse(stop.itemDescription).text : '',
+        images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
+      })),
       vehicleType: vehicleType,
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
       shipment: order.shipment
     };
-  
+    console.log("order stops in replacements:", replacements.stops);
     return template(replacements);
   }
 

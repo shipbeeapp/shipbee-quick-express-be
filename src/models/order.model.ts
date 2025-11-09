@@ -13,6 +13,8 @@ import { PaymentStatus } from "../utils/enums/paymentStatus.enum.js";
 import { Shipment } from "./shipment.model.js";
 import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
 import { Payer } from "../utils/enums/payer.enum.js";
+import { OrderStop } from "./orderStops.model.js";
+import { OrderType } from "../utils/enums/orderType.enum.js";
 
 @Entity("orders")
 export class Order extends BaseEntity {
@@ -28,9 +30,9 @@ export class Order extends BaseEntity {
   @JoinColumn({ name: "senderUserId" })
   sender: Relation<User>;
   
-  @ManyToOne(() => User)
-  @JoinColumn({ name: "receiverUserId" })
-  receiver: Relation<User>;
+  // @ManyToOne(() => User)
+  // @JoinColumn({ name: "receiverUserId" })
+  // receiver: Relation<User>;
 
   @ManyToOne(() => ServiceSubcategory, subcategory => subcategory.orders)
   @JoinColumn({ name: "serviceSubcategoryId" })
@@ -39,19 +41,19 @@ export class Order extends BaseEntity {
   @Column({ type: "timestamptz" })
   pickUpDate: Date;
 
-  @Column({type: "enum", enum: itemType, nullable: true})
-  itemType: itemType;
+  // @Column({type: "enum", enum: itemType, nullable: true})
+  // itemType: itemType;
 
   @ManyToOne(() => Address, address => address.sentOrders)
   @JoinColumn({ name: "fromAddressId" })
   fromAddress: Address;
 
-  @ManyToOne(() => Address, address => address.receivedOrders)
-  @JoinColumn({ name: "toAddressId" })
-  toAddress: Address;
+  // @ManyToOne(() => Address, address => address.receivedOrders)
+  // @JoinColumn({ name: "toAddressId" })
+  // toAddress: Address;
 
-  @Column("text", { nullable: true })
-  itemDescription: string;
+  // @Column("text", { nullable: true })
+  // itemDescription: string;
 
   @Column({ nullable: true, type: "int" })
   lifters: number;
@@ -116,4 +118,10 @@ export class Order extends BaseEntity {
   //viewed at
   @Column({type: "timestamptz", nullable: true})
   viewedAt: Date;
+
+  @Column({ type: "enum", enum: OrderType, default: OrderType.SINGLE_STOP })
+  type: OrderType; // SINGLE_STOP or MULTI_STOP
+
+  @OneToMany(() => OrderStop, (stop) => stop.order, { cascade: true })
+  stops: OrderStop[];
 }

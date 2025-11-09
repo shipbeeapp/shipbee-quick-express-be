@@ -35,7 +35,7 @@ export class OrderController {
 
     this.router.post(
        "/orders",
-       upload.array("images", 5), 
+       upload.any(), 
        validateDto(CreateOrderDto), 
        this.createOrder.bind(this)
     );
@@ -86,11 +86,11 @@ export class OrderController {
       this.notifySender.bind(this)
     )
 
-    this.router.post(
-      "/orders/:orderId/notify-receiver",
-      authenticationMiddleware,
-      this.notifyReceiver.bind(this)
-    )
+    // this.router.post(
+    //   "/orders/:orderId/notify-receiver",
+    //   authenticationMiddleware,
+    //   this.notifyReceiver.bind(this)
+    // )
 
     this.router.put(
       "/orders/:orderId",
@@ -117,13 +117,32 @@ export class OrderController {
       console.log("req.body in create order", req.body);
       const orderData = req.body;
       console.log("req.files", req.files);
-      const imageUrls = Array.isArray(req.files) ? req.files?.map(file => `${file.path.split("/upload/")[1]}`) : [];      
-      if (orderData.itemDescription || imageUrls.length) {
-        orderData.itemDescription = JSON.stringify({
-            text: orderData.itemDescription || "",
-            images: imageUrls,
-        });
-      }
+      // Map uploaded files to the correct stop
+      const files = req.files as Express.Multer.File[];
+      // Map uploaded files to the correct stop
+      files.forEach(file => {
+        // Match field like "stops[0][images]"
+        const match = file.fieldname.match(/stops\[(\d+)\]\[images\]/);
+        console.log("file match:", match);
+        if (match) {
+          const index = parseInt(match[1]);
+          if (!orderData.stops[index].images) {
+            orderData.stops[index].images = [];
+          }
+          orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
+        }
+      });
+
+      // Ensure itemDescription is a JSON string with { text, images }
+      orderData.stops = orderData.stops.map(stop => ({
+        ...stop,
+        itemDescription: JSON.stringify({
+          text: stop.itemDescription || "",
+          images: stop.images || []
+        })
+      }));
+
+      // orderData.stops = stops;
       const order = await this.orderService.createOrder(orderData, userId);
       res.status(201).json({ success: true, data: order });
     } catch (error) {
@@ -230,11 +249,12 @@ export class OrderController {
   private async startOrder(req: AuthenticatedRequest, res: Response) {
     try {
       const { orderId } = req.params;
+      const { stopId } = req.query as { stopId: string };
       const driverId = req.driverId; // Get driverId from the authenticated request
       if (!orderId || !driverId) {
         return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
-      await this.orderService.startOrder(orderId, driverId);
+      await this.orderService.startOrder(orderId, driverId, stopId);
       // const otp = Math.floor(1000 + Math.random() * 9000).toString();
       // console.log(`Generated OTP for order ${orderId}: ${otp}`);
       // await this.orderService.sendOtpToReceiver(orderId, otp);
@@ -249,6 +269,7 @@ export class OrderController {
   private async completeOrder(req: AuthenticatedRequest, res: Response) {
     try {
       const { orderId } = req.params;
+      const { stopId } = req.query as { stopId: string };
       const driverId = req.driverId; // Get driverId from the authenticated request
       // const { otp } = req.body; // Get OTP from request body
       if (!orderId || !driverId) {
@@ -258,7 +279,7 @@ export class OrderController {
         return res.status(400).json({ success: false, message: "Proof of order file is required." });
       }
       const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      await this.orderService.completeOrder(orderId, driverId, proofUrl);
+      await this.orderService.completeOrder(orderId, driverId, stopId, proofUrl);
       res.status(200).json({ success: true, message: "Order completed successfully." });
     } catch (error) {
       console.error("Error in order controller completing order:", error.message);
@@ -332,21 +353,21 @@ export class OrderController {
     }
   }
 
-  private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId;
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
+  // private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
+  //   try {
+  //     const { orderId } = req.params;
+  //     const driverId = req.driverId;
+  //     if (!orderId) {
+  //       return res.status(400).json({ success: false, message: "Order ID is required." });
+  //     }
 
-      await this.orderService.notifyReceiver(orderId, driverId);
-      res.status(200).json({ success: true, message: "Receiver notified successfully." });
-    } catch (error) {
-      console.error("Error in order controller notifying sender:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
-  }
+  //     await this.orderService.notifyReceiver(orderId, driverId);
+  //     res.status(200).json({ success: true, message: "Receiver notified successfully." });
+  //   } catch (error) {
+  //     console.error("Error in order controller notifying sender:", error.message);
+  //     res.status(400).json({ success: false, message: error.message });
+  //   }
+  // }
 
   private async updateOrder(req: AuthenticatedRequest, res: Response) {
     try {
