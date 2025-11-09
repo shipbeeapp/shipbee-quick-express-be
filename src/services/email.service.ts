@@ -145,7 +145,7 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
     }
     const heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
     const replacements = {
-      recipient: userType === 'admin' ? 'admin' : `${order.senderName}`,
+      recipient: userType === 'admin' ? 'admin' : `${order.senderName || order.sender?.name}`,
       heading: heading,
       name: order.senderName,
       email: order.senderEmail,
