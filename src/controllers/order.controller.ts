@@ -86,11 +86,11 @@ export class OrderController {
       this.notifySender.bind(this)
     )
 
-    // this.router.post(
-    //   "/orders/:orderId/notify-receiver",
-    //   authenticationMiddleware,
-    //   this.notifyReceiver.bind(this)
-    // )
+    this.router.post(
+      "/orders/:orderId/notify-receiver",
+      authenticationMiddleware,
+      this.notifyReceiver.bind(this)
+    )
 
     this.router.put(
       "/orders/:orderId",
@@ -353,21 +353,22 @@ export class OrderController {
     }
   }
 
-  // private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
-  //   try {
-  //     const { orderId } = req.params;
-  //     const driverId = req.driverId;
-  //     if (!orderId) {
-  //       return res.status(400).json({ success: false, message: "Order ID is required." });
-  //     }
+  private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+      const stopId = req.query.stopId as string;
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
 
-  //     await this.orderService.notifyReceiver(orderId, driverId);
-  //     res.status(200).json({ success: true, message: "Receiver notified successfully." });
-  //   } catch (error) {
-  //     console.error("Error in order controller notifying sender:", error.message);
-  //     res.status(400).json({ success: false, message: error.message });
-  //   }
-  // }
+      await this.orderService.notifyReceiver(orderId, driverId, stopId);
+      res.status(200).json({ success: true, message: "Receiver notified successfully." });
+    } catch (error) {
+      console.error("Error in order controller notifying sender:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
 
   private async updateOrder(req: AuthenticatedRequest, res: Response) {
     try {

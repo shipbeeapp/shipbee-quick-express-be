@@ -769,28 +769,38 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }
     }
 
-    // async notifyReceiver(orderId: string, driverId: string) {
-    //   try {
-    //     const order = await this.orderRepository.findOne({
-    //       where: { id: orderId },
-    //       relations: ["driver", "receiver"],
-    //     });
-    //     if (!order) {
-    //       throw new Error(`Order with ID ${orderId} not found`);
-    //     }
-    //     if (order.driver?.id !== driverId) {
-    //       throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
-    //     }
-    //     if (!order.receiver) {
-    //       throw new Error(`Receiver for order ${orderId} does not have a phone number`);
-    //     }
-    //     await sendArrivalNotification(order.receiver.phoneNumber, order.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
-    //     console.log(`Arrival notification sent to receiver for order ${orderId}`);
-    //   } catch (error) {
-    //     console.error("Error sending arrival notification to sender:", error.message);
-    //     throw new Error(`Could not send arrival notification to sender: ${error.message}`);
-    //   }
-    // }
+    async notifyReceiver(orderId: string, driverId: string, stopId: string) {
+      try {
+        const order = await this.orderRepository.findOne({
+          where: { id: orderId },
+          relations: ["driver", "stops", "stops.receiver"],
+        });
+        if (!order) {
+          throw new Error(`Order with ID ${orderId} not found`);
+        }
+        if (order.driver?.id !== driverId) {
+          throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+        }
+        // ✅ Find the specific stop
+        const stop = order.stops.find((s) => s.id === stopId);
+        if (!stop) {
+          throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
+        }
+      
+        if (!stop.receiver) {
+          throw new Error(`Receiver for stop ${stopId} in order ${orderId} not found`);
+        }
+      
+        if (!stop.receiver.phoneNumber) {
+          throw new Error(`Receiver for stop ${stopId} does not have a phone number`);
+        }
+        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        console.log(`Arrival notification sent to receiver for order ${orderId}`);
+      } catch (error) {
+        console.error("Error sending arrival notification to sender:", error.message);
+        throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+      }
+    }
 
     async saveOrder(order: Order) {
       return this.orderRepository.save(order);
