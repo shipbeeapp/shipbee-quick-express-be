@@ -12,10 +12,10 @@ let driverTrackingClients: Response[] = [];
 
 
  // Call this whenever you want to broadcast updates
-export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, eventName: string = "order-status-update", cancellationRequestId: string = null) {
+export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, stopNumber?: number, eventName: string = "order-status-update", cancellationRequestId: string = null) {
   clients.forEach(client => {
     client.write(`event: ${eventName}\n`);
-    client.write(`data: ${JSON.stringify({ orderId, orderStatus, cancellationRequestId })}\n\n`);
+    client.write(`data: ${JSON.stringify({ orderId, orderStatus, stopNumber, cancellationRequestId })}\n\n`);
   });
 }
 

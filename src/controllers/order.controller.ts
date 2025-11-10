@@ -249,12 +249,17 @@ export class OrderController {
   private async startOrder(req: AuthenticatedRequest, res: Response) {
     try {
       const { orderId } = req.params;
-      const { stopId } = req.query as { stopId: string };
+      const { stopId, isPickup } = req.query as { stopId?: string, isPickup?: string };
       const driverId = req.driverId; // Get driverId from the authenticated request
       if (!orderId || !driverId) {
         return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
-      await this.orderService.startOrder(orderId, driverId, stopId);
+      if (!stopId && !isPickup) {
+        return res.status(400).json({ success: false, message: "Either stopId or isPickup parameter is required." });
+      }
+      // Convert isPickup from string to boolean
+      const pickupFlag = isPickup === "true";
+      await this.orderService.startOrder(orderId, driverId, stopId, pickupFlag);
       // const otp = Math.floor(1000 + Math.random() * 9000).toString();
       // console.log(`Generated OTP for order ${orderId}: ${otp}`);
       // await this.orderService.sendOtpToReceiver(orderId, otp);
