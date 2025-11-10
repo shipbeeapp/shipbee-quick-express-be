@@ -2,6 +2,9 @@ import { Service, Container } from "typedi";
 import { User } from "../models/user.model.js";
 import { AppDataSource } from "../config/data-source.js";
 import { toUserResponseDto, UserResponseDto } from "../resource/users/user.resource.js";
+import { BusinessUserDto } from "../dto/user/businessUser.dto.js";
+import bcrypt from "bcrypt";
+import { userType } from "../utils/enums/userType.enum.js";
 
 @Service()
 export default class UserService {
@@ -90,6 +93,45 @@ export default class UserService {
       return users.map(toUserResponseDto); 
     } catch (error) {
       console.error("Error fetching users:", error);
+      throw error;
+    }
+  }
+
+  async findOrCreateBusinessUser(businessUser: BusinessUserDto, queryRunner?: any): Promise<User> {
+    const manager = queryRunner ? queryRunner.manager.getRepository(User) : this.userRepository;
+    try {
+      let user = await manager.findOneBy({ email: businessUser.email });
+      if (!user) {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(businessUser.password, saltRounds);
+        user = manager.create({
+          name: businessUser.name,
+          email: businessUser.email,
+          type: userType.BUSINESS,
+          companyName: businessUser.companyName,
+          industry: businessUser.industry,
+          numOfDrivers: businessUser.numOfDrivers,
+          numOfVehicles: businessUser.numOfVehicles,
+          password: hashedPassword,
+        });
+        await manager.save(user);
+        return user;
+      }
+      else {
+        console.log("Business user with email already exists:", businessUser.email);
+        throw new Error('Business user with this email already exists');
+      }
+    } catch (error) {
+      console.log(error);
+      throw new Error(`Error in findOrCreateBusinessUser: ${error.message}`);
+    }
+  }
+
+  async getBusinessUserByEmail(email: string): Promise<User | null> {
+    try {
+      return await this.userRepository.findOneBy({ email, type: userType.BUSINESS });
+    } catch (error) {
+      console.error("Error fetching business user by email:", error);
       throw error;
     }
   }

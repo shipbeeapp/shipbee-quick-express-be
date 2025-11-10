@@ -11,6 +11,7 @@ import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
+import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 
 export class AuthController {
   public router: Router = Router();
@@ -39,6 +40,11 @@ export class AuthController {
         this.router.post(`${this.path}/driver/verify-otp`, this.driverVerifyOtp);
         // reset password for driver
         this.router.post(`${this.path}/driver/reset-password`, this.driverResetPassword);
+        // sign up for business
+        this.router.post(`${this.path}/business/sign-up`, this.businessSignup);
+        // login for business
+        this.router.post(`${this.path}/business/login`, this.businessLogin);
+
     }
 
     private signup = async (req, res) => {
@@ -355,4 +361,58 @@ export class AuthController {
                 return res.status(500).json({ success: false, message: 'Error admin resetting password.' });
             }
         }
+    
+    private businessSignup = async (req, res) => {
+        try {
+            const businessUserDto: BusinessUserDto = req.body;
+            const businessUser = await this.userService.findOrCreateBusinessUser(businessUserDto);
+            const businessUserData = {
+                id: businessUser.id,
+                name: businessUser.name,
+                email: businessUser.email,
+                companyName: businessUser.companyName,
+                industry: businessUser.industry,
+                numOfDrivers: businessUser.numOfDrivers,
+                numOfVehicles: businessUser.numOfVehicles,
+            }
+            return res.status(200).json({ success: true, message: 'Business user signed up successfully.', businessUserData });
+
+        } catch (error) {
+            console.error('Error during business signup:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to sign up business user.' });
+        }
+    }
+
+    private businessLogin = async (req, res) => {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required.' });
+        }
+        try {
+            const businessUser = await this.userService.getBusinessUserByEmail(email);
+            if (!businessUser) {
+                return res.status(404).json({ success: false, message: 'Business user not found.' });
+            }
+            const isPasswordValid = await bcrypt.compare(password, businessUser.password);
+
+            if (!isPasswordValid) {
+                return res.status(401).json({ success: false, message: 'Invalid business user credentials.' });
+            }
+            const businessUserData = {
+                id: businessUser.id,
+                name: businessUser.name,
+                email: businessUser.email,
+                type: businessUser.type,
+                companyName: businessUser.companyName,
+                industry: businessUser.industry,
+                numOfDrivers: businessUser.numOfDrivers,
+                numOfVehicles: businessUser.numOfVehicles,
+            }
+            const token = jwt.sign(businessUserData, env.JWT_SECRET);
+            return res.status(200).json({ success: true, token, businessUserData });
+        } catch (error) {
+            console.error('Error during business login:', error);
+            return res.status(500).json({ success: false, message: 'Failed to log in business user.' });
+        }
+    }        
 }

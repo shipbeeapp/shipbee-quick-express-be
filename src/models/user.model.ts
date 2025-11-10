@@ -14,6 +14,18 @@ export class User extends BaseEntity {
   @Column({ nullable: true, unique: true, type: "text" })
   phoneNumber: string;
 
+  @Column({ type: "text", nullable: true })
+  password: string;
+
+  @Column({ type: "text", nullable: true })
+  industry: string;
+
+  @Column({ type: "text", nullable: true })
+  numOfDrivers: string;
+
+  @Column({ type: "text", nullable: true })
+  numOfVehicles: string;
+
   @Column({ unique: true, type: "text", nullable: true })
   email: string;
 
