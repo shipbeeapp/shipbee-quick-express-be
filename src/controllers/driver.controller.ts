@@ -207,8 +207,8 @@ export class DriverController {
     private signupDriver = async (req: Request, res: Response) => {
         try {
             const driverData: DriverDto  = req.body;
-            if (!driverData.phoneNumber || !driverData.name) {
-                return res.status(400).json({ success: false, message: 'Email, phone number and name are required.' });
+            if (!driverData.phoneNumber) {
+                return res.status(400).json({ success: false, message: 'phone number is required.' });
             }
             if (req.files) {
                 const files = req.files as { [fieldname: string]: Express.Multer.File[] };
