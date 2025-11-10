@@ -103,6 +103,13 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       console.log(`✅ Customer ${socket.id} joined room ${roomName}`);
     });
 
+    socket.on("track-driver", async (driverId: string) => {
+      const roomName = `driver-${driverId}`;
+      console.log('room name: ', roomName);
+      socket.join(roomName);
+      console.log(`✅ Customer ${socket.id} joined room ${roomName}`);
+    });
+
     socket.on("location-update", async (data: { driverId: string; currentLocation: string; orderId: string }) => {
       const { driverId, currentLocation, orderId } = data;
 
@@ -113,11 +120,13 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         await AppDataSource.getRepository(Driver).update(driverId, { updatedAt: new Date() });
         console.log(`📍 Updated location for driver ${driverId}:`, currentLocation);
         broadcastDriverTrackingUpdate(driverId, currentLocation); // Notify all connected clients about the driver location update
+        io.to(`driver-${driverId}`).emit("driver-location", { driverId, currentLocation });
       }
 
       if (orderId) {
         console.log(`Emitting location update for order ID: ${orderId}`);
         broadcastOrderTrackingUpdate(orderId, currentLocation);
+        io.to(`order-${orderId}`).emit("order-location", { orderId, currentLocation });
     }
 });
 
