@@ -202,10 +202,10 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
     if (vehicleType === order.vehicleType) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);
-      if (hasDriverBeenNotified(driverId, order.id)) {
-        console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
-        continue; // Skip if the driver has already been notified
-      }
+      // if (hasDriverBeenNotified(driverId, order.id)) {
+      //   console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
+      //   continue; // Skip if the driver has already been notified
+      // }
       const {distanceMeters, durationMinutes} = await getDrivingDistanceInKm(
         currentLocation,
         locationOnCancel ? locationOnCancel : order.fromAddress.coordinates
