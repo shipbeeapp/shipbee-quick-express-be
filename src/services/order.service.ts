@@ -772,7 +772,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         if (!order.sender) {
           throw new Error(`Sender for order ${orderId} does not exist`);
         }
-        await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        // await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
         console.log(`Arrival notification sent to sender for order ${orderId}`);
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
@@ -805,7 +805,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         if (!stop.receiver.phoneNumber) {
           throw new Error(`Receiver for stop ${stopId} does not have a phone number`);
         }
-        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        // await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
         console.log(`Arrival notification sent to receiver for order ${orderId}`);
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
