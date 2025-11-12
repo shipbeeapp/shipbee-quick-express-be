@@ -68,6 +68,7 @@ import {AddMoreFieldsForEcommerce1762772511358} from "../migrations/176277251135
 import {AddMultiOrderFeature1762079321388} from "../migrations/1762079321388-AddMultiOrderFeature.js";
 import {AddApiKeyInUser1762947817693} from "../migrations/1762947817693-AddApiKeyInUser.js";
 import { OrderStop } from "../models/orderStops.model.js";
+import {DropOrderStopsAndPopulateAgain1762991292803} from "../migrations/1762991292803-DropOrderStopsAndPopulateAgain.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -148,6 +149,7 @@ export const AppDataSource = new DataSource({
     AddMoreFieldsForEcommerce1762772511358,
     AddMultiOrderFeature1762079321388,
     AddApiKeyInUser1762947817693,
+    DropOrderStopsAndPopulateAgain1762991292803,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

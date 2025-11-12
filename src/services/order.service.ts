@@ -190,17 +190,17 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
      orderData.orderNo = order.orderNo;
-    //  await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
-    //    console.error("Error sending emaill to admin:", err);
-    //   });
-    //  console.log('sent mail to admin: ', env.SMTP.USER);
-    //  if (createdByUser.email) {
-    //   await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, createdByUser.email).catch((err) => {
-    //     console.error("Error sending email to user:", err);
-    //   }
-    //   );
-    //   console.log('sent mail to user: ', createdByUser.email);
-    //  }
+     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
+       console.error("Error sending emaill to admin:", err);
+      });
+     console.log('sent mail to admin: ', env.SMTP.USER);
+     if (createdByUser.email) {
+      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, createdByUser.email).catch((err) => {
+        console.error("Error sending email to user:", err);
+      }
+      );
+      console.log('sent mail to user: ', createdByUser.email);
+     }
 
     
      //🔹 Step 5: Create Payment
@@ -772,7 +772,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         if (!order.sender) {
           throw new Error(`Sender for order ${orderId} does not exist`);
         }
-        // await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
         console.log(`Arrival notification sent to sender for order ${orderId}`);
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
