@@ -65,6 +65,7 @@ import {AddIsViewedAndViewedAtInOrder1761827413501} from "../migrations/17618274
 import {AddMoreFieldsInDriver1762085640369} from "../migrations/1762085640369-AddMoreFieldsInDriver.js";
 import {AddMoreFieldsInDriver1762117406201} from "../migrations/1762117406201-AddMoreFieldsInDriver.js";
 import {AddMultiOrderFeature1762079321388} from "../migrations/1762079321388-AddMultiOrderFeature.js";
+import {AddApiKeyInUser1762947817693} from "../migrations/1762947817693-AddApiKeyInUser.js";
 import { OrderStop } from "../models/orderStops.model.js";
 
 export const AppDataSource = new DataSource({
@@ -144,6 +145,7 @@ export const AppDataSource = new DataSource({
     AddMoreFieldsInDriver1762085640369,
     AddMoreFieldsInDriver1762117406201,
     AddMultiOrderFeature1762079321388,
+    AddApiKeyInUser1762947817693,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

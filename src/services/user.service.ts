@@ -93,4 +93,35 @@ export default class UserService {
       throw error;
     }
   }
+
+  async getUserIdByApiKey(apiKey: string): Promise<string | undefined> {
+    try {
+      const user = await this.userRepository.findOneBy({ apiKey });
+      return user ? user.id : undefined;
+    } catch (error) {
+      console.error("Error fetching user by API key:", error);
+      throw error;
+    }
+  }
+
+  async generateAndAssignApiKey(userId: string): Promise<string> {
+    try {
+      const user = await this.userRepository.findOneBy({ id: userId });
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+      const apiKey = this.generateApiKey();
+      user.apiKey = apiKey;
+      await this.userRepository.save(user);
+      return apiKey;
+    } catch (error) {
+      console.error("Error generating and assigning API key:", error);
+      throw error;
+    }
+  }
+
+  private generateApiKey(): string {
+    // Simple API key generation using random bytes
+    return [...Array(30)].map(() => Math.random().toString(36)[2]).join('');
+  }
 }
