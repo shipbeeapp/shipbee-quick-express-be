@@ -7,6 +7,7 @@ import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
 import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { PaymentStatus } from "../../utils/enums/paymentStatus.enum.js";
 import { Payer } from "../../utils/enums/payer.enum.js";
+import { OrderType } from "../../utils/enums/orderType.enum.js";
 
 
 class AddressDto {
@@ -22,9 +23,9 @@ class AddressDto {
     @IsOptional()
     buildingNumber: string;
 
-    @IsString()
     @IsOptional()
-    floor: string;
+    @Transform(({ value }) => (value ? Number(value) : null))
+    floor: number;
 
     @IsString()
     @IsOptional()
@@ -70,25 +71,8 @@ class ShipmentDto {
 
 }
 
-export class CreateOrderDto {
-  @IsOptional()
-  vehicleId?: string;
-
-  @IsEnum(ServiceSubcategoryName)
-  serviceSubcategory: ServiceSubcategoryName;
-
-  @IsEnum(furnitureRequests)
-  @IsOptional()
-  type: furnitureRequests;
-
-  @IsEnum(itemType)
-  @IsOptional()
-  itemType: itemType;
-
-  @ValidateNested() // ✅ Ensure validation of nested object
-  @Type(() => AddressDto)
-  fromAddress: AddressDto  
-
+export class OrderStop {
+  
   @IsOptional()
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
@@ -97,6 +81,61 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   itemDescription?: string;
+
+  @IsEnum(itemType)
+  @IsOptional()
+  itemType: itemType;
+
+  @IsString()
+  @IsOptional()
+  receiverName: string;
+
+  @IsString()
+  @IsOptional()
+  receiverPhoneNumber: string;
+
+  @IsEmail()
+  @IsOptional()
+  receiverEmail: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  sequence: number;
+
+  @IsNumber()
+  @IsOptional()
+  // @Type(() => Number)
+  @Transform(({ value }) => (value ? Number(value) : value))
+  distance: number;
+}
+
+export class CreateOrderDto {
+  @IsOptional()
+  vehicleId?: string;
+
+  @IsEnum(ServiceSubcategoryName)
+  serviceSubcategory: ServiceSubcategoryName;
+
+  // @IsEnum(furnitureRequests)
+  // @IsOptional()
+  // type: furnitureRequests;
+
+  // @IsEnum(itemType)
+  // @IsOptional()
+  // itemType: itemType;
+
+  @ValidateNested() // ✅ Ensure validation of nested object
+  @Type(() => AddressDto)
+  fromAddress: AddressDto  
+
+  // @IsOptional()
+  // @ValidateNested() // ✅ Ensure validation of nested object
+  // @Type(() => AddressDto)
+  // toAddress?: AddressDto
+
+  // @IsOptional()
+  // @IsString()
+  // itemDescription?: string;
 
   @IsDateString()
   pickUpDate: string;
@@ -123,17 +162,17 @@ export class CreateOrderDto {
   @IsOptional()
   senderEmail: string;
 
-  @IsString()
-  @IsOptional()
-  receiverName: string;
+  // @IsString()
+  // @IsOptional()
+  // receiverName: string;
 
-  @IsString()
-  @IsOptional()
-  receiverPhoneNumber: string;
+  // @IsString()
+  // @IsOptional()
+  // receiverPhoneNumber: string;
 
-  @IsEmail()
-  @IsOptional()
-  receiverEmail: string;
+  // @IsEmail()
+  // @IsOptional()
+  // receiverEmail: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsEnum(VehicleType)
@@ -159,4 +198,13 @@ export class CreateOrderDto {
   @IsEnum(Payer)
   @IsOptional()
   payer: Payer;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => OrderStop)
+  stops?: OrderStop[];
+
+  @IsEnum(OrderType)
+  @IsOptional()
+  type?: OrderType;
 }

@@ -5,7 +5,7 @@ import { furnitureRequests } from '../utils/enums/furnitureRequests.enum.js';
 @Service()
 export default class ServiceSubcategoryService {
 
-    async findServiceSubcategoryByName(name: string, type: string, queryRunner: any) {
+    async findServiceSubcategoryByName(name: string, type?: string, queryRunner?: any) {
         try {
             if (type) {
                 const isValidType = Object.values(furnitureRequests).includes(type as furnitureRequests);

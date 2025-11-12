@@ -20,11 +20,11 @@
             <h3 style="padding-bottom:10px;color:#000000">Request Details</h3>
             <p style="margin:0 0 16px;color:#000000">From:<br>
             {{fromAddress}}</p>
-            <p style="margin:0 0 16px;color:#000000">To:<br>
-            {{toAddress}}</p>
+            <!-- <p style="margin:0 0 16px;color:#000000">To:<br>
+            {{toAddress}}</p> -->
             <p style="margin:0 0 16px;color:#000000">Date &amp; time:<br>
             {{pickUpDate}}</p>
-            {{#if itemDescription}}
+            <!-- {{#if itemDescription}}
             <p style="margin:0 0 16px;color:#000000">Additional notes:<br>
             {{itemDescription}}</p>
             {{/if}}
@@ -38,7 +38,7 @@
               </a>
               {{/each}}
             </div>
-            {{/if}}
+            {{/if}} -->
             {{#if vehicleType}}
             <p style="margin:0 0 16px;color:#000000">Vehicle type:<br>
               {{vehicleType}}</p>
@@ -47,16 +47,16 @@
             <table style="width:100%; border-collapse:collapse; font-size:16px; color:#000000">
               <thead>
                 <tr>
-                  <th style="text-align:left; padding:8px;"> </th>
+                  <!-- <th style="text-align:left; padding:8px;"> </th> -->
                   <th style="text-align:left; padding:8px;">Sender information</th>
-                  <th style="text-align:left; padding:8px;">Receiver information</th>
+                  <!-- <th style="text-align:left; padding:8px;">Receiver information</th> -->
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td style="padding:8px;">Full name</td>
                   <td style="padding:8px;">{{sender.name}}</td>
-                  <td style="padding:8px;">{{receiver.name}}</td>
+                  <!-- <td style="padding:8px;">{{receiver.name}}</td> -->
                 </tr>
                 <tr>
                   <td style="padding:8px;">Phone number</td>
@@ -65,24 +65,60 @@
                       {{sender.phoneNumber}}
                     </a>
                   </td>
-                  <td style="padding:8px;">
+                  <!-- <td style="padding:8px;">
                     <a href="https://wa.me/974{{receiver.phoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
                       {{receiver.phoneNumber}}
                     </a>
-                  </td>
+                  </td> -->
                 </tr>
                 <tr>
                   <td style="padding:8px;">Email address</td>
                   <td style="padding:8px;">{{sender.email}}</td>
-                  <td style="padding:8px;">{{#if receiver.email}}{{receiver.email}}{{else}}-{{/if}}</td>
+                  <!-- <td style="padding:8px;">{{#if receiver.email}}{{receiver.email}}{{else}}-{{/if}}</td> -->
                 </tr>
                 <tr>
                   <td style="padding:8px;">Address information</td>
                   <td style="padding:8px;">{{fromAddress}}</td>
-                  <td style="padding:8px;">{{toAddress}}</td>
+                  <!-- <td style="padding:8px;">{{toAddress}}</td> -->
                 </tr>
               </tbody>
             </table>
+
+          <!-- Stops Section -->
+{{#if stops}}
+  <hr style="border:none;border-top:1px solid #ddd;margin:20px 0;">
+  <div style="color:#342E2E;font-size:16px;font-weight:400">
+    <h3 style="padding-bottom:10px;color:#000000">Stops</h3>
+
+    {{#each stops}}
+      <div style="margin-bottom:20px; border:1px solid #eee; padding:10px; border-radius:4px;">
+        <p style="margin:0 0 8px;color:#000000"><strong>Stop {{sequence}}</strong></p>
+        <p style="margin:0 0 8px;color:#000000">Receiver Name: {{receiverName}}</p>
+        <p style="margin:0 0 8px;color:#000000">Phone: 
+          <a href="https://wa.me/974{{receiverPhoneNumber}}" target="_blank" style="color:#25D366; text-decoration:none;">
+            {{receiverPhoneNumber}}
+          </a>
+        </p>
+        <p style="margin:0 0 8px;color:#000000">Address: {{toAddress}}</p>
+
+        {{#if itemDescription}}
+          <p style="margin:0 0 8px;color:#000000">Notes: {{itemDescription}}</p>
+        {{/if}}
+
+        {{#if images}}
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            {{#each images}}
+              <a href="{{this}}" rel="noopener noreferrer">
+                <img src="{{this}}" alt="Image" style="max-width:80px;max-height:80px;border-radius:4px; cursor:pointer;">
+              </a>
+            {{/each}}
+          </div>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+{{/if}}
+
           
           <!-- Shipment Details -->
           {{#if shipment}}

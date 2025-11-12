@@ -3,11 +3,15 @@ import { env } from '../../config/environment.js';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 import { CancelRequestStatus } from '../../utils/enums/cancelRequestStatus.enum.js';
 import { Payer } from '../../utils/enums/payer.enum.js';
+import { itemType } from '../../utils/enums/itemType.enum.js';
+import { OrderStatus } from '../../utils/enums/orderStatus.enum.js';
+import { OrderType } from '../../utils/enums/orderType.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
-    itemType: string;
-    itemDescription: string | null;
+    type: OrderType;
+    // itemType: string;
+    // itemDescription: string | null;
     lifters: number;
     distance: number;
     totalCost: number;
@@ -27,7 +31,7 @@ export class OrderResponseDto {
       phoneNumber: string;
     };
   
-    receiver: {
+    receiver?: {
       id: string;
       name: string;
       email: string;
@@ -53,7 +57,14 @@ export class OrderResponseDto {
       coordinates: string;
     };
   
-    toAddress: {
+    stops: {
+      receiver: {
+        id: string;
+        name: string;
+        email: string;
+        phoneNumber: string;
+      };
+      toAddress: {
         country: string;
         city: string;
         district?: string;
@@ -64,7 +75,16 @@ export class OrderResponseDto {
         zone?: string;
         landmarks?: string;
         coordinates: string;
-    };
+      };
+      itemDescription: {
+        text: string;
+        images: string[];
+      };
+      sequence: number;
+      distance?: number;
+      itemType?: itemType;
+      status: OrderStatus;
+  }[];
   
     statusHistory: {
       status: string;
@@ -102,20 +122,53 @@ export class OrderResponseDto {
 }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
-    const itemDescription = JSON.parse(order.itemDescription) || null;
-    if (itemDescription?.images?.length) {
-        itemDescription.images = itemDescription?.images?.map(
-          (img: string) => `${env.CLOUDINARY_BASE_URL}${img}`
-        );
+    const stops = order.stops?.map(stop => {
+    let itemDesc;
+    try {
+      itemDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : { text: "", images: [] };
+      itemDesc.images = itemDesc.images.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`);
+    } catch {
+      itemDesc = { text: stop.itemDescription || "", images: [] };
     }
+
+    return {
+      receiver: {
+        id: stop.receiver?.id,
+        name: stop.receiver?.name,
+        email: stop.receiver?.email,
+        phoneNumber: stop.receiver?.phoneNumber,
+      },
+      toAddress: {
+        country: stop.toAddress.country,
+        city: stop.toAddress.city,
+        district: stop.toAddress.district,
+        street: stop.toAddress.street,
+        buildingNumber: stop.toAddress.buildingNumber,
+        floor: stop.toAddress.floor,
+        apartmentNumber: stop.toAddress.apartmentNumber,
+        zone: stop.toAddress.zone,
+        landmarks: stop.toAddress.landmarks,
+        coordinates: stop.toAddress.coordinates,
+      },
+      itemDescription: {
+        text: itemDesc.text || "",
+        images: itemDesc.images || [],
+      },
+      sequence: stop.sequence,
+      distance: stop.distance,
+      itemType: stop.itemType,
+      status: stop.status,
+    };
+  }) || [];
     return {
       id: order.id,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       orderNo: order.orderNo,
       pickUpDate: order.pickUpDate,
-      itemType: order.itemType,
-      itemDescription: itemDescription,
+      type: order.type,
+      // itemType: order.itemType,
+      // itemDescription: itemDescription,
       lifters: order.lifters,
       distance: order.distance,
       totalCost: Number(order.totalCost),
@@ -130,12 +183,7 @@ export class OrderResponseDto {
         email: order.sender?.email,
         phoneNumber: order.sender?.phoneNumber,
       },
-      receiver: {
-        id: order.receiver?.id,
-        name: order.receiver?.name,
-        email: order.receiver?.email,
-        phoneNumber: order.receiver?.phoneNumber,
-      },
+      stops,
       serviceSubcategory: {
         id: order.serviceSubcategory.id,
         name: order.serviceSubcategory.name,
@@ -153,18 +201,18 @@ export class OrderResponseDto {
         landmarks: order.fromAddress.landmarks,
         coordinates: order.fromAddress.coordinates,
       },
-      toAddress: {
-        country: order.toAddress.country,
-        city: order.toAddress.city,
-        district: order.toAddress.district,
-        street: order.toAddress.street,
-        buildingNumber: order.toAddress.buildingNumber,
-        floor: order.toAddress.floor,
-        apartmentNumber: order.toAddress.apartmentNumber,
-        zone: order.toAddress.zone,
-        landmarks: order.toAddress.landmarks,
-        coordinates: order.toAddress.coordinates,
-      },
+      // toAddress: {
+      //   country: order.toAddress.country,
+      //   city: order.toAddress.city,
+      //   district: order.toAddress.district,
+      //   street: order.toAddress.street,
+      //   buildingNumber: order.toAddress.buildingNumber,
+      //   floor: order.toAddress.floor,
+      //   apartmentNumber: order.toAddress.apartmentNumber,
+      //   zone: order.toAddress.zone,
+      //   landmarks: order.toAddress.landmarks,
+      //   coordinates: order.toAddress.coordinates,
+      // },
       statusHistory: order.orderStatusHistory?.map(status => ({
         status: status.status,
         timestamp: status.createdAt,

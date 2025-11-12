@@ -12,10 +12,10 @@ let driverTrackingClients: Response[] = [];
 
 
  // Call this whenever you want to broadcast updates
-export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, eventName: string = "order-status-update", cancellationRequestId: string = null) {
+export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, stopNumber?: number, eventName: string = "order-status-update", cancellationRequestId: string = null) {
   clients.forEach(client => {
     client.write(`event: ${eventName}\n`);
-    client.write(`data: ${JSON.stringify({ orderId, orderStatus, cancellationRequestId })}\n\n`);
+    client.write(`data: ${JSON.stringify({ orderId, orderStatus, stopNumber, cancellationRequestId })}\n\n`);
   });
 }
 
@@ -54,6 +54,7 @@ export class UserController {
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
         this.router.get("/order-tracking", this.orderTracking.bind(this));
         this.router.get("/driver-tracking", this.driverTracking.bind(this));
+        this.router.post(`${this.path}/generate-api-key`, authenticationMiddleware, this.generateApiKey.bind(this));
     }
 
     private updateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -150,5 +151,20 @@ export class UserController {
         req.on("close", () => {
           driverTrackingClients = driverTrackingClients.filter(client => client !== res);
         });
+      }
+
+      private generateApiKey = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        try {
+          console.log("Generate API Key request by:", req.email);
+          if (req.email !== env.ADMIN.EMAIL) {
+            return res.status(403).json({ success: false, message: "Unauthorized access" });
+          }
+          const { userId } = req.body;
+          const apiKey = await this.userService.generateAndAssignApiKey(userId);
+          res.status(200).json({ success: true, apiKey });
+        } catch (error) {
+          console.error("Error generating API key:", error.message);
+          res.status(500).json({ success: false, message: error.message });
+        }
       }
 }
