@@ -238,7 +238,7 @@ export default class OrderService {
         createdBy: { id: userId },
       },
       relations: [
-        "sender", "fromAddress", "toAddress", "serviceSubcategory", 
+        "sender", "fromAddress", "serviceSubcategory", 
         "orderStatusHistory", "shipment", 
         "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
         "stops", "stops.receiver", "stops.toAddress"
