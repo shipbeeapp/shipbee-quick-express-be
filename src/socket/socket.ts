@@ -86,13 +86,13 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
           continue;
         }
 
-        if (!hasDriverBeenNotified(order.id, driverId)) {
+        // if (!hasDriverBeenNotified(order.id, driverId)) {
           socket.emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
           markDriverNotified(order.id, driverId);
           console.log(`📦 Sent upcoming order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
-        } else {
-          console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
-        }
+        // } else {
+        //   console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
+        // }
       }
     });
 
