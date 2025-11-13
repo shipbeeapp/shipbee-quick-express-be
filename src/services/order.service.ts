@@ -170,7 +170,7 @@ export default class OrderService {
 
      for (const [index, stopData] of orderData.stops.entries()) {
       console.log("Creating stop:", stopData);
-      const receiver = await this.userService.findOrCreateUser({email: stopData.receiverEmail, phoneNumber: stopData.receiverPhoneNumber}, queryRunner);
+      const receiver = await this.userService.findOrCreateUser({email: stopData.receiverEmail, phoneNumber: stopData.receiverPhoneNumber, name: stopData.receiverName}, queryRunner);
       const toAddress = await this.addressService.createAddress(stopData.toAddress, queryRunner);
 
       const stop = queryRunner.manager.create(OrderStop, {
