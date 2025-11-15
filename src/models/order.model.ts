@@ -122,6 +122,9 @@ export class Order extends BaseEntity {
   @Column({ type: "enum", enum: OrderType, default: OrderType.SINGLE_STOP })
   type: OrderType; // SINGLE_STOP or MULTI_STOP
 
+  @Column({ type: "text", nullable: true })
+  deletedDriverData: string; // JSON string to store deleted driver info
+
   @OneToMany(() => OrderStop, (stop) => stop.order, { cascade: true })
   stops: OrderStop[];
 }

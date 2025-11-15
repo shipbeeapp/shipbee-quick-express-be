@@ -104,6 +104,9 @@ export class DriverController {
                 { name: "vehicleBack", maxCount: 1 },
             ]),
             this.editVehicleInfo.bind(this));
+        
+        this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
+        this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -520,6 +523,37 @@ export class DriverController {
         }
         catch (error) {
             console.error("Error updating driver vehicle info:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private activateDeactivateDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.params.id;
+            const deactivate = req.body.deactivate; // boolean to indicate activate or deactivate
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            await this.driverService.activateDeactivateDriver(driverId, deactivate);
+            res.status(200).json({ success: true, message: `Driver ${deactivate ? "deactivated": "activated"} successfully.` });
+        }
+        catch (error) {
+            console.error("Error deactivating driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private deleteDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.params.id;
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            await this.driverService.deleteDriver(driverId);
+            res.status(200).json({ success: true, message: "Driver deleted successfully." });
+        }
+        catch (error) {
+            console.error("Error deleting driver:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

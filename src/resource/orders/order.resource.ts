@@ -245,7 +245,16 @@ export class OrderResponseDto {
           model: order.driver.vehicle.model,
           number: order.driver.vehicle.number,
         }: null
-      } : null,
+      } : order.deletedDriverData ? {
+        id: null,
+        name: JSON.parse(order.deletedDriverData).name,
+        phoneNumber: JSON.parse(order.deletedDriverData).phoneNumber,
+        vehicle: {
+          type: JSON.parse(order.deletedDriverData).vehicleType,
+          model: JSON.parse(order.deletedDriverData).vehicleModel,
+          number: JSON.parse(order.deletedDriverData).vehicleNumber,
+        },
+      }: null,
     };
   }
   

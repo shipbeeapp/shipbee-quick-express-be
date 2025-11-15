@@ -13,6 +13,7 @@ import { AppDataSource } from "../config/data-source.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { Driver } from "../models/driver.model.js"; // Assuming you have a Driver model
 import { broadcastDriverStatusUpdate, broadcastOrderTrackingUpdate, broadcastDriverTrackingUpdate } from "../controllers/user.controller.js";
+import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -46,6 +47,15 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
     socket.on("driver-online", async (data: { driverId: string; vehicleType: VehicleType, currentLocation: string }) => {
       console.log("Driver connected:", socket.id);
       const { driverId, vehicleType, currentLocation } = data;
+      const driver = await AppDataSource.getRepository(Driver).findOneBy({ id: driverId });
+      if (!driver) {
+        console.log(`❌ Driver ${driverId} not found in database`);
+        return;
+      }
+      if (driver.signUpStatus === DriverSignupStatus.DEACTIVATED) {
+        console.log(`❌ Driver ${driverId} is deactivated, cannot go online`);
+        return;
+      }
       onlineDrivers.set(driverId, {
         socketId: socket.id,
         vehicleType: vehicleType,
@@ -199,6 +209,15 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
   const onlineDrivers = getOnlineDrivers();
   console.log(`📦 Emitting order ${order.id} to online drivers... ${Array.from(onlineDrivers.keys()).join(", ")}`);
   for (const [driverId, { socketId, vehicleType, currentLocation }] of onlineDrivers.entries()) {
+    const driver = await AppDataSource.getRepository(Driver).findOneBy({ id: driverId });
+    if (!driver) {
+      console.log(`❌ Driver ${driverId} not found in database`);
+      continue;
+    }
+    if (driver.signUpStatus === DriverSignupStatus.DEACTIVATED) {
+      console.log(`❌ Driver ${driverId} is deactivated, skipping order emit`);
+      continue;
+    }
     if (vehicleType === order.vehicleType) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);

@@ -993,4 +993,40 @@ export default class DriverService {
         console.error("Error sending driver vehicle info update email:", err);
     });
   }
+
+  async activateDeactivateDriver(driverId: string, deactivate: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    console.log("Deactivate value:", deactivate, "type:", typeof deactivate);
+    if (deactivate) { 
+        driver.signUpStatus = DriverSignupStatus.DEACTIVATED;
+        console.log(`Driver with ID ${driverId} deactivated`);
+    }
+    else driver.signUpStatus = DriverSignupStatus.APPROVED;
+    await this.driverRepository.save(driver);
+    }
+
+  async deleteDriver(driverId: string): Promise<void> {
+    const driver = await this.driverRepository.findOne({ where: { id: driverId }, relations: ["orders", "vehicle"] });
+    if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    if (driver.orders && driver.orders.length > 0) {
+        for (const order of driver.orders) {
+            order.driver = null;
+            order.deletedDriverData = JSON.stringify({
+                name: driver.name,
+                phoneNumber: driver.phoneNumber,
+                vehicleType: driver.vehicle?.type,
+                vehicleNumber: driver.vehicle?.number,
+                vehicleModel: driver.vehicle?.model
+            });
+            await this.orderRepository.save(order);
+        }
+    }   
+    if (driver.vehicle) await this.vehicleRepository.remove(driver.vehicle);
+    await this.driverRepository.remove(driver);
+    }
 }
