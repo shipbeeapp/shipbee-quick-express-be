@@ -52,8 +52,8 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         console.log(`❌ Driver ${driverId} not found in database`);
         return;
       }
-      if (driver.signUpStatus === DriverSignupStatus.DEACTIVATED) {
-        console.log(`❌ Driver ${driverId} is deactivated, cannot go online`);
+      if (driver.signUpStatus !== DriverSignupStatus.APPROVED) {
+        console.log(`❌ Driver ${driverId} is not approved, cannot go online`);
         return;
       }
       onlineDrivers.set(driverId, {
@@ -214,8 +214,8 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       console.log(`❌ Driver ${driverId} not found in database`);
       continue;
     }
-    if (driver.signUpStatus === DriverSignupStatus.DEACTIVATED) {
-      console.log(`❌ Driver ${driverId} is deactivated, skipping order emit`);
+    if (driver.signUpStatus !== DriverSignupStatus.APPROVED) {
+      console.log(`❌ Driver ${driverId} is not approved, cannot receive orders`);
       continue;
     }
     if (vehicleType === order.vehicleType) {
