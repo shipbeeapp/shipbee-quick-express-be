@@ -464,6 +464,7 @@ export default class OrderService {
 
   async startOrder(orderId: string, driverId: string, stopId?: string, isPickup?: boolean) {
     try {
+      let stopNumber;
       console.log("Starting order for order ID:", orderId, "by driver ID:", driverId);
       const order = await this.orderRepository.findOne({
         where: { id: orderId },
@@ -486,18 +487,15 @@ export default class OrderService {
         await this.orderStatusHistoryService.createOrderStatusHistory(order);
         console.log(`Driver ${driverId} going to pickup address for order ${orderId}`);
         // Reload order with relations
-        sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
-          console.error("Error sending email to admin:", err);
-        });
+        order.status = OrderStatus.ACTIVE;
         console.log('sent mail to admin');
         broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-        return;
       }
       
       else {
         
-        if (order.status !== OrderStatus.ASSIGNED && order.type == OrderType.SINGLE_STOP) {
-          throw new Error(`Order with ID ${orderId} is not in ASSIGNED status`);
+        if (order.status !== OrderStatus.ACTIVE && order.type == OrderType.SINGLE_STOP) {
+          throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
         }
         const currentStop = order.stops.find(stop => stop.id === stopId);
         if (!currentStop) throw new Error(`Stop with ID ${stopId} not found for order ${orderId}`);
@@ -509,10 +507,15 @@ export default class OrderService {
         
         currentStop.status = OrderStatus.ACTIVE;
         await this.orderStopRepository.save(currentStop);
-        
-        console.log(`Order ${orderId} started successfully by driver ${driverId} and going to stop #${currentStop.sequence}`);
+        // Add to order status history
+        await this.orderStatusHistoryService.createOrderStatusHistory(order);
+        stopNumber = currentStop.sequence;
+        console.log(`Order ${orderId} by driver ${driverId} is going to stop #${currentStop.sequence}`);
         broadcastOrderUpdate(order.id, order.status, currentStop.sequence); // Notify all connected clients about the order status update
       }
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status', isPickup ? "pickup": stopNumber.toString()).catch((err) => {
+        console.error("Error sending email to admin:", err);
+      });
     } catch (error) {
       console.error("Error starting order:", error.message);
       throw new Error(`Could not start order: ${error.message}`);

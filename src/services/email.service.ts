@@ -38,8 +38,8 @@ const transporter = nodemailer.createTransport({
 });
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
-export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation') {
-  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType);
+export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation', stopNumber?: string) {
+  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType, stopNumber);
   console.log("sending order confirmation email to:", recipientMail);
   await transporter.sendMail({
     from: `Shipbee <${env.SMTP.USER}>`,
@@ -116,7 +116,7 @@ function formatAddress(address: any): string {
   }
 
 
-export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string): string {
+export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string, stopNumber?: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', `${emailType}.html`);
     const html = fs.readFileSync(templatePath, 'utf8');
     console.log("order stops:", order.stops);
@@ -143,7 +143,14 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       default:
         orderStatus = 'unknown';
     }
-    const heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
+    let heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
+    if (emailType === 'order-status' && stopNumber) {
+      if (stopNumber === 'pickup') {
+        heading += `and is going to pickup location.`;
+      } else {
+        heading += `and is going to stop #${stopNumber}.`;
+      }
+    }
     const replacements = {
       recipient: userType === 'admin' ? 'admin' : `${order.senderName || order.sender?.name}`,
       heading: heading,
