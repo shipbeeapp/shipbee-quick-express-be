@@ -40,7 +40,6 @@ class AddressDto {
     landmarks: string;
 
     @IsString()
-    @IsOptional()
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
@@ -83,15 +82,12 @@ export class OrderStop {
   itemDescription?: string;
 
   @IsEnum(itemType)
-  @IsOptional()
   itemType: itemType;
 
   @IsString()
-  @IsOptional()
   receiverName: string;
 
   @IsString()
-  @IsOptional()
   receiverPhoneNumber: string;
 
   @IsEmail()
@@ -151,11 +147,9 @@ export class CreateOrderDto {
   distance: number;
 
   @IsString()
-  @IsOptional()
   senderName: string;
 
   @IsString()
-  @IsOptional()
   senderPhoneNumber: string;
 
   @IsEmail()
@@ -196,15 +190,12 @@ export class CreateOrderDto {
   orderNo?: number;
 
   @IsEnum(Payer)
-  @IsOptional()
   payer: Payer;
 
-  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => OrderStop)
   stops?: OrderStop[];
 
   @IsEnum(OrderType)
-  @IsOptional()
   type?: OrderType;
 }

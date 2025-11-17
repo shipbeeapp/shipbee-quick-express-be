@@ -142,7 +142,7 @@ export class OrderController {
           orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
         }
       });
-
+      if (!orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
       // Ensure itemDescription is a JSON string with { text, images }
       orderData.stops = orderData.stops.map(stop => ({
         ...stop,
@@ -157,7 +157,7 @@ export class OrderController {
       res.status(201).json({ success: true, data: order });
     } catch (error) {
       console.error("Error in order controller creating order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+      res.status(400).json({ status: 400, success: false, message: error.message });
     }
   }
 
