@@ -12,6 +12,7 @@ import { DriverDto } from '../dto/driver/driver.dto.js';
 import authenticationMiddleware from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
+import { broadcastNewDriver } from './user.controller.js';
 
 export class AuthController {
   public router: Router = Router();
@@ -191,6 +192,7 @@ export class AuthController {
                 vehicleModel: driverDto.vehicleModel // Assuming vehicleModel is part of the driverDto
             }
             await sendDriverData(driverDto.phoneNumber, plainPassword);
+            broadcastNewDriver(driver.id, driver.name);
             return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
         } catch (error) {
             console.error('Error during driver signup:', error);

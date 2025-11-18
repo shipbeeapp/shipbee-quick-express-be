@@ -9,6 +9,7 @@ let clients: Response[] = [];
 let driverStatusClients: Response[] = [];
 let orderTrackingClients: Response[] = [];
 let driverTrackingClients: Response[] = [];
+let newDriverClients: Response[] = [];
 
 
  // Call this whenever you want to broadcast updates
@@ -36,6 +37,12 @@ export function broadcastDriverTrackingUpdate(driverId: string, driverLocation: 
     client.write(`data: ${JSON.stringify({ driverId, driverLocation })}\n\n`);
   });
 }
+
+export function broadcastNewDriver(driverId: string, driverName: string) {
+  newDriverClients.forEach(client => {
+    client.write(`data: ${JSON.stringify({ driverId, driverName })}\n\n`);
+  });
+}
 export class UserController {
   public router: Router = Router();
   public path = '/users';
@@ -52,6 +59,7 @@ export class UserController {
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
+        this.router.get("/admin/new-driver", this.newDriver.bind(this));
         this.router.get("/order-tracking", this.orderTracking.bind(this));
         this.router.get("/driver-tracking", this.driverTracking.bind(this));
         this.router.post(`${this.path}/generate-api-key`, authenticationMiddleware, this.generateApiKey.bind(this));
@@ -166,5 +174,20 @@ export class UserController {
           console.error("Error generating API key:", error.message);
           res.status(500).json({ success: false, message: error.message });
         }
+      }
+
+      private newDriver = async (req: Request, res: Response) => {
+        // 1️⃣ Set SSE headers
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
+
+        // 2️⃣ Add client to clients array
+        newDriverClients.push(res);
+        // 3️⃣ Remove client on disconnect
+        req.on("close", () => {
+          newDriverClients = newDriverClients.filter(client => client !== res);
+        });
       }
 }

@@ -15,8 +15,8 @@ import { sendDriverSignUpMail } from '../services/email.service.js';
 import validationMiddleware from '../middlewares/validation.middleware.js';
 import bcrypt from 'bcrypt';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
-import { Driver } from '../models/driver.model.js';
 import { DriverType } from '../utils/enums/driverType.enum.js';
+import { broadcastNewDriver } from './user.controller.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -240,7 +240,8 @@ export class DriverController {
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(driverData.password, saltRounds);
             driverData.password = hashedPassword;
-            await this.driverService.findOrCreateDriver(driverData);
+            const {driver} = await this.driverService.findOrCreateDriver(driverData);
+            broadcastNewDriver(driver.id, driver.name);
             await sendDriverSignUpMail(driverData.name, driverData.phoneNumber);
             res.status(201).json({ success: true, message: 'Driver signed up successfully' });
         }

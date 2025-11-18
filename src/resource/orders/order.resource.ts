@@ -6,6 +6,7 @@ import { Payer } from '../../utils/enums/payer.enum.js';
 import { itemType } from '../../utils/enums/itemType.enum.js';
 import { OrderStatus } from '../../utils/enums/orderStatus.enum.js';
 import { OrderType } from '../../utils/enums/orderType.enum.js';
+import { generatePhotoLink } from '../../utils/global.utils.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -84,6 +85,7 @@ export class OrderResponseDto {
       distance?: number;
       itemType?: itemType;
       status: OrderStatus;
+      proofOfOrder?: string | null;
   }[];
   
     statusHistory: {
@@ -158,6 +160,7 @@ export class OrderResponseDto {
       distance: stop.distance,
       itemType: stop.itemType,
       status: stop.status,
+      proofOfOrder: stop.status === OrderStatus.COMPLETED ? generatePhotoLink(stop.proofOfOrder) : null,
     };
   }) || [];
     return {
