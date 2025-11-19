@@ -70,6 +70,8 @@ import {AddApiKeyInUser1762947817693} from "../migrations/1762947817693-AddApiKe
 import { OrderStop } from "../models/orderStops.model.js";
 import {DropOrderStopsAndPopulateAgain1762991292803} from "../migrations/1762991292803-DropOrderStopsAndPopulateAgain.js";
 import { ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193 } from "../migrations/1763215698193-ModifyDriverSignUpStatusEnumToIncludeDeactivated.js";
+import {ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272} from "../migrations/1763543196272-ModifyOrderStatusEnumToIncludeEnRoutePickup.js";
+
 export const AppDataSource = new DataSource({
   type: "postgres",
   // url: env.DATABASE_URL,
@@ -151,6 +153,7 @@ export const AppDataSource = new DataSource({
     AddApiKeyInUser1762947817693,
     DropOrderStopsAndPopulateAgain1762991292803,
     ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193,
+    ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

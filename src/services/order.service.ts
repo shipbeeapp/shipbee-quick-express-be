@@ -482,20 +482,20 @@ export default class OrderService {
       if (isPickup) {
         if (order.status !== OrderStatus.ASSIGNED) throw new Error(`Order ${orderId} not ready for pickup`);
 
-        await this.orderRepository.update(orderId, { status: OrderStatus.ACTIVE, startedAt: new Date().toISOString() });
+        await this.orderRepository.update(orderId, { status: OrderStatus.EN_ROUTE_TO_PICKUP, startedAt: new Date().toISOString() });
         // Add to order status history
+        order.status = OrderStatus.EN_ROUTE_TO_PICKUP;
         await this.orderStatusHistoryService.createOrderStatusHistory(order);
         console.log(`Driver ${driverId} going to pickup address for order ${orderId}`);
         // Reload order with relations
-        order.status = OrderStatus.ACTIVE;
         console.log('sent mail to admin');
         broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       }
       
       else {
         
-        if (order.status !== OrderStatus.ACTIVE && order.type == OrderType.SINGLE_STOP) {
-          throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
+        if (order.status !== OrderStatus.EN_ROUTE_TO_PICKUP && order.type == OrderType.SINGLE_STOP) {
+          throw new Error(`Order with ID ${orderId} is not ready to start`);
         }
         const currentStop = order.stops.find(stop => stop.id === stopId);
         if (!currentStop) throw new Error(`Stop with ID ${stopId} not found for order ${orderId}`);
@@ -504,10 +504,18 @@ export default class OrderService {
           throw new Error(`Stop ${stopId} already completed`);
         if (currentStop.status === OrderStatus.ACTIVE)
           throw new Error(`Stop ${stopId} is already active`);
+
+        // Multi-stop: ensure no other stop is active
+        if (order.type === OrderType.MULTI_STOP) {
+          const activeStop = order.stops.find(s => s.status === OrderStatus.ACTIVE);
+          if (activeStop) throw new Error(`Stop ${activeStop.sequence} is still active. Cannot start another stop.`);
+        }
         
         currentStop.status = OrderStatus.ACTIVE;
         await this.orderStopRepository.save(currentStop);
         // Add to order status history
+        order.status = OrderStatus.ACTIVE;
+        await this.orderRepository.save(order);
         await this.orderStatusHistoryService.createOrderStatusHistory(order);
         stopNumber = currentStop.sequence;
         console.log(`Order ${orderId} by driver ${driverId} is going to stop #${currentStop.sequence}`);
@@ -653,7 +661,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
             throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
         }
 
-        if (order.status !== OrderStatus.ASSIGNED && order.status !== OrderStatus.ACTIVE) {
+        if (order.status !== OrderStatus.ASSIGNED && order.status !== OrderStatus.ACTIVE && order.status !== OrderStatus.EN_ROUTE_TO_PICKUP) {
             throw new Error(`Order with ID ${orderId} is not assigned or active`);
         }
         
@@ -666,8 +674,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         }
 
         // Case 1️⃣: ASSIGNED — auto reassign, but store cancellation history
-        if (order.status === OrderStatus.ASSIGNED) {
-          console.log(`Order ${orderId} is ASSIGNED — driver ${driverId} canceled. Creating auto-approved record.`);
+        if ([OrderStatus.ASSIGNED, OrderStatus.EN_ROUTE_TO_PICKUP].includes(order.status)) {
+          console.log(`Order ${orderId} is ${order.status} — driver ${driverId} canceled. Creating auto-approved record.`);
         
           // 1. Create auto-approved cancellation request
           const cancellationRequest = this.orderCancellationRequestRepository.create({
