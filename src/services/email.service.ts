@@ -134,6 +134,9 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       case OrderStatus.ACTIVE:
         orderStatus = 'started';
         break;
+      case OrderStatus.EN_ROUTE_TO_PICKUP:
+        orderStatus = 'started';
+        break;
       case OrderStatus.COMPLETED:
         orderStatus = 'completed';
         break;
@@ -146,9 +149,9 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
     let heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
     if (emailType === 'order-status' && stopNumber) {
       if (stopNumber === 'pickup') {
-        heading += `and is going to pickup location.`;
+        heading += ` and is going to pickup location.`;
       } else {
-        heading += `and is going to stop #${stopNumber}.`;
+        heading += ` and is going to stop #${stopNumber}.`;
       }
     }
     const replacements = {
