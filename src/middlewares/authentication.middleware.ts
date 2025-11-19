@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/environment.js';
+import UserService from '../services/user.service.js';
 
 
 export interface AuthenticatedRequest extends Request {
@@ -32,4 +33,30 @@ export const authenticationMiddleware = (req: AuthenticatedRequest, res: Respons
     }
 };
 
-export default authenticationMiddleware;
+export const apiKeyAuthenticationMiddleware = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  
+    const apiKey = req.headers['x-api-key'] as string;
+    console.log("API Key from header:", apiKey);
+
+    if (!apiKey) {
+        res.status(401).json({ success: false, message: 'Access token is missing' });
+        return;
+    }
+
+    try {
+        const userService = new UserService();
+        const userId = await userService.getUserIdByApiKey(apiKey);
+        if (!userId) {
+            res.status(401).json({ success: false, message: "Invalid API key" });
+            return;
+        }
+        req.userId = userId; // Add userId to the request object
+        next();
+    }
+    catch (error) {
+        res.status(401).json({ message: 'Invalid or expired token' });
+        return
+    }
+};
+
+export default {authenticationMiddleware, apiKeyAuthenticationMiddleware};

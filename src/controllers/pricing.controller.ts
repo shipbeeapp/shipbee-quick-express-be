@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import authenticationMiddleware, { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
+import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { CreatePricingDTO } from '../dto/pricing/createPricingDTO.dto.js';
 import { env } from '../config/environment.js';
 import { GetPricingDTO } from '../dto/pricing/getPricingDTO.dto.js';

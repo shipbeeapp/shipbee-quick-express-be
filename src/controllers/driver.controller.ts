@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import {Container} from 'typedi';
 import DriverService from '../services/driver.service.js';
-import authenticationMiddleware from '../middlewares/authentication.middleware.js';
+import {authenticationMiddleware} from '../middlewares/authentication.middleware.js';
 import { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import {env} from '../config/environment.js';
 import { UpdateDriverDto } from '../dto/driver/updateDriver.dto.js';

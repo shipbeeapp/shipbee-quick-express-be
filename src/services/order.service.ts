@@ -838,4 +838,47 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       order.viewedAt = new Date();
       return this.orderRepository.save(order);
     }
+
+    async getAllOrderStatuses(userId: string) {
+      const orders =  await this.orderRepository.find({
+        where: { createdBy: { id: userId } },
+        select: ["id", "orderNo", "status", "createdAt"],
+      });
+      return orders.map(order => ({
+        id: order.id,
+        orderNo: order.orderNo,
+        status: order.status,
+      }) );
+    }
+
+    async getOrderStatus(userId: string, orderId?: string, orderNo?: number) {
+      try {
+          if (!orderId && !orderNo) {
+            throw new Error("Either orderId or orderNo must be provided");
+          }
+          let order: Order;
+          if (orderId) {
+              order =  await this.orderRepository.findOne({
+                where: { id: orderId, createdBy: { id: userId } },
+                select: ["id", "orderNo", "status"],
+              });   
+            } else if (orderNo) {
+              order =  await this.orderRepository.findOne({
+                where: { orderNo: orderNo, createdBy: { id: userId } },
+                select: ["id", "orderNo", "status"],
+              });
+            }
+            if (!order) {
+              throw new Error(`Order not found for user ${userId}`);
+            }
+          return {
+            id: order.id,
+            orderNo: order.orderNo,
+            status: order.status
+          };
+      } catch (error) {
+        console.error("Error fetching order status:", error.message);
+        throw new Error(`Could not fetch order status: ${error.message}`);
+    }
   }
+}

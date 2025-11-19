@@ -1,5 +1,5 @@
 import { Router, Response, Request } from 'express';
-import authenticationMiddleware, { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
+import {authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { Container } from 'typedi';
 import PromoCodeService from '../services/promoCode.service.js';
 import { env } from '../config/environment.js';

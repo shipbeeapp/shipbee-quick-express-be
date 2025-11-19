@@ -9,7 +9,7 @@ import bcrypt from 'bcrypt';
 
 import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
-import authenticationMiddleware from '../middlewares/authentication.middleware.js';
+import {authenticationMiddleware} from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 import { broadcastNewDriver } from './user.controller.js';

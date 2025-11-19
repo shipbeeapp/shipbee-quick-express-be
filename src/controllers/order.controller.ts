@@ -6,7 +6,7 @@ import validateDto from "../middlewares/validation.middleware.js";
 import {CreateOrderDto} from "../dto/order/createOrder.dto.js";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
-import { AuthenticatedRequest, authenticationMiddleware } from "../middlewares/authentication.middleware.js";
+import { AuthenticatedRequest, authenticationMiddleware, apiKeyAuthenticationMiddleware } from "../middlewares/authentication.middleware.js";
 import { env } from "../config/environment.js";
 import jwt from 'jsonwebtoken';
 import UserService from "../services/user.service.js";
@@ -36,12 +36,18 @@ export class OrderController {
     const upload = multer({ storage });
 
     this.router.post(
-       "/orders",
-       upload.any(), 
-       validateDto(CreateOrderDto), 
-       this.createOrder.bind(this)
+      "/orders",
+      upload.any(), 
+      validateDto(CreateOrderDto), 
+      this.createOrder.bind(this)
     );
-
+      
+    this.router.get(
+      "/orders/view-order-status",
+      apiKeyAuthenticationMiddleware,
+      this.viewOrderStatus.bind(this),
+    )
+    
     this.router.get("/orders", authenticationMiddleware, this.getOrders.bind(this));
     // route to update order status. I want only admin to be able to update order status
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
@@ -65,11 +71,11 @@ export class OrderController {
     );
 
     this.router.post(
-    "/orders/:orderId/proof",
-    authenticationMiddleware, // Only authenticated drivers
-    upload.single("proof"),
-    this.uploadProofOfOrder.bind(this)
-  );
+      "/orders/:orderId/proof",
+      authenticationMiddleware, // Only authenticated drivers
+      upload.single("proof"),
+      this.uploadProofOfOrder.bind(this)
+    );
     this.router.post(
       "/orders/:orderId/request-cancellation",
       authenticationMiddleware,
@@ -400,6 +406,24 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller updating order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async viewOrderStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId, orderNo } = req.query as { orderId: string, orderNo: string };
+      const userId = req.userId;
+
+      if (!orderId && !orderNo) {
+        const orders = await this.orderService.getAllOrderStatuses(userId);
+        return res.status(200).json({ success: true, data: orders });
+      }
+      const orderStatus = await this.orderService.getOrderStatus(userId, orderId, Number(orderNo));
+      res.status(200).json({ success: true, data: orderStatus });
+    }
+    catch (error) {
+      console.error("Error in order controller viewing order status:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
