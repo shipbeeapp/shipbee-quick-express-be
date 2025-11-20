@@ -5,6 +5,7 @@ dotenv.config();
 export const env = {
   PORT: process.env.PORT || 3000,
   APP_ENV: process.env.APP_ENV || "development",
+  APP_HOST: process.env.APP_HOST || `http://localhost:${process.env.PORT || 3000}`,
   DB: {
     HOST: process.env.DB_HOST,
     PORT: Number(process.env.DB_PORT),
@@ -53,5 +54,10 @@ export const env = {
     GOOGLE_CLIENT_ID: process.env.OAUTH_GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.OAUTH_GOOGLE_CLIENT_SECRET,
     REFRESH_TOKEN: process.env.OAUTH_REFRESH_TOKEN,
+  },
+  SHOPIFY: {
+    CLIENT_ID: process.env.SHOPIFY_CLIENT_ID,
+    SECRET: process.env.SHOPIFY_SECRET,
+    SCOPES: process.env.SHOPIFY_SCOPES,
   }
 };

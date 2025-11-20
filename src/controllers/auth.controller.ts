@@ -13,6 +13,7 @@ import {authenticationMiddleware} from '../middlewares/authentication.middleware
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 import { broadcastNewDriver } from './user.controller.js';
+import crypto from 'crypto';
 
 export class AuthController {
   public router: Router = Router();
@@ -28,6 +29,9 @@ export class AuthController {
         // Define your routes here
         // Example: this.router.get('/orders', this.getOrders.bind(this));
         // You can add more routes as needed
+        this.router.get(`${this.path}`, this.auth);
+        this.router.get(`${this.path}/callback`, this.authCallback);
+        this.router.post(`/webhooks/orders_create`, this.orderCreateWebhook);
         this.router.post(`${this.path}/sign-up`, this.signup);
         this.router.post(`${this.path}/send-otp`, this.sendOtp)
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
@@ -48,6 +52,82 @@ export class AuthController {
 
     }
 
+    private auth = async (req, res) => {
+        console.log("Starting Shopify OAuth process");
+        const shop = req.query.shop as string;
+        console.log("Shop parameter:", shop);
+        if (!shop) return res.send('Missing shop parameter');
+
+        const state = crypto.randomBytes(8).toString('hex');
+        req.session!.shopifyState = state;
+
+        const redirectUrl = `https://${shop}/admin/oauth/authorize?client_id=${env.SHOPIFY.CLIENT_ID}&scope=${env.SHOPIFY.SCOPES}&redirect_uri=${env.APP_HOST}/api/auth/callback&state=${state}`;
+
+        res.redirect(redirectUrl);
+    }
+
+
+    private authCallback = async (req, res) => {
+        console.log("Handling Shopify OAuth callback");
+        const { shop, code, state } = req.query;
+
+        if (state !== req.session.shopifyState) {
+          return res.status(403).send('Request origin cannot be verified');
+        }
+    
+        // Exchange code for access token
+        const tokenResp = await axios.post(`https://${shop}/admin/oauth/access_token`, {
+          client_id: env.SHOPIFY.CLIENT_ID,
+          client_secret: env.SHOPIFY.SECRET,
+          code
+        });
+    
+        const accessToken = tokenResp.data.access_token;
+        req.session.shopifyToken = accessToken;
+        req.session.shop = shop;
+    
+        // Register webhook after OAuth
+        await this.registerWebhooks(shop, accessToken);
+    
+        res.redirect('/welcome'); // redirect merchant to App URL
+    }
+
+    private async registerWebhooks(shop, accessToken) {
+        console.log("Registering webhooks for shop:", shop);
+        const webhookUrl = `https://${shop}/admin/api/2025-10/webhooks.json`;
+
+        await axios.post(webhookUrl, {
+          webhook: {
+            topic: 'orders/create',
+            address: `${env.APP_HOST}/webhooks/orders_create`,
+            format: 'json'
+          }
+        }, { headers: { 'X-Shopify-Access-Token': accessToken } });
+    }
+
+
+    private orderCreateWebhook = async (req, res) => {
+        console.log("Received order create webhook:", req.body);
+        const hmacHeader = req.headers['x-shopify-hmac-sha256'] as string;
+        const digest = crypto.createHmac('sha256', env.SHOPIFY.SECRET!)
+          .update(req.body)
+          .digest('base64');
+
+        if (digest !== hmacHeader) return res.status(401).send('Unauthorized');
+
+        const order = JSON.parse(req.body.toString());
+
+        // Map Shopify order to your /api/orders payload
+        const orderPayload = {
+          order_id: order.id,
+          customer: order.customer,
+          line_items: order.line_items,
+          shipping_address: order.shipping_address,
+          total_price: order.total_price
+        };
+
+        console.log("Mapped order payload:", orderPayload);
+    }
     private signup = async (req, res) => {
         // This is a placeholder for the actual implementation
         // You would typically handle user signup logic here
