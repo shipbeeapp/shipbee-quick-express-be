@@ -57,6 +57,10 @@ class App {
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
+
+    this.app.use('/welcome', (req, res) => {
+      res.send('Welcome to the Delivery Service API!');
+    });
   }
 
   private initializeErrorHandling() {
