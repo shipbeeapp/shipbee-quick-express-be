@@ -59,7 +59,10 @@ export class AuthController {
         if (!shop) return res.send('Missing shop parameter');
 
         const state = crypto.randomBytes(8).toString('hex');
+        console.log("Generated state parameter in auth endpoint:", state);
         req.session!.shopifyState = state;
+
+        console.log("req.session.shopifyState set to:", req.session!.shopifyState);
 
         const redirectUrl = `https://${shop}/admin/oauth/authorize?client_id=${env.SHOPIFY.CLIENT_ID}&scope=${env.SHOPIFY.SCOPES}&redirect_uri=${env.APP_HOST}/api/auth/callback&state=${state}`;
 
@@ -70,6 +73,9 @@ export class AuthController {
     private authCallback = async (req, res) => {
         console.log("Handling Shopify OAuth callback");
         const { shop, code, state } = req.query;
+        console.log("Callback query parameters:", { shop, code, state });
+
+        console.log("req.session.shopifyState in callback endpoint:", req.session.shopifyState);
 
         if (state !== req.session.shopifyState) {
           return res.status(403).send('Request origin cannot be verified');
