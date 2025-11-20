@@ -67,6 +67,7 @@ export class AuthController {
         console.log("Generated state parameter in auth endpoint:", state);
         oauthStateStore[shop] = { state };
         console.log("Stored state for shop:", {oauthStateStore});
+        console.log("shopify scopes:", env.SHOPIFY.SCOPES); 
         const redirectUrl = `https://${shop}/admin/oauth/authorize?client_id=${env.SHOPIFY.CLIENT_ID}&scope=${env.SHOPIFY.SCOPES}&redirect_uri=${env.APP_HOST}/api/auth/callback&state=${state}`;
 
         res.redirect(redirectUrl);
@@ -100,7 +101,7 @@ export class AuthController {
         oauthStateStore[shop as string].shopifyToken = accessToken;
         // Register webhook after OAuth
         await this.registerWebhooks(shop, accessToken);
-    
+        console.log("Shopify OAuth process completed successfully for shop:", shop, " redirecting to /welcome");
         res.redirect(`/welcome?shop=${shop}`) // redirect merchant to App URL
     }
 
@@ -111,10 +112,11 @@ export class AuthController {
         await axios.post(webhookUrl, {
           webhook: {
             topic: 'orders/create',
-            address: `${env.APP_HOST}/webhooks/orders_create`,
+            address: `${env.APP_HOST}/api/webhooks/orders_create`,
             format: 'json'
           }
         }, { headers: { 'X-Shopify-Access-Token': accessToken } });
+        console.log("Webhook registration completed for shop:", shop);
     }
 
 
