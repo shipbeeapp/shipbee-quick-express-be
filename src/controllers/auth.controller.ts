@@ -79,7 +79,7 @@ export class AuthController {
         console.log("Callback query parameters:", { shop, code, state });
 
         console.log({oauthStateStore});
-        const storedState = oauthStateStore[shop as string];
+        const storedState = oauthStateStore[shop as string].state;
         if (state !== storedState) {
           return res.status(403).send('Request origin cannot be verified');
         }
