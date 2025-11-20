@@ -68,9 +68,11 @@ class App {
 
     this.app.get('/welcome', (req: Request, res) => {
       console.log("Received request for /welcome");
+      const { shop } = req.query;
+      console.log("Shop query parameter:", shop);
       if (!req.session?.shopifyToken) {
         console.log("No Shopify token found in session, redirecting to /api/auth");
-        return res.redirect('/api/auth'); // start OAuth if missing
+        return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }
       console.log("Shopify token found, sending welcome message");
       res.send('Welcome to the Delivery Service API! Your app is installed.');
