@@ -4,7 +4,7 @@ import {env} from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
-import cookieSession from 'cookie-session';
+import session from 'express-session';
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -24,13 +24,16 @@ class App {
     this.app.use(express.json()); // Example middleware for handling JSON data
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
     this.app.use(cors({ origin: "*" }));
-    this.app.use(
-      cookieSession({
-        name: 'session',
-        keys: ['shopify_test_key'],
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-    })
-);
+    this.app.use(session({
+      secret: process.env.SESSION_SECRET || 'some_secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: true,       // must be true if using HTTPS (ngrok provides HTTPS)
+        sameSite: 'none',   // important for Shopify embedded apps
+        httpOnly: true,
+      }
+    }));
     this.app.use((req, res, next) => {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
       next();
