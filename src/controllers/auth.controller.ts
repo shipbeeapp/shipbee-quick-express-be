@@ -14,6 +14,7 @@ import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 import { broadcastNewDriver } from './user.controller.js';
 import crypto from 'crypto';
+const oauthStateStore: Record<string, string> = {};
 
 export class AuthController {
   public router: Router = Router();
@@ -60,7 +61,7 @@ export class AuthController {
 
         const state = crypto.randomBytes(8).toString('hex');
         console.log("Generated state parameter in auth endpoint:", state);
-        req.session!.shopifyState = state;
+        oauthStateStore[shop] = state;
 
         console.log("req.session.shopifyState set to:", req.session!.shopifyState);
 
@@ -76,17 +77,19 @@ export class AuthController {
         console.log("Callback query parameters:", { shop, code, state });
 
         console.log("req.session.shopifyState in callback endpoint:", req.session.shopifyState);
-
-        if (state !== req.session.shopifyState) {
+        const storedState = oauthStateStore[shop as string];
+        if (state !== storedState) {
           return res.status(403).send('Request origin cannot be verified');
         }
-    
+        console.log("State parameter verified successfully");
         // Exchange code for access token
         const tokenResp = await axios.post(`https://${shop}/admin/oauth/access_token`, {
           client_id: env.SHOPIFY.CLIENT_ID,
           client_secret: env.SHOPIFY.SECRET,
           code
         });
+
+        console.log("Received access token response from Shopify:", tokenResp.data);
     
         const accessToken = tokenResp.data.access_token;
         req.session.shopifyToken = accessToken;
