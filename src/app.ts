@@ -5,6 +5,7 @@ import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
 import session from 'express-session';
+import { oauthStateStore } from "./controllers/auth.controller.js";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -73,7 +74,8 @@ class App {
       console.log("Received request for /welcome");
       const { shop } = req.query;
       console.log("Shop query parameter:", shop);
-      if (!req.session?.shopifyToken) {
+      console.log({oauthStateStore});
+      if (!oauthStateStore[shop as string]?.shopifyToken) {
         console.log("No Shopify token found in session, redirecting to /api/auth");
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }

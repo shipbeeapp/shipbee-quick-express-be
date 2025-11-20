@@ -14,7 +14,11 @@ import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 import { broadcastNewDriver } from './user.controller.js';
 import crypto from 'crypto';
-const oauthStateStore: Record<string, string> = {};
+export const oauthStateStore: Record<string, {
+    state: string,
+    shopifyToken?: string,
+    shop?: string
+}> = {};
 
 export class AuthController {
   public router: Router = Router();
@@ -61,7 +65,7 @@ export class AuthController {
 
         const state = crypto.randomBytes(8).toString('hex');
         console.log("Generated state parameter in auth endpoint:", state);
-        oauthStateStore[shop] = state;
+        oauthStateStore[shop] = { state };
 
         console.log("req.session.shopifyState set to:", req.session!.shopifyState);
 
@@ -92,13 +96,14 @@ export class AuthController {
         console.log("Received access token response from Shopify:", tokenResp.data);
     
         const accessToken = tokenResp.data.access_token;
-        req.session.shopifyToken = accessToken;
-        req.session.shop = shop;
-    
+        // req.session.shopifyToken = accessToken;
+        // req.session.shop = shop;
+
+        oauthStateStore[shop as string].shopifyToken = accessToken;
         // Register webhook after OAuth
         await this.registerWebhooks(shop, accessToken);
     
-        res.redirect('/welcome'); // redirect merchant to App URL
+        res.redirect(`/welcome?shop=${shop}`) // redirect merchant to App URL
     }
 
     private async registerWebhooks(shop, accessToken) {
