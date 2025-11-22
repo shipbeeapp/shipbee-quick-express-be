@@ -109,9 +109,9 @@ class App {
     });
 
     this.app.post('/api/settings/save', async (req: Request, res: Response) => {
-      const { shop, senderName, pickupAddress, phone } = req.body;
+      const { shop, senderName, pickupAddress, phone, itemType, vehicleType } = req.body;
 
-      console.log("Received settings save request:", { shop, senderName, pickupAddress, phone });
+      console.log("Received settings save request:", { shop, senderName, pickupAddress, phone, itemType, vehicleType });
     
       res.redirect(`/welcome?shop=${shop}`);
     });
