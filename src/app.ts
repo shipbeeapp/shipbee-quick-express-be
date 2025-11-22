@@ -8,6 +8,11 @@ import session from 'express-session';
 import { oauthStateStore } from "./controllers/auth.controller.js";
 import path from "path";
 import ejs from "ejs";
+import { fileURLToPath } from "url";
+
+// Fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
