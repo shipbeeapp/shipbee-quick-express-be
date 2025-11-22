@@ -7,6 +7,7 @@ import cors from "cors";
 import session from 'express-session';
 import { oauthStateStore } from "./controllers/auth.controller.js";
 import path from "path";
+import ejs from "ejs";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -37,7 +38,7 @@ class App {
       }
     }));
      // ---- VIEW ENGINE CONFIG ----
-    this.app.engine("html", require("ejs").renderFile);
+    this.app.engine("html", ejs.renderFile);
     
     this.app.set(
       "views",
