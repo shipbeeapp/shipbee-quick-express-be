@@ -7,6 +7,9 @@ export function generateToken() {
 }
 
 export function generatePhotoLink(filename: string): string {
+  if (!filename) {
+    return null;
+  }
   const baseUrl = env.CLOUDINARY_BASE_URL;
   return `${baseUrl}${filename}`;
 }

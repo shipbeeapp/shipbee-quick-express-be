@@ -122,6 +122,12 @@ export class Driver extends BaseEntity {
     
     @Column({ type: "text", nullable: true })
     licenseRejectionReason: string;
+
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    businessDocsApprovalStatus: ApprovalStatus;
+    
+    @Column({ type: "text", nullable: true })
+    businessDocsRejectionReason: string;
 }
 
 import { Vehicle } from "./vehicle.model.js";

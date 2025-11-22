@@ -103,6 +103,7 @@ export default class DriverService {
                     vehicle: vehicle,
                     email: data.email,
                     businessType: data.businessType,
+                    businessDocsApprovalStatus: data.type === DriverType.BUSINESS ? ApprovalStatus.PENDING : null
                 });
                 driver = await manager.save(newDriver);
               }
@@ -224,6 +225,8 @@ export default class DriverService {
                     "driver.qidRejectionReason",
                     "driver.licenseApprovalStatus",
                     "driver.licenseRejectionReason",
+                    "driver.businessDocsApprovalStatus",
+                    "driver.businessDocsRejectionReason",
                     "businessOwner.id",
                     "businessOwner.name",
                     "businessOwner.phoneNumber",
@@ -919,6 +922,18 @@ export default class DriverService {
     await this.updateDriverSignUpStatus(driverId);
   }
 
+  async approveBusinessDocs(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    driver.businessDocsApprovalStatus = status;
+    driver.businessDocsRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    driver.signUpStatus = status === ApprovalStatus.APPROVED ? DriverSignupStatus.APPROVED : DriverSignupStatus.REJECTED;
+    await this.driverRepository.save(driver);
+  }
+
   async editQid(driverId: string, qidData: any): Promise<void> {
     const driver = await this.driverRepository.findOneBy({ id: driverId });
 
@@ -993,6 +1008,28 @@ export default class DriverService {
         console.error("Error sending driver vehicle info update email:", err);
     });
   }
+
+  async editBusinessDocs(driverId: string, businessDocsData: any): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    driver.crPhoto = businessDocsData.crPhoto;
+    driver.taxId = businessDocsData.taxId;
+
+    // Reset approval status to pending on edit
+    driver.businessDocsApprovalStatus = ApprovalStatus.PENDING;
+    driver.businessDocsRejectionReason = null;
+    driver.signUpStatus = DriverSignupStatus.PENDING;
+
+    await this.driverRepository.save(driver);
+    
+    await sendDriverUpdateInfoMail(driver.name, driver.phoneNumber, 'Business Documents').catch((err) => {
+        console.error("Error sending driver business documents update email:", err);
+    });
+  }
+
 
   async activateDeactivateDriver(driverId: string, deactivate: string): Promise<void> {
     const driver = await this.driverRepository.findOneBy({ id: driverId });
