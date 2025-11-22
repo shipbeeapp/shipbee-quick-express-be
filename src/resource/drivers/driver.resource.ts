@@ -37,7 +37,7 @@ export class DriverResource {
             licenseRejectionReason: driver.driver_licenseRejectionReason,
             businessDocsApprovalStatus: driver.driver_businessDocsApprovalStatus,
             businessDocsRejectionReason: driver.driver_businessDocsRejectionReason,
-            vehicle: driver.driver_type === DriverType.INDIVIDUAL ? {
+            vehicle: {
                 type: driver.vehicle_type,
                 model: driver.vehicle_model,
                 number: driver.vehicle_number,
@@ -51,7 +51,7 @@ export class DriverResource {
                 registrationBack: generatePhotoLink(driver.vehicle_registrationBack),
                 infoApprovalStatus: driver.vehicle_infoApprovalStatus,
                 infoRejectionReason: driver.vehicle_infoRejectionReason,
-            } : null,
+            },
             ordersCount: Number(driver.orderCount),
         };
     }
