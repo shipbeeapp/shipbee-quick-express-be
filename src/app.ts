@@ -9,6 +9,8 @@ import { oauthStateStore } from "./controllers/auth.controller.js";
 import path from "path";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
+import { itemType } from "./utils/enums/itemType.enum.js";
+import { VehicleType } from "./utils/enums/vehicleType.enum.js";
 
 // Fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -100,7 +102,9 @@ class App {
         shop,
         senderName: "",
         pickupAddress: "",
-        phone: "" 
+        phone: "",
+        itemTypes: Object.values(itemType),
+        vehicleTypes: Object.values(VehicleType), 
       });
     });
 
@@ -109,7 +113,7 @@ class App {
 
       console.log("Received settings save request:", { shop, senderName, pickupAddress, phone });
     
-      res.redirect('/welcome');
+      res.redirect(`/welcome?shop=${shop}`);
     });
 
 
