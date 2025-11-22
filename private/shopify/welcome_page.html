@@ -10,8 +10,6 @@
 
   <h2> Please Enter the following data to get started</h2>
 
-  <h3>Pickup / Sender Address Settings</h3>
-
   <form method="POST" action="/api/settings/save">
     <input type="hidden" name="shop" value="<%= shop %>" />
 
@@ -24,7 +22,7 @@
     <label>Store Address</label><br />
     <input type="text" name="pickupAddress" value="<%= pickupAddress %>" /><br /><br />
 
-    <label>Item Type</label>
+    <label>Item Type</label><br />
     <select name="itemType">
       <% itemTypes.forEach(type => { %>
         <option value="<%= type %>"><%= type.charAt(0).toUpperCase() + type.slice(1) %></option>
@@ -32,7 +30,7 @@
     </select>
     <br /><br />
 
-    <label>Vehicle Type</label>
+    <label>Vehicle Type</label><br />
     <select name="vehicleType">
       <% vehicleTypes.forEach(v => { %>
         <option value="<%= v %>"><%= v.charAt(0).toUpperCase() + v.slice(1) %></option>

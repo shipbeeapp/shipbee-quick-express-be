@@ -11,6 +11,7 @@ import ejs from "ejs";
 import { fileURLToPath } from "url";
 import { itemType } from "./utils/enums/itemType.enum.js";
 import { VehicleType } from "./utils/enums/vehicleType.enum.js";
+import axios from "axios";
 
 // Fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -83,12 +84,30 @@ class App {
     }
   }
 
+  private async getShopCoordinates(shop: string, accessToken: string) {
+    console.log("Fetching shop coordinates for shop:", shop);
+    const response = await axios.get(`https://${shop}/admin/api/2025-10/shop.json`, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken
+      }
+    });
+    console.log("Shopify shop data response:", response.data);
+    const shopData = response.data.shop;
+    return {
+      latitude: shopData.latitude,
+      longitude: shopData.longitude,
+      address: shopData.address1,
+      city: shopData.city,
+      country: shopData.country
+    };
+  }
+
   private initializeControllers(controllers: any): void {
     controllers.forEach((controller: any) => {
       this.app.use('/api', controller.router);
     });
 
-    this.app.get('/welcome', (req: Request, res) => {
+    this.app.get('/welcome', async (req: Request, res) => {
       console.log("Received request for /welcome");
       const { shop } = req.query;
       console.log("Shop query parameter:", shop);
@@ -98,6 +117,8 @@ class App {
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }
       console.log("Shopify token found, sending welcome message");
+      const coordinates = await this.getShopCoordinates(shop as string, oauthStateStore[shop as string].shopifyToken);
+      console.log("Shop coordinates:", coordinates);
       res.render('welcome_page.html', { 
         shop,
         senderName: "",
