@@ -6,6 +6,7 @@ import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
 import session from 'express-session';
 import { oauthStateStore } from "./controllers/auth.controller.js";
+import path from "path";
 // import OrderService from "./services/order.service.js";
 // import {Container} from "typedi";
 
@@ -35,6 +36,15 @@ class App {
         httpOnly: true,
       }
     }));
+     // ---- VIEW ENGINE CONFIG ----
+    this.app.engine("html", require("ejs").renderFile);
+    
+    this.app.set(
+      "views",
+      path.join(__dirname, "..", "private", "shopify")
+    );
+
+    this.app.set("view engine", "html");
     this.app.use((req, res, next) => {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
       next();
@@ -80,8 +90,22 @@ class App {
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }
       console.log("Shopify token found, sending welcome message");
-      res.send('Welcome to the Delivery Service API! Your app is installed.');
+      res.render('welcome_page.html', { 
+        shop,
+        senderName: "",
+        pickupAddress: "",
+        phone: "" 
+      });
     });
+
+    this.app.post('/api/settings/save', async (req: Request, res: Response) => {
+      const { shop, senderName, pickupAddress, phone } = req.body;
+
+      console.log("Received settings save request:", { shop, senderName, pickupAddress, phone });
+    
+      res.redirect('/welcome');
+    });
+
 
     // ----------- 2. OAuth Start -----------
   //   this.app.get('/auth', (req, res) => {
