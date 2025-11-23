@@ -114,57 +114,6 @@ class App {
         vehicleTypes: Object.values(VehicleType), 
       });
     });
-
-    this.app.post('/api/settings/save', async (req: Request, res: Response) => {
-      const shopSettingsService = new ShopSettingsService();
-      const { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude } = req.body;
-
-      console.log("Received settings save request:", { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude });
-      let shopSettings = await shopSettingsService.getSettings(shop);
-      if (shopSettings) {
-        console.log("Shop settings exist, updating...");
-        // Update existing
-        if (senderName !== undefined && senderName !== "") shopSettings.senderName = senderName;
-        if (pickupAddress !== undefined && pickupAddress !== "") shopSettings.pickupAddress = pickupAddress;
-        if (phone !== undefined && phone !== "") shopSettings.senderPhoneNumber = phone;
-        if (itemType !== undefined && itemType !== "") shopSettings.itemType = itemType;
-        if (vehicleType !== undefined && vehicleType !== "") shopSettings.vehicleType = vehicleType;
-        if (latitude !== undefined && latitude !== "") shopSettings.latitude = latitude;
-        if (longitude !== undefined && longitude !== "") shopSettings.longitude = longitude;
-
-        await shopSettingsService.updateShopSettings(shop, shopSettings);
-      }
-      else {
-        console.log("No existing shop settings, creating new...");
-        await shopSettingsService.createShopSettings({
-          shopDomain: shop,
-          senderName,
-          pickupAddress,
-          senderPhoneNumber: phone,
-          itemType,
-          vehicleType,
-          longitude,
-          latitude
-        });
-      console.log("Shop settings saved successfully for shop:", shop);
-      }
-    
-      res.redirect(`/welcome?shop=${shop}`);
-    });
-
-
-    // ----------- 2. OAuth Start -----------
-  //   this.app.get('/auth', (req, res) => {
-  //     const shop = req.query.shop as string;
-  //     if (!shop) return res.send('Missing shop parameter');
-
-  //     const state = crypto.randomBytes(8).toString('hex');
-  //     req.session!.shopifyState = state;
-
-  //     const redirectUrl = `https://${shop}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&redirect_uri=${HOST}/auth/callback&state=${state}`;
-
-  //     res.redirect(redirectUrl);
-  // });
 }
 
   private initializeErrorHandling() {

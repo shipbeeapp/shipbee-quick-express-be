@@ -113,7 +113,24 @@ export class AuthController {
     private async registerWebhooks(shop, accessToken) {
         console.log("Registering webhooks for shop:", shop, "with access token:", accessToken);
         const webhookUrl = `https://${shop}/admin/api/2025-10/webhooks.json`;
-        console.log("address for webhook registration:", `${env.APP_HOST}/api/webhooks/orders_create`);
+        const address = `${env.APP_HOST}/api/webhooks/orders_create`;
+
+        // Step 1: Fetch existing webhooks
+        const existingResp = await axios.get(webhookUrl, {
+            headers: { 'X-Shopify-Access-Token': accessToken }
+        });
+
+        const existingWebhooks = existingResp.data.webhooks || [];
+        const alreadyExists = existingWebhooks.some(
+            (w: any) => w.topic === 'orders/create' && w.address === address
+        );
+
+        if (alreadyExists) {
+            console.log("Webhook for orders/create already exists. Skipping creation.");
+            return;
+        }
+
+        // Step 2: Create
 
         await axios.post(webhookUrl, {
           webhook: {
