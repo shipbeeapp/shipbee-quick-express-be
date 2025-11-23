@@ -9,9 +9,6 @@ export class ShopSettings extends BaseEntity {
   shopDomain: string; // e.g., bassel-store-2.myshopify.com
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  shopId?: string; // optional Shopify store ID
-
-  @Column({ type: "varchar", length: 255, nullable: true })
   senderName?: string;
 
   @Column({ type: "varchar", length: 500, nullable: true })
