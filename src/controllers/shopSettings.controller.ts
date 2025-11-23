@@ -14,10 +14,10 @@ export class ShopSettingsController {
 
   private initializeRoutes() {
     // Define your routes here
-    this.router.post(this.path, this.saveOrUpdateSettings.bind(this));
+    this.router.post(`${this.path}/save`, this.createOrUpdateSettings.bind(this));
   }
 
-    private async saveOrUpdateSettings(req, res) {
+    private async createOrUpdateSettings(req, res) {
         // Implementation for saving or updating shop settings
         const { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude } = req.body;    
         console.log("Received settings save request:", { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude });
