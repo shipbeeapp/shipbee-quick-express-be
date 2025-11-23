@@ -64,7 +64,10 @@
   </style>
 </head>
 
-<body>
+<body 
+  data-latitude="<%= latitude %>"
+  data-longitude="<%= longitude %>"
+>
 
   <h1>Delivery Service App Settings</h1>
 
@@ -105,17 +108,21 @@
     <!-- Map Picker -->
     <label>Select Pickup Location on Map</label>
     <div id="map"></div>
-    <input type="hidden" id="latitude" name="latitude" />
-    <input type="hidden" id="longitude" name="longitude" />
+    <input type="hidden" id="latitude" name="latitude" value="<%= latitude %>" />
+    <input type="hidden" id="longitude" name="longitude" value="<%= longitude %>" />
 
-    <button type="submit">Save Settings</button>
+    <button type="submit">
+      <%= isNew ? "Save Settings" : "Update Settings" %>
+    </button>
   </form>
 
   <!-- Leaflet Map Logic -->
   <script>
-    const defaultCenter = [25.2854, 51.5310]; // Doha
+    const body = document.body;
+    const initialLat = parseFloat(body.dataset.latitude) || 25.2854;
+    const initialLng = parseFloat(body.dataset.longitude) || 51.5310;
 
-    const map = L.map("map").setView(defaultCenter, 11);
+    const map = L.map("map").setView([initialLat, initialLng], 11);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,

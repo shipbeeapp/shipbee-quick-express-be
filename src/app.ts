@@ -11,7 +11,7 @@ import ejs from "ejs";
 import { fileURLToPath } from "url";
 import { itemType } from "./utils/enums/itemType.enum.js";
 import { VehicleType } from "./utils/enums/vehicleType.enum.js";
-import axios from "axios";
+import ShopSettingsService from "./services/shopSettings.service.js";
 
 // Fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -100,20 +100,54 @@ class App {
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }
       console.log("Shopify token found, sending welcome message");
+      const shopSettingsService = new ShopSettingsService();
+      const shopSettings = await shopSettingsService.getSettings(shop as string);
       res.render('welcome_page.html', { 
         shop,
-        senderName: "",
-        pickupAddress: "",
-        phone: "",
+        senderName: shopSettings?.senderName || "",
+        pickupAddress: shopSettings?.pickupAddress || "",
+        phone: shopSettings?.senderPhoneNumber || "",
+        longitude: shopSettings?.longitude || "",
+        latitude: shopSettings?.latitude || "",
+        isNew: shopSettings ? false : true,
         itemTypes: Object.values(itemType),
         vehicleTypes: Object.values(VehicleType), 
       });
     });
 
     this.app.post('/api/settings/save', async (req: Request, res: Response) => {
+      const shopSettingsService = new ShopSettingsService();
       const { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude } = req.body;
 
       console.log("Received settings save request:", { shop, senderName, pickupAddress, phone, itemType, vehicleType, longitude, latitude });
+      let shopSettings = await shopSettingsService.getSettings(shop);
+      if (shopSettings) {
+        console.log("Shop settings exist, updating...");
+        // Update existing
+        if (senderName !== undefined && senderName !== "") shopSettings.senderName = senderName;
+        if (pickupAddress !== undefined && pickupAddress !== "") shopSettings.pickupAddress = pickupAddress;
+        if (phone !== undefined && phone !== "") shopSettings.senderPhoneNumber = phone;
+        if (itemType !== undefined && itemType !== "") shopSettings.itemType = itemType;
+        if (vehicleType !== undefined && vehicleType !== "") shopSettings.vehicleType = vehicleType;
+        if (latitude !== undefined && latitude !== "") shopSettings.latitude = latitude;
+        if (longitude !== undefined && longitude !== "") shopSettings.longitude = longitude;
+
+        await shopSettingsService.updateShopSettings(shop, shopSettings);
+      }
+      else {
+        console.log("No existing shop settings, creating new...");
+        await shopSettingsService.createShopSettings({
+          shopDomain: shop,
+          senderName,
+          pickupAddress,
+          senderPhoneNumber: phone,
+          itemType,
+          vehicleType,
+          longitude,
+          latitude
+        });
+      console.log("Shop settings saved successfully for shop:", shop);
+      }
     
       res.redirect(`/welcome?shop=${shop}`);
     });

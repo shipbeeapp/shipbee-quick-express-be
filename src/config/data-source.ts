@@ -72,6 +72,8 @@ import {DropOrderStopsAndPopulateAgain1762991292803} from "../migrations/1762991
 import { ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193 } from "../migrations/1763215698193-ModifyDriverSignUpStatusEnumToIncludeDeactivated.js";
 import {ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272} from "../migrations/1763543196272-ModifyOrderStatusEnumToIncludeEnRoutePickup.js";
 import { AddBusinessDocsApprovalAndReason1763817948893 } from "../migrations/1763817948893-AddBusinessDocsApprovalAndReason.js";
+import {AddShopSettingsTable1763899376760}  from "../migrations/1763899376760-AddShopSettingsTable.js";
+import { ShopSettings } from "../models/shopSettings.model.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -99,6 +101,7 @@ export const AppDataSource = new DataSource({
     Pricing, // ✅ Add Pricing entity
     OrderCancellationRequest, // ✅ Add OrderCancellationRequest entity
     OrderStop, // ✅ Add OrderStop entity
+    ShopSettings, // ✅ Add ShopSettings entity
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -156,6 +159,7 @@ export const AppDataSource = new DataSource({
     ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193,
     ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272,
     AddBusinessDocsApprovalAndReason1763817948893,
+    AddShopSettingsTable1763899376760,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
