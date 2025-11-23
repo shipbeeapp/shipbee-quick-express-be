@@ -100,14 +100,19 @@ export class AuthController {
 
         oauthStateStore[shop as string].shopifyToken = accessToken;
         // Register webhook after OAuth
-        await this.registerWebhooks(shop, accessToken);
+        try {
+            await this.registerWebhooks(shop, accessToken);
+        } catch (error) {
+            console.error("Error registering webhooks:", error);
+        }
         console.log("Shopify OAuth process completed successfully for shop:", shop, " redirecting to /welcome");
         res.redirect(`/welcome?shop=${shop}`) // redirect merchant to App URL
     }
 
     private async registerWebhooks(shop, accessToken) {
-        console.log("Registering webhooks for shop:", shop);
+        console.log("Registering webhooks for shop:", shop, "with access token:", accessToken);
         const webhookUrl = `https://${shop}/admin/api/2025-10/webhooks.json`;
+        console.log("address for webhook registration:", `${env.APP_HOST}/api/webhooks/orders_create`);
 
         await axios.post(webhookUrl, {
           webhook: {
