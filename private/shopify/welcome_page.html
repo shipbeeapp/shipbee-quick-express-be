@@ -1,47 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Welcome to Delivery App</title>
+  <title>Delivery App – Store Settings</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 12px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #map {
+      height: 300px;
+      width: 100%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+  </style>
 </head>
 
-<body style="font-family: Arial; margin: 40px;">
-  <h1>Welcome to Delivery Service App</h1>
+<body>
 
-  <h2> Please Enter the following data to get started</h2>
+  <h1>Delivery Service App Settings</h1>
 
   <form method="POST" action="/api/settings/save">
     <input type="hidden" name="shop" value="<%= shop %>" />
 
-    <label>Store Name</label><br />
-    <input type="text" name="senderName" value="<%= senderName %>" /><br /><br />
-    
-    <label>Store Phone Number</label><br />
-    <input type="text" name="phone" value="<%= phone %>" /><br /><br />
+    <!-- Sender Name -->
+    <label>Sender Name</label>
+    <input type="text" name="senderName" value="<%= senderName %>" placeholder="Enter sender name" />
 
-    <label>Store Address</label><br />
-    <input type="text" name="pickupAddress" value="<%= pickupAddress %>" /><br /><br />
+    <!-- Phone Number -->
+    <label>Phone Number</label>
+    <div style="display: flex; align-items: center;">
+        <span style="padding: 10px 14px;">+974 </span>
+        <input type="text" name="phone" value="<%= phone %>" placeholder="5xxxxxxx" />
+    </div>
 
-    <label>Item Type</label><br />
+    <!-- Pickup Address -->
+    <label>Pickup Address (Text)</label>
+    <input type="text" name="pickupAddress" value="<%= pickupAddress %>" placeholder="Street, Building, Area..." />
+
+    <!-- Item Type -->
+    <label>Item Type</label>
     <select name="itemType">
       <% itemTypes.forEach(type => { %>
-        <option value="<%= type %>"><%= type.charAt(0).toUpperCase() + type.slice(1) %></option>
+        <option value="<%= type %>"><%= type %></option>
       <% }) %>
     </select>
-    <br /><br />
 
-    <label>Vehicle Type</label><br />
+    <!-- Vehicle Type -->
+    <label>Vehicle Type</label>
     <select name="vehicleType">
-      <% vehicleTypes.forEach(v => { %>
-        <option value="<%= v %>"><%= v.charAt(0).toUpperCase() + v.slice(1) %></option>
+      <% vehicleTypes.forEach(type => { %>
+        <option value="<%= type %>"><%= type %></option>
       <% }) %>
     </select>
-    <br /><br />
 
+    <!-- Map -->
+    <label>Select Exact Pickup Location on Map</label>
+    <div id="map"></div>
 
-    <button type="submit">Save</button>
+    <label>Latitude</label>
+    <input type="text" id="latitude" name="latitude" value="<%= latitude %>" readonly />
+
+    <label>Longitude</label>
+    <input type="text" id="longitude" name="longitude" value="<%= longitude %>" readonly />
+
+    <button type="submit">Save Settings</button>
   </form>
 
-  <br />
+  <!-- Leaflet Map Logic -->
+  <script>
+    const defaultCenter = [25.2854, 51.5310]; // Doha
+
+    const map = L.map("map").setView(defaultCenter, 11);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+    }).addTo(map);
+
+    let marker;
+
+    map.on("click", function (e) {
+      const { lat, lng } = e.latlng;
+
+      document.getElementById("latitude").value = lat;
+      document.getElementById("longitude").value = lng;
+
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+    });
+  </script>
+
 </body>
 </html>
