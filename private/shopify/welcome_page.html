@@ -128,7 +128,7 @@
       maxZoom: 18,
     }).addTo(map);
 
-    let marker;
+    let marker = L.marker([initialLat, initialLng]).addTo(map);
 
     map.on("click", function (e) {
       const { lat, lng } = e.latlng;
