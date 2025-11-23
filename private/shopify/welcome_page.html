@@ -44,6 +44,23 @@
       border-radius: 8px;
       border: 1px solid #ddd;
     }
+    .phone-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .phone-prefix {
+      padding: 10px 14px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .phone-input {
+      flex: 1;
+    }
   </style>
 </head>
 
@@ -60,9 +77,9 @@
 
     <!-- Phone Number -->
     <label>Phone Number</label>
-    <div style="display: flex; align-items: center;">
-        <span style="padding: 10px 14px;">+974 </span>
-        <input type="text" name="phone" value="<%= phone %>" placeholder="5xxxxxxx" />
+    <div class="phone-wrapper">
+      <span class="phone-prefix">+974</span>
+      <input type="text" name="phone" value="<%= phone %>" placeholder="5xxxxxxx" class="phone-input" />
     </div>
 
     <!-- Pickup Address -->

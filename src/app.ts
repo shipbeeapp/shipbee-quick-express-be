@@ -84,23 +84,6 @@ class App {
     }
   }
 
-  private async getShopCoordinates(shop: string, accessToken: string) {
-    console.log("Fetching shop coordinates for shop:", shop);
-    const response = await axios.get(`https://${shop}/admin/api/2025-10/shop.json`, {
-      headers: {
-        "X-Shopify-Access-Token": accessToken
-      }
-    });
-    console.log("Shopify shop data response:", response.data);
-    const shopData = response.data.shop;
-    return {
-      latitude: shopData.latitude,
-      longitude: shopData.longitude,
-      address: shopData.address1,
-      city: shopData.city,
-      country: shopData.country
-    };
-  }
 
   private initializeControllers(controllers: any): void {
     controllers.forEach((controller: any) => {
@@ -117,8 +100,6 @@ class App {
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
       }
       console.log("Shopify token found, sending welcome message");
-      const coordinates = await this.getShopCoordinates(shop as string, oauthStateStore[shop as string].shopifyToken);
-      console.log("Shop coordinates:", coordinates);
       res.render('welcome_page.html', { 
         shop,
         senderName: "",
