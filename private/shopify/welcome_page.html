@@ -85,15 +85,11 @@
       <% }) %>
     </select>
 
-    <!-- Map -->
-    <label>Select Exact Pickup Location on Map</label>
+    <!-- Map Picker -->
+    <label>Select Pickup Location on Map</label>
     <div id="map"></div>
-
-    <label>Latitude</label>
-    <input type="text" id="latitude" name="latitude" value="<%= latitude %>" readonly />
-
-    <label>Longitude</label>
-    <input type="text" id="longitude" name="longitude" value="<%= longitude %>" readonly />
+    <input type="hidden" id="latitude" name="latitude" />
+    <input type="hidden" id="longitude" name="longitude" />
 
     <button type="submit">Save Settings</button>
   </form>
