@@ -74,6 +74,7 @@ import {ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272} from "../migra
 import { AddBusinessDocsApprovalAndReason1763817948893 } from "../migrations/1763817948893-AddBusinessDocsApprovalAndReason.js";
 import {AddShopSettingsTable1763899376760}  from "../migrations/1763899376760-AddShopSettingsTable.js";
 import { ShopSettings } from "../models/shopSettings.model.js";
+import { AddSenderNameInShopSettings1763904870962 } from "../migrations/1763904870962-AddSenderNameInShopSettings.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -160,6 +161,7 @@ export const AppDataSource = new DataSource({
     ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272,
     AddBusinessDocsApprovalAndReason1763817948893,
     AddShopSettingsTable1763899376760,
+    AddSenderNameInShopSettings1763904870962,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
