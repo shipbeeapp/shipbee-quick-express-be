@@ -104,6 +104,7 @@ export class AuthController {
             await this.registerWebhooks(shop, accessToken);
         } catch (error) {
             console.error("Error registering webhooks:", error);
+            console.error("error details:", JSON.stringify(error.response?.data?.errors) || error.message);
         }
         console.log("Shopify OAuth process completed successfully for shop:", shop, " redirecting to /welcome");
         res.redirect(`/welcome?shop=${shop}`) // redirect merchant to App URL
