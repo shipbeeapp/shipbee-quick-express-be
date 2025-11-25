@@ -105,6 +105,18 @@ export class OrderController {
       authenticationMiddleware,
       this.updateOrder.bind(this)
     )
+
+    this.router.post(
+      "/orders/:orderId/client-cancel",
+      authenticationMiddleware,
+      this.clientCancelOrder.bind(this)
+    )
+
+    this.router.post(
+      "/orders/:orderId/admin-cancel",
+      authenticationMiddleware,
+      this.adminApproveClientCancellation.bind(this)
+    )
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -424,6 +436,45 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller viewing order status:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async clientCancelOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      console.log("Inside clientCancelOrder controller");
+      const { orderId } = req.params;
+      const userId = req.userId;
+
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+
+      await this.orderService.clientCancelOrder(userId, orderId);
+      res.status(200).json({ success: true, message: "Order cancelled successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller cancelling order:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async adminApproveClientCancellation(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const cancellationRequestId = req.query.cancellationRequestId as string;
+      const {status, reason} = req.body;
+      if (req.email !== env.ADMIN.EMAIL) {
+          return res.status(403).json({ success: false, message: "You are not authorized to approve order cancellations." });
+      }
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+      await this.orderService.adminApproveClientCancellation(orderId, cancellationRequestId, status, reason);
+      res.status(200).json({ success: true, message: "Order cancellation approved successfully." });
+    } 
+    catch (error) {
+      console.error("Error in order controller approving order cancellation:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

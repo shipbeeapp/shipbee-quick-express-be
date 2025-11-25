@@ -121,6 +121,12 @@ export class OrderResponseDto {
         number: string;
       }
     } | null;
+
+    clientCancellationRequests?: {
+    id: string;
+    status: CancelRequestStatus;
+    updatedAt: Date;
+  }[];
 }
 
   export function toOrderResponseDto(order: Order): OrderResponseDto {
@@ -228,16 +234,26 @@ export class OrderResponseDto {
         itemCount: Number(order.shipment?.itemCount),
         totalValue: Number(order.shipment?.totalValue),
       },
-      cancellationRequests: order.cancellationRequests?.map(request => ({
-        id: request.id,
-        status: request.status,
-        reason: request.reason,
-        updatedAt: request.updatedAt,
-        driver: {
-          name: request.driver?.name,
-          phoneNumber: request.driver?.phoneNumber,
-        }
-      })) || [],
+      cancellationRequests: order.cancellationRequests?.
+        filter(request => request.reason !== "Cancellation requested by client").
+        map(request => ({
+          id: request.id,
+          status: request.status,
+          reason: request.reason,
+          updatedAt: request.updatedAt,
+          driver: {
+            name: request.driver?.name,
+            phoneNumber: request.driver?.phoneNumber,
+          }
+        })) || [],
+
+      clientCancellationRequests: order.cancellationRequests
+        ?.filter(request => request.reason === "Cancellation requested by client")
+        .map(request => ({
+          id: request.id,
+          status: request.status,
+          updatedAt: request.updatedAt,
+        })) || [],
 
       driver: order.driver ? {
         id: order.driver.id,

@@ -881,4 +881,93 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         throw new Error(`Could not fetch order status: ${error.message}`);
     }
   }
+
+  async clientCancelOrder(userId: string, orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, createdBy: { id: userId } },
+      relations: ["driver"],
+    });
+
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found for user ${userId}`);
+    }
+
+    if (order.status === OrderStatus.CANCELED) {
+      throw new Error(`Order with ID ${orderId} is already canceled`);
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new Error(`Order with ID ${orderId} is already completed and cannot be canceled`);
+    }
+
+    if (order.status === OrderStatus.PENDING || order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.EN_ROUTE_TO_PICKUP) {
+      //cancel directly and notify driver
+      order.status = OrderStatus.CANCELED;
+      await this.orderRepository.save(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory(order, 'Canceled by client');
+      broadcastOrderUpdate(order.id, order.status);
+      if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
+      return;
+    }
+
+    if (order.status === OrderStatus.ACTIVE) {
+      //create cancellation request for admin approval
+      const existingRequest = await this.orderCancellationRequestRepository.findOne({
+        where: { order: { id: orderId }, status: CancelRequestStatus.PENDING }
+      });
+
+      if (existingRequest) {
+        throw new Error(`Cancellation request already exists for order ${orderId}`);
+      }
+
+      const cancellationRequest = this.orderCancellationRequestRepository.create({
+          order: { id: orderId } as any,
+          status: CancelRequestStatus.PENDING,
+          reason: 'Cancellation requested by client'
+      });
+
+      const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
+      console.log(`Order cancellation requested for order ${orderId} by client ${userId}`);
+      // broadcastOrderUpdate(order.id, order.status, undefined, "order-cancel-request", cancelRequest.id);
+      return cancelRequest.id;
+    }
+  }
+
+  async adminApproveClientCancellation(orderId: string, cancellationRequestId: string, status: CancelRequestStatus, reason?: string) {
+    const order = await this.orderRepository.findOne({
+      where: { 
+        id: orderId, 
+        cancellationRequests: 
+        { id: cancellationRequestId }
+       },
+      relations: ["driver"],
+    });
+
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found`);
+    }
+
+    if (order.status === OrderStatus.CANCELED) {
+      throw new Error(`Order with ID ${orderId} is already canceled`);
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new Error(`Order with ID ${orderId} is already completed and cannot be canceled`);
+    }
+    console.log(`Admin processing cancellation request ${cancellationRequestId} for order ${orderId} with status ${status}`);
+    if (status === CancelRequestStatus.APPROVED) {
+      order.status = OrderStatus.CANCELED;
+      await this.orderRepository.save(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory(order, reason || 'Cancellation approved by admin');
+      await this.orderCancellationRequestRepository.update(cancellationRequestId, { status: CancelRequestStatus.APPROVED });
+      broadcastOrderUpdate(order.id, order.status);
+      if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
+    } else if (status === CancelRequestStatus.DECLINED) {
+      console.log(`Admin declined cancellation request ${cancellationRequestId} for order ${orderId} declined`);
+      await this.orderCancellationRequestRepository.update(cancellationRequestId, { status: CancelRequestStatus.DECLINED });
+    }
+
+    return;
+
+  }
 }
