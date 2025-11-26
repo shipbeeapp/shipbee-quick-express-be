@@ -167,6 +167,8 @@ export class AuthController {
         console.log("Calculated HMAC digest:", digest);
         if (digest !== hmacHeader) return res.status(401).send('Unauthorized');
         console.log("Webhook HMAC verification successful");
+        // ✅ Respond immediately to prevent Shopify retrying
+        res.status(200).send('OK');
         const order = req.body;
         console.log("Processing order: ", {order});
         const shop = req.headers['x-shopify-shop-domain'] as string;
