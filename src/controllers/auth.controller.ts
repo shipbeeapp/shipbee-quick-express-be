@@ -158,10 +158,11 @@ export class AuthController {
 
     private orderCreateWebhook = async (req, res) => {
         console.log("Received order create webhook:", req.body);
+        console.log("rawbody:", req.rawBody);
         const hmacHeader = req.headers['x-shopify-hmac-sha256'] as string;
         console.log("HMAC header from webhook:", hmacHeader);
         const digest = crypto.createHmac('sha256', env.SHOPIFY.SECRET!)
-          .update(req.body.toString())
+          .update(req.rawBody)
           .digest('base64');
         console.log("Calculated HMAC digest:", digest);
         if (digest !== hmacHeader) return res.status(401).send('Unauthorized');

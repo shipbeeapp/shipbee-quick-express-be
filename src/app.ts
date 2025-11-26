@@ -45,6 +45,13 @@ class App {
         httpOnly: true,
       }
     }));
+    this.app.use(
+      express.json({
+        verify: (req: any, res, buf) => {
+          req.rawBody = buf; // Save raw request body
+        }
+      })
+    );
      // ---- VIEW ENGINE CONFIG ----
     this.app.engine("html", ejs.renderFile);
     
