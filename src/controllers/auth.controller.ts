@@ -164,9 +164,9 @@ export class AuthController {
           .digest('base64');
 
         if (digest !== hmacHeader) return res.status(401).send('Unauthorized');
-
-        const order = JSON.parse(req.body.toString());
-        console.log("Processing order: ",  {order});
+        console.log("Webhook HMAC verification successful");
+        const order = req.body;
+        console.log("Processing order: ", {order});
         const shop = req.headers['x-shopify-shop-domain'] as string;
         console.log("Processing creating order from shop:", shop, " Order ID:", order.id);
         const shopSettings = await this.shopSettingsService.getSettings(shop);
