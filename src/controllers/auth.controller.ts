@@ -214,7 +214,7 @@ export class AuthController {
             },
             itemType: shopSettings.itemType as itemType,
             receiverEmail: order.contact_email,
-            receiverName: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
+            receiverName: order.shipping_address.name,
             receiverPhoneNumber: order.shipping_address.phone,
             sequence: 1,
             distance: 0
