@@ -162,7 +162,6 @@ export default class PromoCodeService {
                 discountApplied: discount
             });
         }
-        console.log({promoCodeStatus});
         return { totalCost, discount, promoCodeStatus };
     }
 

@@ -247,7 +247,6 @@ export default class OrderService {
         createdAt: "DESC",
       },
     })
-    console.log("Orders fetched for user:", orders);
     return orders.map(toOrderResponseDto);
   } catch (error) {
     console.error("Error fetching orders for user:", error.message);

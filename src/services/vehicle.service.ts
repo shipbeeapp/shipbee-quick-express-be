@@ -129,7 +129,6 @@ export default class VehicleService {
           const day = pickupDateObj.getDate();
           const pickupHour = pickupDateObj.getHours();
 
-          console.log({ month, day, pickupHour });
           // Check if date is between June 1st and Sept 15th
           // and time is between 10AM and 4PM
 
@@ -159,7 +158,6 @@ export default class VehicleService {
       {
         reason = "Price at request";
       }
-      console.log({vehicle});
       return {
         name: vehicle.name,
         image: vehicle.image,
