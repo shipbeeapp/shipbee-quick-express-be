@@ -14,6 +14,17 @@ import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
 import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
 import { broadcastNewDriver } from './user.controller.js';
 import crypto from 'crypto';
+import OrderService from '../services/order.service.js';
+import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import ShopSettingsService from '../services/shopSettings.service.js';
+import { PaymentMethod } from '../utils/enums/paymentMethod.enum.js';
+import { PaymentStatus } from '../utils/enums/paymentStatus.enum.js';
+import { OrderType } from '../utils/enums/orderType.enum.js';
+import { itemType } from '../utils/enums/itemType.enum.js';
+import { Payer } from '../utils/enums/payer.enum.js';
+import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
+
 export const oauthStateStore: Record<string, {
     state: string,
     shopifyToken?: string,
@@ -25,6 +36,8 @@ export class AuthController {
   public path = '/auth';
   private userService: UserService = Container.get(UserService)
   private driverService = Container.get(DriverService); // Assuming driverService is also UserService
+  private orderService = Container.get(OrderService);
+  private shopSettingsService = Container.get(ShopSettingsService)
   constructor() {
 
     this.initializeRoutes();
@@ -153,17 +166,63 @@ export class AuthController {
         if (digest !== hmacHeader) return res.status(401).send('Unauthorized');
 
         const order = JSON.parse(req.body.toString());
+        console.log("Processing order: ",  {order});
+        const shop = req.headers['x-shopify-shop-domain'] as string;
+        console.log("Processing creating order from shop:", shop, " Order ID:", order.id);
+        const shopSettings = await this.shopSettingsService.getSettings(shop);
+        const {distanceMeters} = await getDrivingDistanceInKm(
+          `${shopSettings.latitude},${shopSettings.longitude}`,
+          `${order.shipping_address.latitude},${order.shipping_address.longitude}`
+        );
+        console.log(`Calculated driving distance: ${distanceMeters} km`);
 
         // Map Shopify order to your /api/orders payload
-        const orderPayload = {
-          order_id: order.id,
-          customer: order.customer,
-          line_items: order.line_items,
-          shipping_address: order.shipping_address,
-          total_price: order.total_price
-        };
+        const orderPayload: CreateOrderDto = {
+          serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+          fromAddress: {
+            country: order.shipping_address.country,
+            city: order.shipping_address.city,
+            landmarks: shopSettings.pickupAddress,
+            buildingNumber: '',
+            floor: null,
+            apartmentNumber: '',
+            zone: '',
+            coordinates: `${shopSettings.latitude},${shopSettings.longitude}`
+            },
+          pickUpDate: new Date(order.created_at).toUTCString(),
+          distance: distanceMeters || 0,
+          senderName: shopSettings.senderName,
+          senderPhoneNumber: shopSettings.senderPhoneNumber,
+          senderEmail: shopSettings.senderEmail || '',
+          vehicleType: shopSettings.vehicleType,
+          paymentMethod: PaymentMethod.CASH_ON_DELIVERY,
+          paymentStatus: PaymentStatus.PENDING,
+          payer: Payer.RECEIVER,
+          type: OrderType.SINGLE_STOP,
+          stops: [{
+            toAddress: {
+              country: order.shipping_address.country,
+              city: order.shipping_address.city,
+              buildingNumber: order.shipping_address.address1,
+              floor: null,
+              apartmentNumber: order.shipping_address.address2,
+                zone: order.shipping_address.province,
+                landmarks: order.shipping_address.company || order.shipping_address.name,
+                coordinates: `${order.shipping_address.latitude},${order.shipping_address.longitude}`   
+            },
+            itemType: shopSettings.itemType as itemType,
+            receiverEmail: order.contact_email,
+            receiverName: `${order.shipping_address.first_name} ${order.shipping_address.last_name}`,
+            receiverPhoneNumber: order.shipping_address.phone,
+            sequence: 1,
+            distance: 0
+            }
+         ]
+        }
 
         console.log("Mapped order payload:", orderPayload);
+        await this.orderService.createOrder(orderPayload);
+        console.log("Order created successfully in the system for Shopify order ID:", order.id);
     }
     private signup = async (req, res) => {
         // This is a placeholder for the actual implementation
