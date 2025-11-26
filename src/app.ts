@@ -32,7 +32,13 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    this.app.use(express.json()); // Example middleware for handling JSON data
+    this.app.use(
+      express.json({
+        verify: (req: any, res, buf) => {
+          req.rawBody = buf; // Save raw request body
+        }
+      })
+    );
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
     this.app.use(cors({ origin: "*" }));
     this.app.use(session({
@@ -45,13 +51,6 @@ class App {
         httpOnly: true,
       }
     }));
-    this.app.use(
-      express.json({
-        verify: (req: any, res, buf) => {
-          req.rawBody = buf; // Save raw request body
-        }
-      })
-    );
      // ---- VIEW ENGINE CONFIG ----
     this.app.engine("html", ejs.renderFile);
     
