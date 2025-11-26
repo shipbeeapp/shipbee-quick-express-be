@@ -213,7 +213,7 @@ export class AuthController {
                 coordinates: `${order.shipping_address.latitude},${order.shipping_address.longitude}`   
             },
             itemType: shopSettings.itemType as itemType,
-            receiverEmail: order.contact_email,
+            receiverEmail: order.shipping_address.email,
             receiverName: order.shipping_address.name,
             receiverPhoneNumber: order.shipping_address.phone,
             sequence: 1,
