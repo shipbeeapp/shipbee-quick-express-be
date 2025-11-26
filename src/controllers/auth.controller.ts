@@ -191,7 +191,7 @@ export class AuthController {
             zone: '',
             coordinates: `${shopSettings.latitude},${shopSettings.longitude}`
             },
-          pickUpDate: new Date(order.created_at).toUTCString(),
+          pickUpDate: new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000).toUTCString(),
           distance: distanceMeters || 0,
           senderName: shopSettings.senderName,
           senderPhoneNumber: shopSettings.senderPhoneNumber,
