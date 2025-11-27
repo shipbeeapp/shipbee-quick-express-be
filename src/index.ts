@@ -16,6 +16,7 @@ import { TermsAndConditionsController } from "./controllers/terms-and-conditions
 import { PricingController } from "./controllers/pricing.controller.js";
 import { PromoCodeController } from "./controllers/promoCode.controller.js";
 import { ShopSettingsController } from "./controllers/shopSettings.controller.js";
+import { BroadcastMessageController } from "./controllers/broadcastMessage.controller.js";
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
@@ -39,6 +40,7 @@ const app = new App(
     new PricingController(), // Add PricingController
     new PromoCodeController(), // Add PromoCodeController
     new ShopSettingsController(), // Add ShopSettingsController
+    new BroadcastMessageController(), // Add BroadcastMessageController
     ],
 );
 

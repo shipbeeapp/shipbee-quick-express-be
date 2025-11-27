@@ -75,6 +75,9 @@ import { AddBusinessDocsApprovalAndReason1763817948893 } from "../migrations/176
 import {AddShopSettingsTable1763899376760}  from "../migrations/1763899376760-AddShopSettingsTable.js";
 import { ShopSettings } from "../models/shopSettings.model.js";
 import { AddSenderNameInShopSettings1763904870962 } from "../migrations/1763904870962-AddSenderNameInShopSettings.js";
+import { AddBroadcastMessageAndDriverBroadcast1764238643026 } from '../migrations/1764238643026-AddBroadcastMessageAndDriverBroadcast.js';
+import { DriverBroadcastMessage } from '../models/driverBroadcastMessage.model.js';
+import { BroadcastMessage } from '../models/broadcastMessage.model.js';
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -103,6 +106,8 @@ export const AppDataSource = new DataSource({
     OrderCancellationRequest, // ✅ Add OrderCancellationRequest entity
     OrderStop, // ✅ Add OrderStop entity
     ShopSettings, // ✅ Add ShopSettings entity
+    BroadcastMessage,
+    DriverBroadcastMessage,
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -162,6 +167,7 @@ export const AppDataSource = new DataSource({
     AddBusinessDocsApprovalAndReason1763817948893,
     AddShopSettingsTable1763899376760,
     AddSenderNameInShopSettings1763904870962,
+    AddBroadcastMessageAndDriverBroadcast1764238643026,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

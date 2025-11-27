@@ -5,6 +5,7 @@ import { Order } from "./order.model.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import { DriverType } from "../utils/enums/driverType.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
+import { DriverBroadcastMessage } from "./driverBroadcastMessage.model.js";
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
@@ -128,6 +129,9 @@ export class Driver extends BaseEntity {
     
     @Column({ type: "text", nullable: true })
     businessDocsRejectionReason: string;
+
+    @OneToMany(() => DriverBroadcastMessage, (driverBroadcastMessage) => driverBroadcastMessage.driver)
+    broadcastMessages: DriverBroadcastMessage[];
 }
 
 import { Vehicle } from "./vehicle.model.js";
