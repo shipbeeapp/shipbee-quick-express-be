@@ -9,7 +9,21 @@ export class BroadcastMessageService {
     private broadcastRepo = AppDataSource.getRepository(BroadcastMessage);
     private broadcastDriverRepo = AppDataSource.getRepository(DriverBroadcastMessage)
     private driverRepository = AppDataSource.getRepository(Driver);
+
     // Implement methods to create, retrieve, and manage broadcast messages
+
+    async getAllMessages() {
+        try {
+            const messages = await this.broadcastRepo.find({
+                order: { createdAt: "DESC" }
+            });
+            return messages;
+        } catch (error) {
+            console.error("Error retrieving all broadcast messages:", error);
+            throw new Error("Failed to retrieve broadcast messages: " + error.message);
+        }
+    }
+
     async broadcastToAllDrivers(title: string, message: string) {
         try {
             const drivers = await this.driverRepository.find();
@@ -42,7 +56,7 @@ export class BroadcastMessageService {
     async getMessagesForDriver(driverId: string) {
         try {
             const driverMessages = await this.broadcastDriverRepo.find({
-                where: { driver: { id: driverId } },
+                where: { driver: { id: driverId }, broadcastMessage: { isActive: true } },
                 relations: ["broadcastMessage"],
                 order: { createdAt: "DESC" }
             });
@@ -76,6 +90,49 @@ export class BroadcastMessageService {
         } catch (error) {
             console.error("Error marking message as read:", error);
             throw new Error("Failed to mark message as read: " + error.message);
+        }
+    }
+
+    async modifyMessageStatus(broadcastMessageId: string, isActive: boolean) {
+        try {
+            const message = await this.broadcastRepo.findOne({  where: { id: broadcastMessageId } });
+            if (!message) {
+                throw new Error("Broadcast message not found");
+            }
+            message.isActive = isActive;
+            await this.broadcastRepo.save(message);
+        } catch (error) {
+            console.error("Error modifying message status:", error);
+            throw new Error("Failed to modify message status: " + error.message);
+        }
+    }
+
+    async assignDriverToActiveMessages(driverId: string) {
+        try {
+            const driver = await this.driverRepository.findOne({ where: { id: driverId } });
+            if (!driver) {
+                throw new Error("Driver not found");
+            }
+            const activeMessages = await this.broadcastRepo.find({ where: { isActive: true } });
+            for (const message of activeMessages) {
+                const existingRelation = await this.broadcastDriverRepo.findOne({
+                    where: { driver: { id: driverId }, broadcastMessage: { id: message.id } }
+                });
+
+                if (!existingRelation) {
+                    const relation = this.broadcastDriverRepo.create({
+                        broadcastMessage: message,
+                        driver,
+                    });
+                    await this.broadcastDriverRepo.save(relation);
+                }
+                else {
+                    console.log(`Driver ${driverId} already has message ${message.id} assigned.`);
+                }
+            }
+        } catch (error) {
+            console.error("Error assigning driver to active messages:", error);
+            throw new Error("Failed to assign driver to active messages: " + error.message);
         }
     }
 }

@@ -22,6 +22,7 @@ import { DriverResource } from "../resource/drivers/driver.resource.js";
 import { generatePhotoLink } from "../utils/global.utils.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
+import { BroadcastMessageService } from "./broadcastMessage.service.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -31,6 +32,7 @@ export default class DriverService {
     private vehicleRepository = AppDataSource.getRepository(Vehicle);
     private orderRepository = AppDataSource.getRepository(Order); // Assuming you have an Order model
     private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
+    private broadcastMessageService = Container.get(BroadcastMessageService);
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
@@ -167,6 +169,7 @@ export default class DriverService {
                 }
               }
             await queryRunner.commitTransaction();
+            await this.broadcastMessageService.assignDriverToActiveMessages(driver.id);
             return {driver, vehicleType: vehicle?.type};
         } catch (error) {
             console.error("Error in findOrCreateDriver:", error);
