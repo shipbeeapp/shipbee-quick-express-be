@@ -73,6 +73,7 @@ export class DriverController {
         this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
         this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
+        this.router.get(`${this.path}/all-online-drivers`, authenticationMiddleware, this.getAllOnlineDrivers.bind(this));
         this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
         this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
@@ -630,6 +631,21 @@ export class DriverController {
         }
         catch (error) {
             console.error("Error deleting driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getAllOnlineDrivers = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            const drivers = await this.driverService.getAllOnlineDrivers();
+            res.status(200).json({ success: true, data: drivers });
+        }       
+        catch (error) {
+            console.error("Error fetching all online drivers:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

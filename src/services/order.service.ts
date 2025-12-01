@@ -31,7 +31,7 @@ import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.j
 import PricingService from "./pricing.service.js";
 import { validateObject } from "../middlewares/validation.middleware.js";
 import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
-import { generateToken } from "../utils/global.utils.js";
+import { generatePhotoLink, generateToken } from "../utils/global.utils.js";
 import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
@@ -842,11 +842,21 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       const orders =  await this.orderRepository.find({
         where: { createdBy: { id: userId } },
         select: ["id", "orderNo", "status", "createdAt"],
+        relations: ["driver"],
       });
+      console.log("Fetched orders for user:", JSON.stringify(orders, null, 2));
       return orders.map(order => ({
         id: order.id,
         orderNo: order.orderNo,
         status: order.status,
+        driver: order.driver ? { 
+          name: order.driver.name, 
+          phoneNumber: order.driver.phoneNumber,
+          profilePicture: generatePhotoLink(order.driver.profilePicture),
+          qid: order.driver.qid,
+          licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
+          licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,  
+        } : null,
       }) );
     }
 
@@ -860,11 +870,13 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               order =  await this.orderRepository.findOne({
                 where: { id: orderId, createdBy: { id: userId } },
                 select: ["id", "orderNo", "status"],
+                relations: ["driver"],
               });   
             } else if (orderNo) {
               order =  await this.orderRepository.findOne({
                 where: { orderNo: orderNo, createdBy: { id: userId } },
                 select: ["id", "orderNo", "status"],
+                relations: ["driver"],
               });
             }
             if (!order) {
@@ -873,7 +885,15 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           return {
             id: order.id,
             orderNo: order.orderNo,
-            status: order.status
+            status: order.status,
+            driver: order.driver ? { 
+              name: order.driver.name, 
+              phoneNumber: order.driver.phoneNumber,
+              profilePicture: generatePhotoLink(order.driver.profilePicture),
+              qid: order.driver.qid,
+              licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
+              licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,
+            } : null,
           };
       } catch (error) {
         console.error("Error fetching order status:", error.message);
@@ -968,5 +988,14 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
     return;
 
+  }
+  
+  // Check if a given order belongs to the user
+  async isOrderOwnedByUser(orderId: string, userId: string): Promise<boolean> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, createdBy: { id: userId } },
+      select: ["id"],
+    });
+    return !!order;
   }
 }

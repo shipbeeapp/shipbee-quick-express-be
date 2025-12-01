@@ -5,17 +5,26 @@ import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/a
 import { OrderStatus } from '../utils/enums/orderStatus.enum.js';
 import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
 import { env } from '../config/environment.js';
+import jwt from "jsonwebtoken";
+import OrderService from '../services/order.service.js';
+
 let clients: Response[] = [];
 let driverStatusClients: Response[] = [];
-let orderTrackingClients: Response[] = [];
 let driverTrackingClients: Response[] = [];
 let newDriverClients: Response[] = [];
 
 
+interface OrderTrackingClient {
+  res: Response;
+  type: "admin" | "api";
+  userId?: string;       // API client userId
+}
+let orderTrackingClients: OrderTrackingClient[] = [];
+
  // Call this whenever you want to broadcast updates
-export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, stopNumber?: number, eventName: string = "order-status-update", cancellationRequestId: string = null) {
-  clients.forEach(client => {
-    client.write(`event: ${eventName}\n`);
+ export function broadcastOrderUpdate(orderId: string, orderStatus: OrderStatus, stopNumber?: number, eventName: string = "order-status-update", cancellationRequestId: string = null) {
+   clients.forEach(client => {
+     client.write(`event: ${eventName}\n`);
     client.write(`data: ${JSON.stringify({ orderId, orderStatus, stopNumber, cancellationRequestId })}\n\n`);
   });
 }
@@ -26,10 +35,20 @@ export function broadcastDriverStatusUpdate(driverId: string, driverStatus: Driv
   });
 }
 
-export function broadcastOrderTrackingUpdate(orderId: string, driverLocation: string) {
-  orderTrackingClients.forEach(client => {
-    client.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
-  });
+export async function broadcastOrderTrackingUpdate(orderId: string, driverLocation: string) {
+  const orderService = new OrderService();
+  for (const client of orderTrackingClients) {
+    if (client.type === "admin") {
+      client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
+    } else if (client.type === "api" && client.userId) {
+      console.log("Checking order ownership for userId:", client.userId);
+      const isOwned = await orderService.isOrderOwnedByUser(orderId, client.userId);
+      console.log(`Order ${orderId} owned by user ${client.userId}:`, isOwned);
+      if (isOwned) {
+        client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
+      }
+    }
+  }
 }
 
 export function broadcastDriverTrackingUpdate(driverId: string, driverLocation: string) {
@@ -132,6 +151,39 @@ export class UserController {
     }
 
     private orderTracking = async (req: Request, res: Response) => {
+        
+        const {apiKey, token} = req.query;
+        console.log("Order tracking connection attempt with apiKey:", apiKey, "and token:", token);
+        if (token) {
+          const secretKey = env.JWT_SECRET || 'your-secret-key';
+          const decoded = jwt.verify(token as string, secretKey) as { userId: string, email: string, driverId?: string };
+          if (!decoded || decoded.email !== env.ADMIN.EMAIL) {
+            return res.status(403).json({ success: false, message: "Unauthorized access" });
+          }
+          // 1️⃣ Set SSE headers
+          res.setHeader("Content-Type", "text/event-stream");
+          res.setHeader("Cache-Control", "no-cache");
+          res.setHeader("Connection", "keep-alive");
+          res.flushHeaders();
+  
+          // 2️⃣ Add client to clients array
+          orderTrackingClients.push({ res, type: "admin" });
+          // 3️⃣ Remove client on disconnect
+          req.on("close", () => {
+            orderTrackingClients = orderTrackingClients.filter(client => client.res !== res);
+          });
+          return;
+        }
+
+        // 2️⃣ External client via API key
+        if (!apiKey) {
+          return res.status(400).json({ error: "api key is required" });
+        }
+
+        const userId = await this.userService.getUserIdByApiKey(apiKey as string);
+        if (!userId) {
+          return res.status(401).json({ success: false, message: "Invalid API key" });
+        }
         // 1️⃣ Set SSE headers
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
@@ -139,11 +191,12 @@ export class UserController {
         res.flushHeaders();
 
         // 2️⃣ Add client to clients array
-        orderTrackingClients.push(res);
+        orderTrackingClients.push({ res, type: "api", userId });
         // 3️⃣ Remove client on disconnect
         req.on("close", () => {
-          orderTrackingClients = orderTrackingClients.filter(client => client !== res);
+          orderTrackingClients = orderTrackingClients.filter(client => client.res !== res);
         });
+        return;
       }
 
       private driverTracking = async (req: Request, res: Response) => {

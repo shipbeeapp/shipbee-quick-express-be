@@ -1069,4 +1069,29 @@ export default class DriverService {
     if (driver.vehicle) await this.vehicleRepository.remove(driver.vehicle);
     await this.driverRepository.remove(driver);
     }
+
+    async getAllOnlineDrivers(): Promise<any[]> {
+        try {
+            const onlineDriversMap = getOnlineDrivers();
+            const onlineDrivers: any[] = [];
+            for (const [driverId, driverData] of onlineDriversMap.entries()) {
+                const driver = await this.driverRepository.findOneBy({ id: driverId });
+                if (driver) {
+                    onlineDrivers.push({
+                        id: driver.id,
+                        name: driver.name,
+                        phoneNumber: driver.phoneNumber,
+                        currentLocation: driverData.currentLocation,
+                        vehicleType: driverData.vehicleType,
+                        status: driver.status
+                    });
+                }
+            }
+            return onlineDrivers;
+        }
+        catch (error) {
+            console.error("Error fetching all online drivers:", error);
+            throw error;
+        }
+    }       
 }
