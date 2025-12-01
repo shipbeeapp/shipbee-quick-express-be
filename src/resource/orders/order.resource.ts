@@ -224,6 +224,7 @@ export class OrderResponseDto {
       // },
       statusHistory: order.orderStatusHistory?.map(status => ({
         status: status.status,
+        reason: status.cancellationReason,
         timestamp: status.createdAt,
       })),
       shipment: {
@@ -235,7 +236,7 @@ export class OrderResponseDto {
         totalValue: Number(order.shipment?.totalValue),
       },
       cancellationRequests: order.cancellationRequests?.
-        filter(request => request.reason !== "Cancellation requested by client").
+        filter(request => request.driver !== null).
         map(request => ({
           id: request.id,
           status: request.status,
@@ -252,6 +253,7 @@ export class OrderResponseDto {
         .map(request => ({
           id: request.id,
           status: request.status,
+          reason: request.reason,
           updatedAt: request.updatedAt,
         })) || [],
 
