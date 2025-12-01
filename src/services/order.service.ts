@@ -942,7 +942,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       const cancellationRequest = this.orderCancellationRequestRepository.create({
           order: { id: orderId } as any,
           status: CancelRequestStatus.PENDING,
-          reason: 'Cancellation requested by client'
+          reason
       });
 
       const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);

@@ -248,7 +248,7 @@ export class OrderResponseDto {
         })) || [],
 
       clientCancellationRequests: order.cancellationRequests
-        ?.filter(request => request.reason === "Cancellation requested by client")
+        ?.filter(request => request.driver?.id === null)
         .map(request => ({
           id: request.id,
           status: request.status,
