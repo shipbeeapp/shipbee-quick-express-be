@@ -449,8 +449,8 @@ export class OrderController {
       if (!orderId) {
         return res.status(400).json({ success: false, message: "Order ID is required." });
       }
-
-      await this.orderService.clientCancelOrder(userId, orderId);
+      const {reason} = req.body;
+      await this.orderService.clientCancelOrder(userId, orderId, reason);
       res.status(200).json({ success: true, message: "Order cancelled successfully." });
     }
     catch (error) {

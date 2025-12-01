@@ -901,7 +901,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
   }
 
-  async clientCancelOrder(userId: string, orderId: string) {
+  async clientCancelOrder(userId: string, orderId: string, reason?: string) {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, createdBy: { id: userId } },
       relations: ["driver"],
@@ -923,7 +923,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       //cancel directly and notify driver
       order.status = OrderStatus.CANCELED;
       await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory(order, 'Canceled by client');
+      await this.orderStatusHistoryService.createOrderStatusHistory(order, reason || 'Cancellation by client');
       broadcastOrderUpdate(order.id, order.status);
       if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
       return;
