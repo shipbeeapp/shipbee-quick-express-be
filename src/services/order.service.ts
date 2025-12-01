@@ -918,7 +918,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     if (order.status === OrderStatus.COMPLETED) {
       throw new Error(`Order with ID ${orderId} is already completed and cannot be canceled`);
     }
-
+    console.log(`reason for cancellation: ${reason}`);
     if (order.status === OrderStatus.PENDING || order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.EN_ROUTE_TO_PICKUP) {
       //cancel directly and notify driver
       order.status = OrderStatus.CANCELED;
