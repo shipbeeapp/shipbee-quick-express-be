@@ -280,20 +280,27 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
   } 
 }
 
-export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
+export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string, stopSequence?: number) {
   try {
+    let stopSequenceText = '';
+    if (stopSequence) {
+      stopSequenceText = `for dropoff at stop #${stopSequence} for order #${orderNo}`;
+    }
+    else {
+      stopSequenceText = `for pickup with order #${orderNo}`;
+    }
     if (email) {
       await transporter.sendMail({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
         subject: `Order #${orderNo}`,
-        html: `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) has arrived at your location with order #${orderNo}. </p>`,
+        html: `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) has arrived ${stopSequenceText}. </p>`,
       });
       console.log(`Arrival notification email to ${email}`);
     } 
     else {
       await twilioClient.messages.create({
-        body: `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}), has arrived at your location with order ${orderNo}.`,
+        body: `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}), has arrived ${stopSequenceText}.`,
         from: 'ShipBee',
         to: `+974${phoneNumber}`,
       });

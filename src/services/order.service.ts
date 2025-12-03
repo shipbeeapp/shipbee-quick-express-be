@@ -815,7 +815,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         if (!stop.receiver.phoneNumber) {
           throw new Error(`Receiver for stop ${stopId} does not have a phone number`);
         }
-        // await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence);
         console.log(`Arrival notification sent to receiver for order ${orderId}`);
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
