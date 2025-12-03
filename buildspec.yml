@@ -1,0 +1,28 @@
+version: 0.2
+
+env:
+  variables:
+    # Optional: default Node environment
+    NODE_ENV: production
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app)
+      - REPOSITORY_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app
+      - IMAGE_TAG=latest
+  build:
+    commands:
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+  post_build:
+    commands:
+      - echo Pushing the Docker image to ECR...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Build and push completed successfully.
+
+artifacts:
+  files:
+    - "**/*"
