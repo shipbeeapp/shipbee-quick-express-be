@@ -8,8 +8,8 @@ export class GetPricingDTO {
     @IsEnum(ServiceSubcategoryName)
     serviceSubcategory: ServiceSubcategoryName;
 
-    @IsString()
-    shippingCompany: string;
+    @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+    shippingCompany?: string;
 
     @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
     vehicleType: VehicleType; // Optional, only for PERSONAL_QUICK
