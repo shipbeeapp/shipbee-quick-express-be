@@ -78,6 +78,7 @@ import { AddSenderNameInShopSettings1763904870962 } from "../migrations/17639048
 import { AddBroadcastMessageAndDriverBroadcast1764238643026 } from '../migrations/1764238643026-AddBroadcastMessageAndDriverBroadcast.js';
 import { DriverBroadcastMessage } from '../models/driverBroadcastMessage.model.js';
 import { BroadcastMessage } from '../models/broadcastMessage.model.js';
+import {AddShippingCompanyInShipment1764847815381} from "../migrations/1764847815381-AddShippingCompanyInShipment.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -168,6 +169,7 @@ export const AppDataSource = new DataSource({
     AddShopSettingsTable1763899376760,
     AddSenderNameInShopSettings1763904870962,
     AddBroadcastMessageAndDriverBroadcast1764238643026,
+    AddShippingCompanyInShipment1764847815381,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

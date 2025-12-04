@@ -7,4 +7,4 @@ services:
       dockerfile: Dockerfile
     container_name: shipbee_backend
     ports:
-      - "3000:3000"  # Change this based on your app's port
+      - "7500:7500"  # Change this based on your app's port

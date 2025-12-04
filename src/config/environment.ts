@@ -59,5 +59,11 @@ export const env = {
     CLIENT_ID: process.env.SHOPIFY_CLIENT_ID,
     SECRET: process.env.SHOPIFY_SECRET,
     SCOPES: process.env.SHOPIFY_SCOPES,
+  },
+  DHL: {
+    API_KEY: process.env.DHL_API_KEY,
+    API_SECRET: process.env.DHL_API_SECRET,
+    ACCOUNT_NUMBER: process.env.DHL_ACCOUNT_NUMBER,
+    DOMAIN: process.env.DHL_DOMAIN || 'https://api-dhl.com',
   }
 };

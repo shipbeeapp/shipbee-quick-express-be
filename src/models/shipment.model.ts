@@ -29,6 +29,9 @@ export class Shipment extends BaseEntity {
     //height in cm
     @Column({type: "numeric", precision: 10, scale: 2, nullable: true})
     height: number;
+
+    @Column({type: "varchar", length: 100, nullable: true})
+    shippingCompany: string; // e.g., 'DHL', 'Qatar Post'
 }
 
 import { Order } from "./order.model.js";

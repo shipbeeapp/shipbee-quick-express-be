@@ -126,8 +126,15 @@ export default class OrderService {
         vehicleType: orderData.vehicleType,
         distance: orderData.distance,
         fromCountry: orderData.fromAddress.country,
+        fromCity: orderData.fromAddress.city,
         toCountry: orderData.stops[0]?.toAddress?.country,
+        toCity: orderData.stops[0]?.toAddress?.city,
         weight: orderData.shipment?.weight,
+        length: orderData.shipment?.length,
+        width: orderData.shipment?.width,
+        height: orderData.shipment?.height,
+        plannedShippingDate: orderData.pickUpDate.split('T')[0], // extract date in YYYY-MM-DD format
+        shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
         lifters: orderData.lifters
       });
       const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);

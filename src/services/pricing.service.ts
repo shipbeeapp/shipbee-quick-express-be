@@ -5,7 +5,9 @@ import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 import { LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
 import { env } from "../config/environment.js";
-    
+import { getCountryIsoCode } from "../utils/dhl.utils.js";
+import axios from "axios";
+
 @Service()
 export default class PricingService {
     private pricingRepository = AppDataSource.getRepository(Pricing);
@@ -84,24 +86,57 @@ export default class PricingService {
                     Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                 )};
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
-                const currentPricing = await this.pricingRepository.findOne({
-                    where: {
-                        serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
-                        fromCountry: getPricingDTO.fromCountry,
-                        toCountry: getPricingDTO.toCountry,
-                        maxWeight: MoreThanOrEqual(getPricingDTO.weight),
-                        isCurrent: true
-                    },
-                    order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
-                });
-                if (!currentPricing) {
-                    throw new Error('No pricing found for the given criteria');
+                if (getPricingDTO.shippingCompany === 'Qatar Post') {
+                    const currentPricing = await this.pricingRepository.findOne({
+                        where: {
+                            serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                            fromCountry: getPricingDTO.fromCountry,
+                            toCountry: getPricingDTO.toCountry,
+                            maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                            isCurrent: true
+                        },
+                        order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
+                    });
+                    if (!currentPricing) {
+                        throw new Error('No pricing found for the given criteria');
+                    }
+                    const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+                    return {
+                        totalCost: Number(cost.toFixed(1)),
+                        estimatedDeliveryDays: currentPricing.transitTime
+                    };
+                } else if (getPricingDTO.shippingCompany === 'DHL') {
+                    const params = {
+                      accountNumber: env.DHL.ACCOUNT_NUMBER,
+                      originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+                      originCityName: getPricingDTO.fromCity,
+                      destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+                      destinationCityName: getPricingDTO.toCity,
+                      weight: getPricingDTO.weight,
+                      length: getPricingDTO.length,
+                      width: getPricingDTO.width,
+                      height: getPricingDTO.height,
+                      plannedShippingDate: getPricingDTO.plannedShippingDate,
+                      isCustomsDeclarable: false,
+                      unitOfMeasurement: "metric",
+                    };
+                    console.log('shipping date: ', getPricingDTO.plannedShippingDate);
+
+                    const auth = {
+                        username: env.DHL.API_KEY,
+                        password: env.DHL.API_SECRET,
+                    }
+                    const response = await axios.get(env.DHL.DOMAIN, { params, auth });
+                    const cost = response.data.products[0].totalPrice.find(p => p.currencyType === "BILLC")?.price;
+                    console.log('DHL pricing:', cost);
+                    return {
+                        totalCost: Number(cost),
+                        estimatedDeliveryDays: response.data.products[0].deliveryCapabilities.totalTransitDays
+                    };
                 }
-                const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
-                return {
-                    totalCost: Number(cost.toFixed(1)),
-                    estimatedDeliveryDays: currentPricing.transitTime
-                };
+                else {
+                    throw new Error('Unsupported shipping company for Express service');
+                }
             }
             else {
                 throw new Error('Unsupported service subcategory'); 

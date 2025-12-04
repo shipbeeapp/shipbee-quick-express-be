@@ -10,7 +10,7 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws --version
-      - $(aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app)
+      - $(aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app)
       - REPOSITORY_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app
       - IMAGE_TAG=latest
   build:

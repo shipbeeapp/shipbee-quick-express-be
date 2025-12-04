@@ -60,6 +60,9 @@ class ShipmentDto {
     @Type(() => Number)
     height: number; // height in cm
 
+    @IsString()
+    shippingCompany: string; // e.g., 'DHL', 'Qatar Post'
+
     @IsNumber()
     @Type(() => Number)
     itemCount: number; // number of items
