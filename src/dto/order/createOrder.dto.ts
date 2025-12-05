@@ -121,9 +121,9 @@ export class CreateOrderDto {
   // type: furnitureRequests;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
-  @IsEnum(itemType)
   @IsOptional()
-  itemType: itemType;
+  @IsEnum(itemType)
+  itemType?: itemType;
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
@@ -164,17 +164,17 @@ export class CreateOrderDto {
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
   @IsString()
   @IsOptional()
-  receiverName: string;
+  receiverName?: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  receiverPhoneNumber: string;
+  receiverPhoneNumber?: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
-  @IsEmail()
   @IsOptional()
-  receiverEmail: string;
+  @IsEmail()
+  receiverEmail?: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsEnum(VehicleType)
