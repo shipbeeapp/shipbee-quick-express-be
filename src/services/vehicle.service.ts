@@ -58,7 +58,7 @@ export default class VehicleService {
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Motorcycle_dsp9nw.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Sedan_Car_l8w1gn.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_2_Tons_dqmymz.png",
-      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_3_Tons_nnvyrq.png",
+      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Pickup_Truck_2_Tons_dqmymz.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Truck_qlewn6.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Van_eumwn4.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Truck_qlewn6.png",

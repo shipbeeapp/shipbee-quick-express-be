@@ -86,26 +86,7 @@ export default class PricingService {
                     Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                 )};
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
-                if (getPricingDTO.shippingCompany === 'Qatar Post') {
-                    const currentPricing = await this.pricingRepository.findOne({
-                        where: {
-                            serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
-                            fromCountry: getPricingDTO.fromCountry,
-                            toCountry: getPricingDTO.toCountry,
-                            maxWeight: MoreThanOrEqual(getPricingDTO.weight),
-                            isCurrent: true
-                        },
-                        order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
-                    });
-                    if (!currentPricing) {
-                        throw new Error('No pricing found for the given criteria');
-                    }
-                    const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
-                    return {
-                        totalCost: Number(cost.toFixed(1)),
-                        estimatedDeliveryDays: currentPricing.transitTime
-                    };
-                } else if (getPricingDTO.shippingCompany === 'DHL') {
+                if (getPricingDTO.shippingCompany === 'DHL') {
                     const params = {
                       accountNumber: env.DHL.ACCOUNT_NUMBER,
                       originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
@@ -133,9 +114,25 @@ export default class PricingService {
                         totalCost: Number(cost),
                         estimatedDeliveryDays: response.data.products[0].deliveryCapabilities.totalTransitDays
                     };
-                }
-                else {
-                    throw new Error('Unsupported shipping company for Express service');
+                } else {
+                    const currentPricing = await this.pricingRepository.findOne({
+                        where: {
+                            serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                            fromCountry: getPricingDTO.fromCountry,
+                            toCountry: getPricingDTO.toCountry,
+                            maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                            isCurrent: true
+                        },
+                        order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
+                    });
+                    if (!currentPricing) {
+                        throw new Error('No pricing found for the given criteria');
+                    }
+                    const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+                    return {
+                        totalCost: Number(cost.toFixed(1)),
+                        estimatedDeliveryDays: currentPricing.transitTime
+                    };
                 }
             }
             else {
