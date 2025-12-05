@@ -120,18 +120,19 @@ export class CreateOrderDto {
   // @IsOptional()
   // type: furnitureRequests;
 
-  // @IsEnum(itemType)
-  // @IsOptional()
-  // itemType: itemType;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsEnum(itemType)
+  @IsOptional()
+  itemType: itemType;
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
   fromAddress: AddressDto  
 
-  // @IsOptional()
-  // @ValidateNested() // ✅ Ensure validation of nested object
-  // @Type(() => AddressDto)
-  // toAddress?: AddressDto
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @ValidateNested() // ✅ Ensure validation of nested object
+  @Type(() => AddressDto)
+  toAddress?: AddressDto
 
   // @IsOptional()
   // @IsString()
@@ -160,17 +161,20 @@ export class CreateOrderDto {
   @IsOptional()
   senderEmail: string;
 
-  // @IsString()
-  // @IsOptional()
-  // receiverName: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsString()
+  @IsOptional()
+  receiverName: string;
 
-  // @IsString()
-  // @IsOptional()
-  // receiverPhoneNumber: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsString()
+  @IsOptional()
+  receiverPhoneNumber: string;
 
-  // @IsEmail()
-  // @IsOptional()
-  // receiverEmail: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsEmail()
+  @IsOptional()
+  receiverEmail: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsEnum(VehicleType)
@@ -195,6 +199,7 @@ export class CreateOrderDto {
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
   @IsEnum(Payer)
+  @IsOptional()
   @Transform(({ obj, value }) => {
     if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
       return Payer.SENDER;      // force SENDER for international shipments
@@ -208,6 +213,7 @@ export class CreateOrderDto {
   stops?: OrderStop[];
 
   @IsEnum(OrderType)
+  @IsOptional()
   @Transform(({ obj, value }) => {
     if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
       return OrderType.SINGLE_STOP;      // force SINGLE_STOP for international shipments

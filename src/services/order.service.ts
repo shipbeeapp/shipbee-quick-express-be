@@ -127,8 +127,8 @@ export default class OrderService {
         distance: orderData.distance,
         fromCountry: orderData.fromAddress.country,
         fromCity: orderData.fromAddress.city,
-        toCountry: orderData.stops[0]?.toAddress?.country,
-        toCity: orderData.stops[0]?.toAddress?.city,
+        // toCountry: orderData.stops[0]?.toAddress?.country,
+        // toCity: orderData.stops[0]?.toAddress?.city,
         weight: orderData.shipment?.weight,
         length: orderData.shipment?.length,
         width: orderData.shipment?.width,
@@ -169,11 +169,23 @@ export default class OrderService {
     await queryRunner.manager.save(order);
 
     // 🔹 Step 4: Create multiple stops
-    if (!orderData.stops || orderData.stops.length === 0) {
+    if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK && (!orderData.stops || orderData.stops.length === 0)) {
       throw new Error("At least one stop is required for multi-stop order");
     }
     
     let stopEntities: OrderStop[] = [];
+    if (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+      orderData.stops = [{
+        toAddress: orderData.toAddress,
+        receiverEmail: orderData.receiverEmail,
+        receiverName: orderData.receiverName,
+        receiverPhoneNumber: orderData.receiverPhoneNumber,
+        itemType: orderData.itemType,
+        distance: 0,
+        sequence: 1
+    }
+    ];
+    }
 
      for (const [index, stopData] of orderData.stops.entries()) {
       console.log("Creating stop:", stopData);

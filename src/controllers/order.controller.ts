@@ -10,6 +10,7 @@ import { AuthenticatedRequest, authenticationMiddleware, apiKeyAuthenticationMid
 import { env } from "../config/environment.js";
 import jwt from 'jsonwebtoken';
 import UserService from "../services/user.service.js";
+import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 
 export class OrderController {
   public router: Router = Router();
@@ -160,8 +161,9 @@ export class OrderController {
           orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
         }
       });
-      if (!orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
+      if (orderData.ServiceSubcategoryName === ServiceSubcategoryName.PERSONAL_QUICK && !orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
       // Ensure itemDescription is a JSON string with { text, images }
+      if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK) {
       orderData.stops = orderData.stops.map(stop => ({
         ...stop,
         itemDescription: JSON.stringify({
@@ -169,6 +171,7 @@ export class OrderController {
           images: stop.images || []
         })
       }));
+    }
 
       // orderData.stops = stops;
       const order = await this.orderService.createOrder(orderData, userId);
