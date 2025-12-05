@@ -61,7 +61,8 @@ class ShipmentDto {
     height: number; // height in cm
 
     @IsString()
-    shippingCompany: string; // e.g., 'DHL', 'Qatar Post'
+    @IsOptional()
+    shippingCompany?: string; // e.g., 'DHL', 'Qatar Post'
 
     @IsNumber()
     @Type(() => Number)
@@ -192,7 +193,14 @@ export class CreateOrderDto {
   @IsNumber()
   orderNo?: number;
 
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
   @IsEnum(Payer)
+  @Transform(({ obj, value }) => {
+    if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+      return Payer.SENDER;      // force SENDER for international shipments
+    }
+    return value;
+    })
   payer: Payer;
 
   @ValidateNested({ each: true })
@@ -200,5 +208,11 @@ export class CreateOrderDto {
   stops?: OrderStop[];
 
   @IsEnum(OrderType)
+  @Transform(({ obj, value }) => {
+    if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+      return OrderType.SINGLE_STOP;      // force SINGLE_STOP for international shipments
+    }
+    return value;
+    })
   type?: OrderType;
 }
