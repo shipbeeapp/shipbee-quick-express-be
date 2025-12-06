@@ -7,6 +7,8 @@ import { itemType } from '../../utils/enums/itemType.enum.js';
 import { OrderStatus } from '../../utils/enums/orderStatus.enum.js';
 import { OrderType } from '../../utils/enums/orderType.enum.js';
 import { generatePhotoLink } from '../../utils/global.utils.js';
+import { getDrivingDistanceInKm } from '../../utils/google-maps/distance-time.js';
+import { getCurrentLocationOfDriver } from '../../socket/socket.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -24,6 +26,10 @@ export class OrderResponseDto {
     payer: Payer;
     isViewed: boolean;
     viewedAt: Date | null;
+    ETA: {
+      time: number | null;
+      nextDestination: string | null;
+    } | null;
   
     sender: {
       id: string;
@@ -129,7 +135,53 @@ export class OrderResponseDto {
   }[];
 }
 
-  export function toOrderResponseDto(order: Order): OrderResponseDto {
+  export async function toOrderResponseDto(order: Order): Promise<OrderResponseDto> {
+    let ETA = null;
+    if (order.status === OrderStatus.PENDING || order.status === OrderStatus.CANCELED || order.status === OrderStatus.COMPLETED) {
+      console.log("Order is in pending, canceled, or completed status - no ETA");
+      ETA = null;
+    }
+    else if (order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.EN_ROUTE_TO_PICKUP) {
+      const driverLocation = getCurrentLocationOfDriver(order.driver.id);
+      if (!driverLocation || !order.fromAddress?.coordinates) {
+        console.log("Could not get driver location or order pickup coordinates");
+        ETA = null;
+      }
+      else {
+        console.log("Calculating ETA from driver location to pickup location");
+        const {durationMinutes} = await getDrivingDistanceInKm(
+          driverLocation,
+          order.fromAddress.coordinates
+        )
+        ETA = {
+          time: durationMinutes,
+          nextDestination: "Pickup Location",
+        };
+      } 
+    }
+    else {
+      console.log("Order is in progress - calculating ETA to next stop");
+      console.log("Order driver ID:", order.driver.id);
+      const driverLocation = getCurrentLocationOfDriver(order.driver.id);
+      console.log("Driver location:", driverLocation);
+      const currentStop = order.stops.find(stop => stop.status === OrderStatus.ACTIVE);
+      console.log("Current active stop:", currentStop);
+      if (!driverLocation || !currentStop || !currentStop.toAddress?.coordinates) {
+        console.log("Could not get driver location or current stop coordinates");
+        ETA = null;
+      }
+      else {
+        console.log("Calculating ETA from driver location to current stop");
+        const {durationMinutes} = await getDrivingDistanceInKm(
+          driverLocation,
+          currentStop.toAddress.coordinates
+        )
+        ETA = {
+          time: durationMinutes,
+          nextDestination: `Stop #${currentStop.sequence}`,
+        };
+      }
+    }
     const stops = order.stops?.map(stop => {
     let itemDesc;
     try {
@@ -186,6 +238,7 @@ export class OrderResponseDto {
       payer: order.payer,
       isViewed: order.isViewed,
       viewedAt: order.viewedAt,
+      ETA,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,

@@ -235,7 +235,7 @@ export default class OrderService {
        scheduleOrderEmission(order);
      }
      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the new order
-     return toOrderResponseDto(order);
+     return await toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
       await queryRunner.rollbackTransaction();
@@ -266,7 +266,9 @@ export default class OrderService {
         createdAt: "DESC",
       },
     })
-    return orders.map(toOrderResponseDto);
+     return await Promise.all(
+      orders.map(order => toOrderResponseDto(order))
+    );
   } catch (error) {
     console.error("Error fetching orders for user:", error.message);
     throw new Error(`Could not fetch orders for user: ${error.message}`);
@@ -291,7 +293,9 @@ export default class OrderService {
         createdAt: "DESC",
       },
     });
-    return orders.map(toOrderResponseDto);
+     return await Promise.all(
+      orders.map(order => toOrderResponseDto(order))
+    );
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus) {
@@ -360,7 +364,7 @@ export default class OrderService {
         status: 403
       };
     }
-    return toOrderResponseDto(order);
+    return await toOrderResponseDto(order);
   }
 
   async getOrderDriver(orderId: string) {

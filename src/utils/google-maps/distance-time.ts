@@ -16,7 +16,6 @@ export async function getDrivingDistanceInKm(
         mode: "driving",
       },
     });
-    console.log("Distance response:", JSON.stringify(response.data, null, 2));
     const distanceMeters = response.data.rows?.[0]?.elements?.[0]?.distance?.value;
     const durationMinutes = Math.ceil(response.data.rows?.[0]?.elements?.[0]?.duration?.value / 60);
     return {

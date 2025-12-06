@@ -70,6 +70,11 @@ export default class UserService {
       if (!user) {
         throw new Error(`User with ID ${userId} not found`);
       }
+      if (userData.password) {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+        userData.password = hashedPassword;
+      }
       Object.assign(user, userData);
       return await this.userRepository.save(user);
     } catch (error) {
@@ -163,6 +168,20 @@ export default class UserService {
       return await this.userRepository.findOneBy({ email, type: userType.BUSINESS });
     } catch (error) {
       console.error("Error fetching business user by email:", error);
+      throw error;
+    }
+  }
+
+  async findUserByEmailOrPhone(userData: any): Promise<User | null> {
+    try {
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.email = :email', { email: userData.email })
+        .orWhere('user.phoneNumber = :phone', { phone: userData.phoneNumber })
+        .getOne();
+      return user || null;
+    } catch (error) {
+      console.error("Error fetching user by email or phone:", error);
       throw error;
     }
   }

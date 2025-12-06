@@ -51,6 +51,7 @@ export class AuthController {
         this.router.get(`${this.path}/callback`, this.authCallback);
         this.router.post(`/webhooks/orders_create`, this.orderCreateWebhook);
         this.router.post(`${this.path}/sign-up`, this.signup);
+        this.router.post(`${this.path}/login`, this.login);
         this.router.post(`${this.path}/send-otp`, this.sendOtp)
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
         this.router.post(`${this.path}/admin/login`, this.adminLogin);
@@ -68,6 +69,45 @@ export class AuthController {
         // login for business
         this.router.post(`${this.path}/business/login`, this.businessLogin);
 
+    }
+
+    private login = async (req, res) => {
+        // This is a placeholder for the actual implementation
+        const { emailOrPhone, password } = req.body;
+
+        if (!emailOrPhone || !password) {
+            return res.status(400).json({ success: false, message: 'Email or phone number and password are required.' });
+        }
+        try {
+            const data = {
+                email: emailOrPhone.includes('@') ? emailOrPhone : null,
+                phoneNumber: emailOrPhone.includes('@') ? null : emailOrPhone,
+            }
+            const user = await this.userService.findUserByEmailOrPhone(data);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found.' });
+            }
+            // Compare the provided password with the hashed password in the database
+            const isPasswordValid = await bcrypt.compare(password, user.password || '');
+            if (!isPasswordValid) {
+                return res.status(401).json({ success: false, message: 'Invalid user credentials.' });
+            }
+            const userData = {
+                email: user.email,
+                userId: user.id,
+                phoneNumber: user.phoneNumber,
+                isNewUser: user.isNewUser,
+                userType: user.type // Assuming userType is a field in your User model
+            }
+            const myToken = jwt.sign(
+                userData,
+                env.JWT_SECRET,
+            );
+            res.status(200).json({ success: true, token: myToken, userData: userData });
+        } catch (error) {
+            console.error('Error during login:', error);
+            res.status(500).json({ success: false, message: 'Failed to login user.' });
+        }
     }
 
     private auth = async (req, res) => {
@@ -285,12 +325,14 @@ export class AuthController {
                 }
                 console.log("data: ", data);
                 const user = await this.userService.findOrCreateUser(data);
-                user.otp = otp; // Save the OTP to the user model
-                await this.userService.saveUser(user); // Save the user with the OTP
-                console.log("otp: ", otp);
-                const phoneExtension = '+974'
-                await sendOtp(emailOrPhone, otp, phoneExtension);
-                return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
+                if (user.isNewUser) {
+                    user.otp = otp; // Save the OTP to the user model
+                    await this.userService.saveUser(user); // Save the user with the OTP
+                    console.log("otp: ", otp);
+                    const phoneExtension = '+974'
+                    await sendOtp(emailOrPhone, otp, phoneExtension);
+                }
+                return res.status(200).json({ success: true, message: 'OTP sent successfully.', isNewUser: user.isNewUser });
             } catch (error) {
                 console.error('Error sending OTP:', error);
                 return res.status(500).json({ success: false, message: 'Failed to send OTP.' });
