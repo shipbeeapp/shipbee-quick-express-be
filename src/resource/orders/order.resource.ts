@@ -26,6 +26,7 @@ export class OrderResponseDto {
     payer: Payer;
     isViewed: boolean;
     viewedAt: Date | null;
+    acccessToken?: string;
     ETA: {
       time: number | null;
       nextDestination: string | null;
@@ -138,17 +139,14 @@ export class OrderResponseDto {
   export async function toOrderResponseDto(order: Order): Promise<OrderResponseDto> {
     let ETA = null;
     if (order.status === OrderStatus.PENDING || order.status === OrderStatus.CANCELED || order.status === OrderStatus.COMPLETED) {
-      console.log("Order is in pending, canceled, or completed status - no ETA");
       ETA = null;
     }
     else if (order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.EN_ROUTE_TO_PICKUP) {
       const driverLocation = getCurrentLocationOfDriver(order.driver.id);
       if (!driverLocation || !order.fromAddress?.coordinates) {
-        console.log("Could not get driver location or order pickup coordinates");
         ETA = null;
       }
       else {
-        console.log("Calculating ETA from driver location to pickup location");
         const {durationMinutes} = await getDrivingDistanceInKm(
           driverLocation,
           order.fromAddress.coordinates
@@ -160,18 +158,12 @@ export class OrderResponseDto {
       } 
     }
     else {
-      console.log("Order is in progress - calculating ETA to next stop");
-      console.log("Order driver ID:", order.driver.id);
       const driverLocation = getCurrentLocationOfDriver(order.driver.id);
-      console.log("Driver location:", driverLocation);
       const currentStop = order.stops.find(stop => stop.status === OrderStatus.ACTIVE);
-      console.log("Current active stop:", currentStop);
       if (!driverLocation || !currentStop || !currentStop.toAddress?.coordinates) {
-        console.log("Could not get driver location or current stop coordinates");
         ETA = null;
       }
       else {
-        console.log("Calculating ETA from driver location to current stop");
         const {durationMinutes} = await getDrivingDistanceInKm(
           driverLocation,
           currentStop.toAddress.coordinates
@@ -239,6 +231,7 @@ export class OrderResponseDto {
       isViewed: order.isViewed,
       viewedAt: order.viewedAt,
       ETA,
+      acccessToken: order.accessToken,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,

@@ -16,8 +16,9 @@ let newDriverClients: Response[] = [];
 
 interface OrderTrackingClient {
   res: Response;
-  type: "admin" | "api";
+  type: "admin" | "api" | "receiver";
   userId?: string;       // API client userId
+  orderId?: string;      // Receiver client orderId
 }
 let orderTrackingClients: OrderTrackingClient[] = [];
 
@@ -48,6 +49,9 @@ export async function broadcastOrderTrackingUpdate(orderId: string, driverLocati
         client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
       }
     }
+    else if (client.type === "receiver" && client.orderId === orderId) {
+      client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
+    }
   }
 }
 
@@ -66,6 +70,7 @@ export class UserController {
   public router: Router = Router();
   public path = '/users';
   private userService: UserService = Container.get(UserService)
+  private orderService: OrderService = Container.get(OrderService)
   constructor() {
 
     this.initializeRoutes();
@@ -152,8 +157,8 @@ export class UserController {
 
     private orderTracking = async (req: Request, res: Response) => {
         
-        const {apiKey, token} = req.query;
-        console.log("Order tracking connection attempt with apiKey:", apiKey, "and token:", token);
+        const {apiKey, token, receiverToken} = req.query;
+        console.log("Order tracking connection attempt with apiKey:", apiKey, "or token:", token, "or receiverToken:", receiverToken);
         if (token) {
           const secretKey = env.JWT_SECRET || 'your-secret-key';
           const decoded = jwt.verify(token as string, secretKey) as { userId: string, email: string, driverId?: string };
@@ -172,6 +177,34 @@ export class UserController {
           req.on("close", () => {
             orderTrackingClients = orderTrackingClients.filter(client => client.res !== res);
           });
+          return;
+        }
+
+        if (receiverToken) {
+          const { orderId, isValid } = await this.orderService.validateReceiverTrackingToken(receiverToken as string);
+
+          if (!isValid) {
+            return res.status(403).json({ success: false, message: "Invalid or expired tracking token" });
+          }
+        
+          // SSE setup
+          res.setHeader("Content-Type", "text/event-stream");
+          res.setHeader("Cache-Control", "no-cache");
+          res.setHeader("Connection", "keep-alive");
+          res.flushHeaders();
+        
+          orderTrackingClients.push({
+            res,
+            type: "receiver",
+            orderId // receiver only receives updates for this order
+          });
+        
+          console.log(`Receiver connected to order ${orderId}`);
+        
+          req.on("close", () => {
+            orderTrackingClients = orderTrackingClients.filter(client => client.res !== res);
+          });
+        
           return;
         }
 

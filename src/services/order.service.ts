@@ -351,7 +351,7 @@ export default class OrderService {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ["sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
-            "stops", "stops.toAddress", "stops.receiver"
+            "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle"
       ],
     });
     if (!order) {
@@ -1020,5 +1020,31 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       select: ["id"],
     });
     return !!order;
+  }
+
+  async validateReceiverTrackingToken(token: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { accessToken: token },
+        select: ["id"]
+      });
+      if (!order) {
+        return {
+          isValid: false,
+          orderId: null
+        }
+      }
+      return {
+        isValid: true,
+        orderId: order.id
+      }
+    }
+    catch (error) {
+      console.error("Error validating receiver tracking token:", error.message);
+      return {
+        isValid: false,
+        orderId: null
+      }
+    }
   }
 }
