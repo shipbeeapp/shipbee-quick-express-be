@@ -26,7 +26,7 @@ export class OrderResponseDto {
     payer: Payer;
     isViewed: boolean;
     viewedAt: Date | null;
-    acccessToken?: string;
+    accessToken?: string;
     ETA: {
       time: number | null;
       nextDestination: string | null;
@@ -231,7 +231,7 @@ export class OrderResponseDto {
       isViewed: order.isViewed,
       viewedAt: order.viewedAt,
       ETA,
-      acccessToken: order.accessToken,
+      accessToken: order.accessToken,
       sender: {
         id: order.sender?.id,
         name: order.sender?.name,
