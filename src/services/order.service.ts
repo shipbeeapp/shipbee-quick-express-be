@@ -794,7 +794,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       try {
         const order = await this.orderRepository.findOne({
           where: { id: orderId },
-          relations: ["driver", "sender"],
+          relations: ["driver", "sender", "stops", "stops.receiver"],
+          order: { stops: { sequence: "ASC" } }
         });
         if (!order) {
           throw new Error(`Order with ID ${orderId} not found`);
@@ -807,17 +808,25 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         }
         await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
         console.log(`Arrival notification sent to sender for order ${orderId}`);
+
+        // Notify first receiver (if any)
+        const firstStop = order.stops?.[0];
+        console.log("First stop for order:", firstStop);
+        if (firstStop && firstStop.receiver) {
+          await this.notifyReceiver(orderId, driverId, firstStop.id, true);
+        }
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
         throw new Error(`Could not send arrival notification to sender: ${error.message}`);
       }
     }
 
-    async notifyReceiver(orderId: string, driverId: string, stopId: string) {
+    async notifyReceiver(orderId: string, driverId: string, stopId: string, atPickup: boolean = false) {
       try {
         const order = await this.orderRepository.findOne({
           where: { id: orderId },
           relations: ["driver", "stops", "stops.receiver"],
+          order: { stops: { sequence: "ASC" } }
         });
         if (!order) {
           throw new Error(`Order with ID ${orderId} not found`);
@@ -838,8 +847,17 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         if (!stop.receiver.phoneNumber) {
           throw new Error(`Receiver for stop ${stopId} does not have a phone number`);
         }
-        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence);
+        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence, atPickup);
         console.log(`Arrival notification sent to receiver for order ${orderId}`);
+
+        // Notify next receiver in sequence, if any
+        if (!atPickup) {
+          const nextStopIndex = order.stops.findIndex((s) => s.id === stopId) + 1;
+          const nextStop = order.stops[nextStopIndex];
+          if (nextStop && nextStop.receiver) {
+            await this.notifyReceiver(orderId, driverId, nextStop.id, true);
+          }
+        }
       } catch (error) {
         console.error("Error sending arrival notification to sender:", error.message);
         throw new Error(`Could not send arrival notification to sender: ${error.message}`);

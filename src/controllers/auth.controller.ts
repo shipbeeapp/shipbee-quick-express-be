@@ -93,6 +93,7 @@ export class AuthController {
                 return res.status(401).json({ success: false, message: 'Invalid user credentials.' });
             }
             const userData = {
+                name: user.name,
                 email: user.email,
                 userId: user.id,
                 phoneNumber: user.phoneNumber,
