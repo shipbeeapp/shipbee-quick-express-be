@@ -1047,4 +1047,34 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }
     }
   }
+
+  async getOrdersReport(userId: string, startDate: Date, endDate: Date) {
+    try {
+      console.log(`Generating orders report for user ${userId} from ${startDate} to ${endDate}`);
+      //get number of orders created by user in date range, average distance per order, average time per order
+      const ordersReport = await this.orderRepository
+        .createQueryBuilder("order")
+        .select("COUNT(order.id)", "totalOrders")
+        .addSelect("AVG(order.distance)", "avgDistance")
+        .addSelect(
+          "AVG(EXTRACT(EPOCH FROM (order.completedAt - order.startedAt)) / 60)",
+          "avgDurationMinutes"
+        )
+        .where("order.createdById = :userId", { userId })
+        .andWhere("order.createdAt BETWEEN :start AND :end", {
+          start: startDate,
+          end: endDate,
+        })
+        .getRawOne();
+
+      return {
+        totalOrders: parseInt(ordersReport.totalOrders, 10) || 0,
+        avgDistancePerOrder: parseFloat(ordersReport.avgDistance) || null,
+        avgDurationMinutesPerOrder: parseFloat(ordersReport.avgDurationMinutes) || null,
+      };
+      } catch (error) {
+        console.error("Error generating orders report:", error.message);
+        throw new Error(`Could not generate orders report: ${error.message}`);
+      }
+  }
 }

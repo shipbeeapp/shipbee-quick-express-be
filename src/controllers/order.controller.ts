@@ -42,6 +42,8 @@ export class OrderController {
       validateDto(CreateOrderDto), 
       this.createOrder.bind(this)
     );
+
+    this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
       
     this.router.get(
       "/orders/view-order-status",
@@ -478,6 +480,21 @@ export class OrderController {
     } 
     catch (error) {
       console.error("Error in order controller approving order cancellation:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async getOrdersReport(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { startDate, endDate } = req.query as { startDate?: Date, endDate?: Date };
+      if (!startDate || !endDate) {
+        return res.status(400).json({ success: false, message: "Start date and end date are required." });
+      }
+      const reports = await this.orderService.getOrdersReport(req.userId, startDate, endDate);
+      res.status(200).json({ success: true, data: reports });
+    }
+    catch (error) {
+      console.error("Error in order controller getting orders report:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
