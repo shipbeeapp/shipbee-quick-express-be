@@ -176,4 +176,5 @@ export const AppDataSource = new DataSource({
   ssl: false,
   synchronize: false, // Always false in production!
   logging: false,
+  schema: "public",
 });
