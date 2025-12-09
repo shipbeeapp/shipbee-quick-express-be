@@ -142,7 +142,7 @@ export class OrderResponseDto {
       ETA = null;
     }
     else if (order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.EN_ROUTE_TO_PICKUP) {
-      const driverLocation = getCurrentLocationOfDriver(order.driver.id);
+      const driverLocation = getCurrentLocationOfDriver(order.driver?.id);
       if (!driverLocation || !order.fromAddress?.coordinates) {
         ETA = null;
       }
@@ -158,7 +158,7 @@ export class OrderResponseDto {
       } 
     }
     else {
-      const driverLocation = getCurrentLocationOfDriver(order.driver.id);
+      const driverLocation = getCurrentLocationOfDriver(order.driver?.id);
       const currentStop = order.stops.find(stop => stop.status === OrderStatus.ACTIVE);
       if (!driverLocation || !currentStop || !currentStop.toAddress?.coordinates) {
         ETA = null;
