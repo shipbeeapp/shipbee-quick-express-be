@@ -130,6 +130,9 @@ export class Driver extends BaseEntity {
     @Column({ type: "text", nullable: true })
     businessDocsRejectionReason: string;
 
+    @Column({ type: "text", nullable: true })
+    fcmToken: string;
+
     @OneToMany(() => DriverBroadcastMessage, (driverBroadcastMessage) => driverBroadcastMessage.driver)
     broadcastMessages: DriverBroadcastMessage[];
 }

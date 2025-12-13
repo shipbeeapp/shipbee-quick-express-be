@@ -760,7 +760,7 @@ export default class DriverService {
         if (order.status !== OrderStatus.PENDING) {
             throw new Error(`Order with ID ${orderId} has status ${order.status} and cannot be assigned`);
         }
-        await emitOrderToDriver(driverId, order);
+        await emitOrderToDriver(driverId, order, driver.fcmToken);
     }
     catch (error) {
         console.error("Error assigning driver to order:", error);

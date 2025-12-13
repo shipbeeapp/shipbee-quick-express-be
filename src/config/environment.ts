@@ -65,5 +65,7 @@ export const env = {
     API_SECRET: process.env.DHL_API_SECRET,
     ACCOUNT_NUMBER: process.env.DHL_ACCOUNT_NUMBER,
     DOMAIN: process.env.DHL_DOMAIN || 'https://api-dhl.com',
-  }
+  },
+  GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
+  GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 };

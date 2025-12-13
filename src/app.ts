@@ -120,6 +120,10 @@ class App {
         vehicleTypes: Object.values(VehicleType), 
       });
     });
+
+    this.app.get('/stay-active', (req: Request, res: Response) => {
+      res.send('I am still active!');
+    });
 }
 
   private initializeErrorHandling() {

@@ -14,6 +14,7 @@ import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { Driver } from "../models/driver.model.js"; // Assuming you have a Driver model
 import { broadcastDriverStatusUpdate, broadcastOrderTrackingUpdate, broadcastDriverTrackingUpdate } from "../controllers/user.controller.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
+import {sendFcmNotification} from "../firebase/fcm.utils.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -170,9 +171,13 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
     socket.on("disconnect", async () => {
         for (const [driverId, info] of onlineDrivers.entries()) {
           if (info.socketId === socket.id) {
-            onlineDrivers.delete(driverId);
-            await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
-            broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
+            // Instead of deleting the driver, just nullify socketId
+            onlineDrivers.set(driverId, {
+              ...info,
+              socketId: null
+            });
+            // await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
+            // broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
             const now = new Date();
             const sessions = driverSessions.get(driverId);
             if (sessions && sessions.length > 0) {
@@ -218,7 +223,12 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       console.log(`❌ Driver ${driverId} is not approved, cannot receive orders`);
       continue;
     }
-    if (vehicleType === order.vehicleType) {
+
+    if (vehicleType !== order.vehicleType) {
+      console.log(`❌ Driver ${driverId} vehicle type ${vehicleType} does not match order ${order.id} vehicle type ${order.vehicleType}`);
+      continue;
+    }
+    if (socketId) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);
       // if (hasDriverBeenNotified(driverId, order.id)) {
@@ -240,6 +250,26 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       io.to(socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
       markDriverNotified(order.id, driverId);
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
+    }
+
+    if (driver.fcmToken) {
+      console.log(`Driver ${driverId} has FCM token, sending push notification for order ${order.id}`);
+      // Here you would integrate with FCM to send a push notification
+      // For example:
+      await sendFcmNotification(driver.fcmToken, {
+        title: "New Order Available",
+        body: `Order ${order.id} is available for pickup.`,
+        data: { 
+          fromAddress: {
+            country: order.fromAddress.country,
+            city: order.fromAddress.city,
+            coordinates: order.fromAddress.coordinates,
+            landmarks: order.fromAddress.landmarks,
+          },
+          distance: order.distance,
+        }
+      
+      });
     }
   }
 }
@@ -292,18 +322,38 @@ export function calculateActiveHoursToday(driverId: string): number {
   return totalMilliseconds / (1000 * 60 * 60); // convert ms to hours, rounded to 1 decimal
 }
 
-export async function emitOrderToDriver(driverId: string, order: Order) {
+export async function emitOrderToDriver(driverId: string, order: Order, fcmToken?: string): Promise<void> {
   const io = getSocketInstance();
   const onlineDrivers = getOnlineDrivers();
   const driver = onlineDrivers.get(driverId);
 
   if (driver) {
+    if (driver.socketId) {
     const {distanceMeters, durationMinutes} = await getDrivingDistanceInKm(
       driver.currentLocation,
       order.fromAddress.coordinates
     );
     io.to(driver.socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
-    console.log(`📦 Sent order ${order.id} by assignment to driver ${driverId}`);
+    console.log(`📦 Sent order ${order.id} by assignment to driver ${driverId} via socket`);
+   }
+
+   if (fcmToken) {
+    console.log(`Driver ${driverId} has FCM token, sending push notification for assigned order ${order.id}`);
+    // Here you would integrate with FCM to send a push notification
+    await sendFcmNotification(fcmToken, {
+      title: "New Order Assigned",
+      body: `Order ${order.id} has been assigned to you.`,
+      data: { 
+        fromAddress: {
+          country: order.fromAddress.country,
+          city: order.fromAddress.city,
+          coordinates: order.fromAddress.coordinates,
+          landmarks: order.fromAddress.landmarks,
+        },
+      distance: order.distance,
+    }
+    });
+   }
   } else {
     console.log(`❌ Driver ${driverId} is not online when trying to assign order ${order.id}`);
   }

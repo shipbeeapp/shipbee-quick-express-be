@@ -17,4 +17,8 @@ export class UpdateDriverDto {
     @IsEnum(VehicleType)
     @IsOptional()
     vehicleType: VehicleType; // Type of vehicle the driver operates
+
+    @IsString()
+    @IsOptional()
+    fcmToken: string; // FCM token for push notifications
 }

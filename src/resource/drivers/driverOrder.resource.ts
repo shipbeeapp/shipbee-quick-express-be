@@ -37,6 +37,7 @@ export class DriverOrderResource {
     receiverPhoneNumber: string;
     distanceToPickup: number;
     timeToPickup: number;
+    lifters: number | null;
     payer: Payer;
     stops: DriverOrderStopResource[];
 }
@@ -61,6 +62,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     // resource.receiverPhoneNumber = order.receiver.phoneNumber;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
+    resource.lifters = order.lifters;
     resource.payer = order.payer;
     // Map each stop
     resource.stops = order.stops?.map((stop: any) => {
