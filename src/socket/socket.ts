@@ -260,13 +260,14 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
         title: "New Order Available",
         body: `Order ${order.id} is available for pickup.`,
         data: { 
-          fromAddress: {
+          orderId: order.id,
+          distance: String(order.distance),
+          fromAddress: JSON.stringify({
             country: order.fromAddress.country,
             city: order.fromAddress.city,
             coordinates: order.fromAddress.coordinates,
             landmarks: order.fromAddress.landmarks,
-          },
-          distance: order.distance,
+          }),
         }
       
       });
@@ -343,15 +344,16 @@ export async function emitOrderToDriver(driverId: string, order: Order, fcmToken
     await sendFcmNotification(fcmToken, {
       title: "New Order Assigned",
       body: `Order ${order.id} has been assigned to you.`,
-      data: { 
-        fromAddress: {
-          country: order.fromAddress.country,
-          city: order.fromAddress.city,
-          coordinates: order.fromAddress.coordinates,
-          landmarks: order.fromAddress.landmarks,
-        },
-      distance: order.distance,
-    }
+       data: { 
+          orderId: order.id,
+          distance: String(order.distance),
+          fromAddress: JSON.stringify({
+            country: order.fromAddress.country,
+            city: order.fromAddress.city,
+            coordinates: order.fromAddress.coordinates,
+            landmarks: order.fromAddress.landmarks,
+          }),
+        }
     });
    }
   } else {
