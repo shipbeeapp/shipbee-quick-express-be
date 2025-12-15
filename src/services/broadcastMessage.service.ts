@@ -3,6 +3,7 @@ import { BroadcastMessage } from "../models/broadcastMessage.model.js";
 import { DriverBroadcastMessage } from "../models/driverBroadcastMessage.model.js";
 import { AppDataSource } from "../config/data-source.js";
 import { Driver } from "../models/driver.model.js";
+import { sendFcmNotification } from "../firebase/fcm.utils.js";
 
 @Service()
 export class BroadcastMessageService {
@@ -45,6 +46,13 @@ export class BroadcastMessageService {
             );
 
             await this.broadcastDriverRepo.save(relations);
+            for (const driver of drivers) {
+                try {
+                    if (driver.fcmToken) await sendFcmNotification(driver.fcmToken, { title, body: message });
+                } catch (err) {
+                    console.error(`Error sending FCM to driver ${driver.id}:`, err);
+                }
+            }
 
             return { message, driversCount: drivers.length };
         } catch (error) {
