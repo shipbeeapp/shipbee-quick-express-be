@@ -1,8 +1,12 @@
 import admin from "firebase-admin";
-import {env} from "../config/environment.js";
+import fs from "fs";
+
+const serviceAccount = JSON.parse(
+    fs.readFileSync("dist/firebase/firebase-admin.json", "utf8")
+  );
 
 admin.initializeApp({
-    projectId: env.GCP_PROJECT_ID,
+    credential: admin.credential.cert(serviceAccount),
 });
 
 console.log("🔥 Firebase admin initialized");
