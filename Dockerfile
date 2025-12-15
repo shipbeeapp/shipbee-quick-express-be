@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Copy compiled JavaScript from the build stage
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/src/firebase/shipbee-firebase-adminsdk.json ./dist/firebase/shipbee-firebase-adminsdk.json
+# COPY --from=builder /app/src/firebase/shipbee-firebase-adminsdk.json ./dist/firebase/shipbee-firebase-adminsdk.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 # COPY --from=builder /app/.env ./

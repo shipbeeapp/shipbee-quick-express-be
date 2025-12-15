@@ -3,3 +3,4 @@
 node_modules/
 uploads/
 dist/
+src/firebase/firebase-account.json
