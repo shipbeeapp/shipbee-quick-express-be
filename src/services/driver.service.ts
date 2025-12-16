@@ -1093,5 +1093,20 @@ export default class DriverService {
             console.error("Error fetching all online drivers:", error);
             throw error;
         }
-    }       
+    }
+    
+    async isDriverConnected(driverId: string): Promise<boolean> {
+        try {
+            const onlineDriversMap = getOnlineDrivers();
+            const driver = onlineDriversMap.get(driverId);
+            console.log("Driver connection status for ID", driverId, ":", driver);
+            const isConnected = (driver && driver?.socketId) ? true : false;
+            console.log("isConnected:", isConnected);
+            return isConnected;
+        }
+        catch (error) {
+            console.error("Error checking if driver is connected:", error);
+            throw error;
+        }
+    }
 }

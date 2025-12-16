@@ -44,6 +44,7 @@ export class DriverController {
             });
         const upload = multer({ storage });
         this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
+        this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
         this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
         this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
@@ -136,6 +137,17 @@ export class DriverController {
             res.status(200).json({ success: true, message: "Driver Updated Successfully" });
         } catch (error) {
             console.error("Error updating driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private isDriverConnected = async (req: Request, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            const isConnected = await this.driverService.isDriverConnected(paramDriverId);
+            res.status(200).json({ success: true, driverId: paramDriverId, isConnected });
+        } catch (error) {
+            console.error("Error checking driver connection status:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }
