@@ -1,4 +1,4 @@
-import { IsEnum, ValidateIf, IsPositive, IsOptional, IsString, IsDateString } from "class-validator";
+import { IsEnum, ValidateIf, IsPositive, IsOptional, IsNumber, IsDateString } from "class-validator";
 import { Transform } from "class-transformer";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
@@ -64,7 +64,7 @@ export class GetPricingDTO {
     plannedShippingDate?: string;
 
     @IsOptional()
-    @IsPositive()
+    @IsNumber()
     @Type(() => Number)
     lifters?: number; // Optional, only for Personal Quick
 }
