@@ -45,6 +45,7 @@ export class DriverController {
         const upload = multer({ storage });
         this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
         this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
+        this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
         this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
         this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
@@ -148,6 +149,23 @@ export class DriverController {
             res.status(200).json({ success: true, driverId: paramDriverId, isConnected });
         } catch (error) {
             console.error("Error checking driver connection status:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private markDriverNotified = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            const {orderId} = req.query;
+            // Validate that the driver ID matches the authenticated user's ID
+            if (req.driverId !== paramDriverId) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            await this.driverService.markDriverAsNotified(paramDriverId, String(orderId));
+            res.status(200).json({ success: true, message: "Driver marked as notified for the order." });
+        } catch (error) {
+            console.error("Error marking driver as notified:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

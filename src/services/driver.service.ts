@@ -9,7 +9,7 @@ import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { calculateActiveHoursToday } from "../socket/socket.js";
 import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
-import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
+import { resetNotifiedDrivers, markDriverNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { sendDriverUpdateInfoMail, sendOrderConfirmation, sendOtp } from "../services/email.service.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
@@ -1107,6 +1107,17 @@ export default class DriverService {
         }
         catch (error) {
             console.error("Error checking if driver is connected:", error);
+            throw error;
+        }
+    }
+
+    async markDriverAsNotified(driverId: string, orderId: string): Promise<void> {
+        try {
+            markDriverNotified(orderId, driverId);
+            const notifiedDrivers = getNotifiedDriversForOrder(orderId);
+            console.log(`Driver ${driverId} marked as notified for order ${orderId}. Notified drivers:`, notifiedDrivers);
+        } catch (error) {
+            console.error("Error marking driver as notified:", error);
             throw error;
         }
     }

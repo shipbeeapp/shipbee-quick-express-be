@@ -3,7 +3,7 @@ import { Server as HTTPServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { Order } from "../models/order.model.js"; // Assuming you have an Order model
-import { hasDriverBeenNotified, markDriverNotified } from "../utils/notification-tracker.js";
+import { hasDriverBeenNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
 import { Container } from "typedi";
 import OrderService from "../services/order.service.js"; // Assuming you have an OrderService to fetch
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js"; // Assuming you have a function to create order resources for drivers
@@ -99,7 +99,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
 
         if (!hasDriverBeenNotified(order.id, driverId)) {
           socket.emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
-          markDriverNotified(order.id, driverId);
+          // markDriverNotified(order.id, driverId);
           console.log(`📦 Sent upcoming order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
         } else {
           console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
@@ -248,7 +248,7 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       }
       order.fromAddress.coordinates = locationOnCancel ? locationOnCancel : order.fromAddress.coordinates;
       io.to(socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
-      markDriverNotified(order.id, driverId);
+      // markDriverNotified(order.id, driverId);
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
 
@@ -369,5 +369,24 @@ export function getCurrentLocationOfDriver(driverId: string): string | null {
     return driver.currentLocation;
   } else {
     return null;
+  }
+}
+
+export function emitOrderAccepted(orderId: string, acceptedByDriverId: string): void {
+  const io = getSocketInstance();
+  const notifiedDrivers = getNotifiedDriversForOrder(orderId);
+  if (!notifiedDrivers) {
+    console.log(`No notified drivers found for order ${orderId}`);
+    return;
+  }
+
+  for (const driverId of notifiedDrivers) {
+    if (driverId !== acceptedByDriverId) {
+      const driver = onlineDrivers.get(driverId);
+      if (driver && driver.socketId) {
+        io.to(driver.socketId).emit("order-accepted", { orderId });
+        console.log(`Notified driver ${driverId} that order ${orderId} was accepted`);
+      }
+    }
   }
 }

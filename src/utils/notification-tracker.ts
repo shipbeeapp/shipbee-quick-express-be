@@ -40,3 +40,7 @@ export function clearNotificationsForOrder(orderId: string): void {
         console.log(`🧹 Cleaned up notifications for accepted order ${orderId}`);
     }
 }
+
+export function getNotifiedDriversForOrder(orderId: string): Set<string> | null {
+    return notifiedDriversPerOrder.get(orderId)?.notified || null;
+}

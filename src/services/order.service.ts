@@ -35,7 +35,7 @@ import { generatePhotoLink, generateToken } from "../utils/global.utils.js";
 import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
-import { emitOrderCancellationUpdate, emitOrderCompletionUpdate, emitOrderToDrivers, getCurrentLocationOfDriver } from "../socket/socket.js";
+import { emitOrderAccepted, emitOrderCancellationUpdate, emitOrderCompletionUpdate, emitOrderToDrivers, getCurrentLocationOfDriver } from "../socket/socket.js";
 import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
 import PromoCodeService from "./promoCode.service.js";
 import { User } from "../models/user.model.js";
@@ -451,6 +451,8 @@ export default class OrderService {
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
 
     await queryRunner.commitTransaction();
+
+    emitOrderAccepted(orderId, driverId); // Notify other drivers that the order has been accepted
 
     clearNotificationsForOrder(order.id); // Clear notifications for this order
     const fullOrder = await this.orderRepository.findOne({
