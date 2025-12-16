@@ -336,6 +336,7 @@ export default class DriverService {
         try {
             const result = await this.constructDriverQuery()
             .addSelect("COUNT(order.id)", "orderCount")
+            .addSelect("SUM(CASE WHEN order.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
             .addGroupBy("businessOwner.id")

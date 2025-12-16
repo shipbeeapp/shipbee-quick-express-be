@@ -53,6 +53,7 @@ export class DriverResource {
                 infoRejectionReason: driver.vehicle_infoRejectionReason,
             },
             ordersCount: Number(driver.orderCount),
+            numberOfKms: Number(driver.numberOfKms),
         };
     }
 

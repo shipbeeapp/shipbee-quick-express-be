@@ -82,6 +82,7 @@ import {AddShippingCompanyInShipment1764847815381} from "../migrations/176484781
 import {MakeAllUsersNew1765029363063} from "../migrations/1765029363063-MakeAllUsersNew.js";
 import {AddFcmTokenInDrivers1765366534790} from "../migrations/1765366534790-AddFcmTokenInDrivers.js";
 import { AddLiftersInOrderStop1765883228517 } from "../migrations/1765883228517-AddLiftersInOrderStop.js";
+import {MakeVehicleTypeInOrderCorrect1765884622888} from "../migrations/1765884622888-MakeVehicleTypeInOrderCorrect.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -176,6 +177,7 @@ export const AppDataSource = new DataSource({
     MakeAllUsersNew1765029363063,
     AddFcmTokenInDrivers1765366534790,
     AddLiftersInOrderStop1765883228517,
+    MakeVehicleTypeInOrderCorrect1765884622888,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
