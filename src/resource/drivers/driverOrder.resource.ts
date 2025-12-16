@@ -15,6 +15,7 @@ export class DriverOrderStopResource {
     additionalToAddressInfo: string;
     receiverName: string;
     receiverPhoneNumber: string;
+    lifters: number | null;
 }
 export class DriverOrderResource {
     orderId: string;
@@ -37,7 +38,6 @@ export class DriverOrderResource {
     receiverPhoneNumber: string;
     distanceToPickup: number;
     timeToPickup: number;
-    lifters: number | null;
     payer: Payer;
     stops: DriverOrderStopResource[];
 }
@@ -53,16 +53,10 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.fromAddress = order.fromAddress?.city;
     resource.fromCoordinates = order.fromAddress.coordinates;
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
-    // resource.toAddress = order.toAddress.city;
-    // resource.toCoordinates = order.toAddress.coordinates;
-    // resource.additionalToAddressInfo = order.toAddress.landmarks;
     resource.senderName = order.sender.name;
     resource.senderPhoneNumber = order.sender.phoneNumber;
-    // resource.receiverName = order.receiver.name;
-    // resource.receiverPhoneNumber = order.receiver.phoneNumber;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
-    resource.lifters = order.lifters;
     resource.payer = order.payer;
     // Map each stop
     resource.stops = order.stops?.map((stop: any) => {
@@ -77,7 +71,8 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             toCoordinates: stop.toAddress?.coordinates,
             additionalToAddressInfo: stop.toAddress?.landmarks,
             receiverName: stop.receiver?.name,
-            receiverPhoneNumber: stop.receiver?.phoneNumber
+            receiverPhoneNumber: stop.receiver?.phoneNumber,
+            lifters: stop.lifters
         };
     }) || [];
     return resource;

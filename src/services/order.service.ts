@@ -135,7 +135,7 @@ export default class OrderService {
         height: orderData.shipment?.height,
         plannedShippingDate: orderData.pickUpDate.split('T')[0], // extract date in YYYY-MM-DD format
         shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
-        lifters: orderData.lifters
+        lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
       });
       const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
 
@@ -149,7 +149,7 @@ export default class OrderService {
         pickUpDate: orderData.pickUpDate,
         // itemType: orderData.itemType,
         // itemDescription: orderData.itemDescription ?? null,
-        lifters: orderData.lifters ?? 0,   
+        // lifters: orderData.lifters ?? 0,   
         vehicleType: orderData.vehicleType,
         createdBy: createdByUser,
         sender,
@@ -199,7 +199,8 @@ export default class OrderService {
         itemDescription: stopData.itemDescription ?? null,
         itemType: stopData.itemType,
         distance: stopData.distance,
-        sequence: stopData.sequence ?? index + 1
+        sequence: stopData.sequence ?? index + 1,
+        lifters: stopData.lifters ?? 0,
       });
 
       stopEntities.push(stop);

@@ -39,6 +39,9 @@ export class OrderStop extends BaseEntity {
   @Column({type: "text", nullable: true})
   proofOfOrder: string;
 
+  @Column({ type: "int", nullable: true })
+  lifters: number;
+
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;
 }

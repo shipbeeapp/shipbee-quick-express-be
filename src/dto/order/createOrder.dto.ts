@@ -107,6 +107,11 @@ export class OrderStop {
   // @Type(() => Number)
   @Transform(({ value }) => (value ? Number(value) : value))
   distance: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  lifters?: number;
 }
 
 export class CreateOrderDto {
@@ -141,10 +146,10 @@ export class CreateOrderDto {
   @IsDateString()
   pickUpDate: string;
 
-  @IsOptional()
-  @IsNumber()
-  @Transform(({ value }) => (value ? Number(value) : value))
-  lifters?: number;
+  // @IsOptional()
+  // @IsNumber()
+  // @Transform(({ value }) => (value ? Number(value) : value))
+  // lifters?: number;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @Transform(({ value }) => (value ? Number(value) : value))
