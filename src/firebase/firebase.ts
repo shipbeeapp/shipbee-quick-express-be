@@ -1,8 +1,9 @@
 import admin from "firebase-admin";
 import fs from "fs";
+import {env} from "../config/environment.js";
 
 const serviceAccount = JSON.parse(
-    fs.readFileSync("/etc/secrets/firebase-account.json", "utf8")
+    fs.readFileSync(env.FIREBASE_CONFIG_PATH, "utf8")
   );
 
 admin.initializeApp({
