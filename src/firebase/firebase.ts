@@ -10,7 +10,7 @@ if (env.FIREBASE_CONFIG_PATH === '/etc/secrets/firebase-account.json') {
     fs.readFileSync(env.FIREBASE_CONFIG_PATH, "utf8")
   );
 } else {
-  console.log("⚠️ Using Firebase config from local environment variable");
+  console.log("⚠️ Using Firebase config from local environment variablee");
   serviceAccount = JSON.parse(
       env.FIREBASE_CONFIG_PATH
   );
