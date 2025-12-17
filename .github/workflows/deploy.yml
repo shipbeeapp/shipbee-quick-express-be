@@ -10,51 +10,62 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Log in to Amazon ECR
-      id: ecr-login
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build, tag, and push Docker image
-      run: |
-        IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app
-        docker build -t myapp .
-        docker tag myapp:latest $IMAGE_URI
-        docker push $IMAGE_URI
+      - name: Build, tag, and push Docker image
+        run: |
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:latest
+          docker build -t myapp .
+          docker tag myapp:latest $IMAGE_URI
+          docker push $IMAGE_URI
 
-    - name: Update ECS service
-      run: |
-        CLUSTER_NAME=shipbee-cluster
-        SERVICE_NAME=shipbee-task-def-service-a0b0xli9
-        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition shipbee-task-def-3)
-        IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app
+      - name: Deploy to ECS
+        run: |
+          # Variables
+          CLUSTER_NAME=shipbee-cluster
+          SERVICE_NAME=shipbee-task-def-service-a0b0xli9
+          TASK_DEF_NAME=shipbee-task-def-3
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:latest
 
-        CURRENT_TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition $TASK_DEFINITION \
+          # 1️⃣ Get current task definition
+          CURRENT_TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition $TASK_DEF_NAME \
             --query "taskDefinition" \
             --output json)
-        
-        # Update task definition with new image
-        CLEAN_TASK_DEF=$(echo $CURRENT_TASK_DEF | jq 'del(.status, .revision, .taskDefinitionArn, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
-        
-        UPDATED_TASK_DEF=$(echo $CLEAN_TASK_DEF | jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image=$IMAGE')
 
-        NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json "$UPDATED_TASK_DEF" \
+          # 2️⃣ Remove fields that ECS rejects when registering a new task definition
+          CLEAN_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq 'del(.status, .revision, .taskDefinitionArn, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          # 3️⃣ Update container image
+          UPDATED_TASK_DEF=$(echo "$CLEAN_TASK_DEF" | jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image=$IMAGE')
+
+          # 4️⃣ Write JSON to file to avoid shell parsing issues
+          echo "$UPDATED_TASK_DEF" > new-task-def.json
+
+          # 5️⃣ Register new task definition revision
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
             --query "taskDefinition.taskDefinitionArn" \
             --output text)
 
-        aws ecs update-service \
-          --cluster $CLUSTER_NAME \
-          --service $SERVICE_NAME \
-          --task-definition $NEW_TASK_DEF_ARN \
-          --force-new-deployment
+          echo "Registered new task definition: $NEW_TASK_DEF_ARN"
+
+          # 6️⃣ Update ECS service to use the new revision
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service $SERVICE_NAME \
+            --task-definition $NEW_TASK_DEF_ARN \
+            --force-new-deployment
+
+          echo "ECS service updated successfully!"
