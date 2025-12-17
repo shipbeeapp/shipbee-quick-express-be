@@ -35,7 +35,7 @@ jobs:
           # Variables
           CLUSTER_NAME=shipbee-cluster
           SERVICE_NAME=shipbee-task-def-service-a0b0xli9
-          TASK_DEF_NAME=shipbee-task-def-3
+          TASK_DEF_NAME=shipbee-task-def-4
           IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:latest
 
           # 1️⃣ Get current task definition
