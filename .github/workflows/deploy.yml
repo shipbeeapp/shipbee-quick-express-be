@@ -36,13 +36,25 @@ jobs:
         CLUSTER_NAME=shipbee-cluster
         SERVICE_NAME=shipbee-task-def-service-a0b0xli9
         TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition shipbee-task-def-3)
+        IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app
+
+        CURRENT_TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition $TASK_DEFINITION \
+            --query "taskDefinition" \
+            --output json)
         
         # Update task definition with new image
-        NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE_URI" '.taskDefinition | .containerDefinitions[0].image=$IMAGE | {family: .family, containerDefinitions: .containerDefinitions, taskRoleArn: .taskRoleArn, executionRoleArn: .executionRoleArn, networkMode: .networkMode, requiresCompatibilities: .requiresCompatibilities, cpu: .cpu, memory: .memory}')
+        CLEAN_TASK_DEF=$(echo $CURRENT_TASK_DEF | jq 'del(.status, .revision, .taskDefinitionArn, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
         
-        # Register new task definition
-        aws ecs register-task-definition --cli-input-json "$(echo $NEW_TASK_DEF | jq -c .)"
-        
-        # Update service to use new task definition
-        NEW_REV=$(aws ecs describe-task-definition --task-definition my-task-def | jq -r '.taskDefinition.revision')
-        aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition my-task-def:$NEW_REV
+        UPDATED_TASK_DEF=$(echo $CLEAN_TASK_DEF | jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image=$IMAGE')
+
+        NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$UPDATED_TASK_DEF" \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+
+        aws ecs update-service \
+          --cluster $CLUSTER_NAME \
+          --service $SERVICE_NAME \
+          --task-definition $NEW_TASK_DEF_ARN \
+          --force-new-deployment
