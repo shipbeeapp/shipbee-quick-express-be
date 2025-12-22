@@ -54,6 +54,7 @@ export class DriverResource {
             },
             ordersCount: Number(driver.orderCount),
             numberOfKms: Number(driver.numberOfKms),
+            orders: driver.orders ? driver.orders : []
         };
     }
 

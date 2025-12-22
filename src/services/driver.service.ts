@@ -194,15 +194,14 @@ export default class DriverService {
     }
     constructDriverQuery() {
         return this.driverRepository.createQueryBuilder("driver")
-                .leftJoinAndSelect("driver.vehicle", "vehicle")
-                .leftJoin("driver.orders", "order")
-                .leftJoinAndSelect("driver.businessOwner", "businessOwner")
+                .leftJoin("driver.vehicle", "vehicle")
+                .leftJoin("driver.orders", "orders")
+                .leftJoin("driver.businessOwner", "businessOwner")
                 .select([
                     "driver.id",
                     "driver.name",
                     "driver.phoneNumber",
                     "driver.status",
-                    "driver.password",
                     "driver.updatedAt",
                     "driver.signUpStatus",
                     "driver.dateOfBirth",
@@ -335,8 +334,24 @@ export default class DriverService {
     async findAllDrivers(): Promise<any> {
         try {
             const result = await this.constructDriverQuery()
-            .addSelect("COUNT(order.id)", "orderCount")
-            .addSelect("SUM(CASE WHEN order.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
+            .addSelect("COUNT(DISTINCT orders.id)", "orderCount")
+            .addSelect("SUM(CASE WHEN orders.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
+            .addSelect(`
+                COALESCE(
+                    jsonb_agg(
+                        DISTINCT jsonb_build_object(
+                            'id', orders.id,
+                            'orderNo', orders."orderNo",
+                            'status', orders.status,
+                            'distance', orders.distance,
+                            'totalCost', orders."totalCost",
+                            'startedAt', orders."startedAt",
+                            'completedAt', orders."completedAt"
+                        )
+                    ) FILTER (WHERE orders.id IS NOT NULL),
+                    '[]'
+                )
+            `, "orders")
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
             .addGroupBy("businessOwner.id")
