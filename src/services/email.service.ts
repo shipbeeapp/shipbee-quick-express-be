@@ -332,3 +332,20 @@ export async function sendDriverUpdateInfoMail(driverName: string, driverPhoneNu
     throw new Error(`Failed to send driver update info email to ${env.SMTP.USER}: ${error.message}`);
   }
 }
+
+export async function sendPasswordResetEmail(recipientEmail: string, resetUrl: string) {
+  try {
+    await transporter.sendMail({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      to: recipientEmail,
+      subject: 'Password Reset Request',
+      html: `<p>You requested a password reset. Click the link below to reset your password:</p>
+             <a href="${resetUrl}">${resetUrl}</a>
+             <p>If you did not request this, please ignore this email.</p>`,
+    });
+    console.log(`Password reset email sent to: ${recipientEmail}`);
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error(`Failed to send password reset email to ${recipientEmail}: ${error.message}`);
+  }
+}

@@ -3,7 +3,7 @@ import { Server as HTTPServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { Order } from "../models/order.model.js"; // Assuming you have an Order model
-import { hasDriverBeenNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
+import { hasDriverBeenNotified, getNotifiedDriversForOrder, markDriverNotifiedViaSocket, getNotifiedDriversViaSocketForOrder } from "../utils/notification-tracker.js";
 import { Container } from "typedi";
 import OrderService from "../services/order.service.js"; // Assuming you have an OrderService to fetch
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js"; // Assuming you have a function to create order resources for drivers
@@ -231,10 +231,10 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
     if (socketId) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);
-      // if (hasDriverBeenNotified(driverId, order.id)) {
-      //   console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
-      //   continue; // Skip if the driver has already been notified
-      // }
+      if (hasDriverBeenNotified(driverId, order.id)) {
+        console.log(`Driver ${driverId} has already been notified for order ${order.id}`);
+        continue; // Skip if the driver has already been notified
+      }
       const {distanceMeters, durationMinutes} = await getDrivingDistanceInKm(
         currentLocation,
         locationOnCancel ? locationOnCancel : order.fromAddress.coordinates
@@ -248,7 +248,7 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       }
       order.fromAddress.coordinates = locationOnCancel ? locationOnCancel : order.fromAddress.coordinates;
       io.to(socketId).emit("new-order", createDriverOrderResource(order, distanceMeters, durationMinutes));
-      // markDriverNotified(order.id, driverId);
+      markDriverNotifiedViaSocket(order.id, driverId);
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
 
@@ -374,7 +374,7 @@ export function getCurrentLocationOfDriver(driverId: string): string | null {
 
 export function emitOrderAccepted(orderId: string, acceptedByDriverId: string): void {
   const io = getSocketInstance();
-  const notifiedDrivers = getNotifiedDriversForOrder(orderId);
+  const notifiedDrivers = getNotifiedDriversViaSocketForOrder(orderId);
   if (!notifiedDrivers) {
     console.log(`No notified drivers found for order ${orderId}`);
     return;

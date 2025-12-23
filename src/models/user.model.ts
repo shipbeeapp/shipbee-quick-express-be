@@ -45,6 +45,12 @@ export class User extends BaseEntity {
   @Column({ type: "text", nullable: true, unique: true })
   apiKey?: string;
 
+  @Column({ type: "text", nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  resetPasswordExpires: Date;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

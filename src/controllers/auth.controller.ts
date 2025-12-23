@@ -54,6 +54,8 @@ export class AuthController {
         this.router.post(`${this.path}/login`, this.login);
         this.router.post(`${this.path}/send-otp`, this.sendOtp)
         this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
+        this.router.post(`${this.path}/forgot-password`, this.forgetPassword);
+        this.router.post(`${this.path}/reset-password`, this.resetPassword);
         this.router.post(`${this.path}/admin/login`, this.adminLogin);
         this.router.post(`${this.path}/admin/driver/reset-password`, authenticationMiddleware, this.adminResetPasswordForDriver);
         this.router.post(`${this.path}/driver/signup`, authenticationMiddleware, this.driverSignup);
@@ -639,5 +641,50 @@ export class AuthController {
             console.error('Error during business login:', error);
             return res.status(500).json({ success: false, message: 'Failed to log in business user.' });
         }
-    }        
+    }
+    
+    private forgetPassword = async (req, res) => {
+        const { emailOrPhone } = req.body;
+        if (!emailOrPhone) {
+            return res.status(400).json({ success: false, message: 'Email or phone number is required.' });
+        }
+        try {
+            const data = {
+                email: emailOrPhone.includes('@') ? emailOrPhone : null,
+                phoneNumber: emailOrPhone.includes('@') ? null : emailOrPhone,
+            }
+            const user = await this.userService.findUserByEmailOrPhone(data);
+            if (!user) {
+                // return res.status(404).json({ success: false, message: 'User not found.' });
+                return res.status(200).json({ success: true, message: 'If the user exists, an reset password has been sent to the provided contact.' });
+            }
+
+            await this.userService.forgotPassword(user);
+            return res.status(200).json({ success: true, message: 'If the user exists, an reset password has been sent to the provided contact.' });
+        } catch (error) {
+            console.error('Error during forget password:', error);
+            return res.status(500).json({ success: false, message: 'Failed to process forget password request.' });
+        }
+    }
+
+    private resetPassword = async (req, res) => {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+        }
+
+        try {
+            const user = await this.userService.getUserByResetToken(token);
+            if (!user) {
+                return res.status(400).json({ success: false, message: 'Invalid or expired token.' });
+            }
+            await this.userService.resetPassword(user, newPassword);
+            return res.status(200).json({ success: true, message: 'Password has been reset successfully.' });
+        }
+        catch (error) {
+            console.error('Error during reset password:', error);
+            return res.status(500).json({ success: false, message: 'Failed to reset password.' });
+        }
+    }
 }

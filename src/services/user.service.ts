@@ -5,6 +5,9 @@ import { toUserResponseDto, UserResponseDto } from "../resource/users/user.resou
 import { BusinessUserDto } from "../dto/user/businessUser.dto.js";
 import bcrypt from "bcrypt";
 import { userType } from "../utils/enums/userType.enum.js";
+import crypto from "crypto";
+import { env } from "../config/environment.js";
+import {sendPasswordResetEmail} from "./email.service.js";
 
 @Service()
 export default class UserService {
@@ -182,6 +185,52 @@ export default class UserService {
       return user || null;
     } catch (error) {
       console.error("Error fetching user by email or phone:", error);
+      throw error;
+    }
+  }
+
+  async forgotPassword(user: User): Promise<void> {
+    try {
+      if (!user.email) {
+        throw new Error("User does not have an email address");
+      }
+      const token = crypto.randomBytes(20).toString('hex');
+      user.resetPasswordToken = token;
+      // user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour from now
+      await this.userRepository.save(user);
+       // Universal link for web / deep link for mobile
+      const resetUrl = `${env.CLIENT_HOST}/reset-password/${token}`;
+      console.log(`Password reset link for user ${user.email}: ${resetUrl}`);
+      // Here, you would typically send the resetUrl via email to the user
+
+      await sendPasswordResetEmail(user.email!, resetUrl);
+      console.log(`Password reset email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Error in forgotPassword:", error);
+      throw error;
+    }
+  }
+
+  async getUserByResetToken(token: string): Promise<User | null> {
+    try {
+      const user = await this.userRepository.findOneBy({ resetPasswordToken: token });
+      return user || null;
+    } catch (error) {
+      console.error("Error fetching user by reset token:", error);
+      throw error;
+    }
+  }
+
+  async resetPassword(user: User, newPassword: string): Promise<void> {
+    try {
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      user.password = hashedPassword;
+      user.resetPasswordToken = null!;
+      // user.resetPasswordExpires = null;
+      await this.userRepository.save(user);
+    } catch (error) {
+      console.error("Error resetting password:", error);
       throw error;
     }
   }

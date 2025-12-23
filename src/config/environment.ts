@@ -6,6 +6,7 @@ export const env = {
   PORT: process.env.PORT || 3000,
   APP_ENV: process.env.APP_ENV || "development",
   APP_HOST: process.env.APP_HOST || `http://localhost:${process.env.PORT || 3000}`,
+  CLIENT_HOST: process.env.CLIENT_HOST || 'http://localhost:4200',
   DB: {
     HOST: process.env.DB_HOST,
     PORT: Number(process.env.DB_PORT),

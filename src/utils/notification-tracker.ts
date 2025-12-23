@@ -3,6 +3,22 @@ const notifiedDriversPerOrder = new Map<
   { notified: Set<string>; canceled: Set<string> }
 >();
 
+const notifiedDriversViaSocket = new Map<
+  string,
+  { notified: Set<string>; canceled: Set<string> }
+>();
+
+export function hasDriverBeenNotifiedViaSocket(orderId: string, driverId: string): boolean {
+  return notifiedDriversViaSocket.get(orderId)?.notified.has(driverId) ?? false;
+}
+
+export function markDriverNotifiedViaSocket(orderId: string, driverId: string): void {
+  if (!notifiedDriversViaSocket.has(orderId)) {
+    notifiedDriversViaSocket.set(orderId, { notified: new Set(), canceled: new Set() });
+  }
+  notifiedDriversViaSocket.get(orderId)!.notified.add(driverId);
+}
+
 export function hasDriverBeenNotified(orderId: string, driverId: string): boolean {
   return notifiedDriversPerOrder.get(orderId)?.notified.has(driverId) ?? false;
 }
@@ -43,4 +59,8 @@ export function clearNotificationsForOrder(orderId: string): void {
 
 export function getNotifiedDriversForOrder(orderId: string): Set<string> | null {
     return notifiedDriversPerOrder.get(orderId)?.notified || null;
+}
+
+export function getNotifiedDriversViaSocketForOrder(orderId: string): Set<string> | null {
+    return notifiedDriversViaSocket.get(orderId)?.notified || null;
 }
