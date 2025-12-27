@@ -5,6 +5,7 @@ import { Address } from "./address.model.js";
 import { itemType } from "../utils/enums/itemType.enum.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import BaseEntity from "./baseEntity.js";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 
 @Entity("order_stops")
 export class OrderStop extends BaseEntity {
@@ -41,6 +42,18 @@ export class OrderStop extends BaseEntity {
 
   @Column({ type: "int", nullable: true })
   lifters: number;
+
+  @Column({ type: "jsonb", nullable: true })
+  items: any;
+
+  @Column({ type: "text", nullable: true })
+  clientStopId: string;
+
+  @Column({ type: "float", nullable: true })
+  totalPrice: number;
+
+  @Column({ type: "enum", enum: PaymentMethod, nullable: true, default: PaymentMethod.CASH_ON_DELIVERY })
+  paymentMethod: PaymentMethod;
 
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;

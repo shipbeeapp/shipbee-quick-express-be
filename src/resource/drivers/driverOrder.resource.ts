@@ -16,6 +16,9 @@ export class DriverOrderStopResource {
     receiverName: string;
     receiverPhoneNumber: string;
     lifters: number | null;
+    items?: any;
+    totalPrice?: number
+    paymentMethod?: PaymentMethod;
 }
 export class DriverOrderResource {
     orderId: string;
@@ -72,7 +75,10 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             additionalToAddressInfo: stop.toAddress?.landmarks,
             receiverName: stop.receiver?.name,
             receiverPhoneNumber: stop.receiver?.phoneNumber,
-            lifters: stop.lifters
+            lifters: stop.lifters,
+            items: stop.items,
+            totalPrice: stop.totalPrice,
+            paymentMethod: stop.paymentMethod,
         };
     }) || [];
     return resource;

@@ -9,6 +9,7 @@ import { OrderType } from '../../utils/enums/orderType.enum.js';
 import { generatePhotoLink } from '../../utils/global.utils.js';
 import { getDrivingDistanceInKm } from '../../utils/google-maps/distance-time.js';
 import { getCurrentLocationOfDriver } from '../../socket/socket.js';
+import { PaymentMethod } from '../../utils/enums/paymentMethod.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -93,6 +94,9 @@ export class OrderResponseDto {
       itemType?: itemType;
       status: OrderStatus;
       proofOfOrder?: string | null;
+      items?: any;
+      totalPrice?: number;
+      paymentMethod?: PaymentMethod;
   }[];
   
     statusHistory: {
@@ -211,6 +215,9 @@ export class OrderResponseDto {
       itemType: stop.itemType,
       status: stop.status,
       proofOfOrder: stop.status === OrderStatus.COMPLETED ? generatePhotoLink(stop.proofOfOrder) : null,
+      items: stop.items,
+      totalPrice: stop.totalPrice,
+      paymentMethod: stop.paymentMethod,
     };
   }) || [];
     return {
@@ -224,7 +231,7 @@ export class OrderResponseDto {
       // itemDescription: itemDescription,
       lifters: order.lifters,
       distance: order.distance,
-      totalCost: Number(order.totalCost),
+      totalCost: order.totalCost ? Number(order.totalCost) : null,
       currentStatus: order.status,
       vehicleType: order.vehicleType,
       payer: order.payer,

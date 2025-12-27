@@ -105,6 +105,28 @@
           <p style="margin:0 0 8px;color:#000000">Notes: {{itemDescription}}</p>
         {{/if}}
 
+        {{#if items}}
+          <p style="margin:0 0 8px;color:#000000"><strong>Items:</strong></p>
+          <ul style="margin:0 0 8px;color:#000000; padding-left:20px;">
+            {{#each items}}
+              <li>
+                {{#if name}} Name: {{name}}<br>{{/if}}
+                {{#if itemId}} (ID: {{itemId}}) <br>{{/if}}
+                {{#if quantity}} Quantity: {{quantity}}<br>{{/if}}
+                {{#if price}} Price: {{price}}<br>{{/if}}
+              </li>
+            {{/each}}
+          </ul>
+        {{/if}}
+
+        {{#if totalPrice}}
+          <p style="margin:0 0 8px;color:#000000">Items Price: QAR {{totalPrice}}</p>
+        {{/if}}
+
+        {{#if paymentMethod}}
+          <p style="margin:0 0 8px;color:#000000">Payment Method: {{paymentMethod}}</p>
+        {{/if}}
+
         {{#if images}}
           <div style="display:flex;flex-wrap:wrap;gap:10px;">
             {{#each images}}

@@ -194,7 +194,10 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
         receiverName: stop.receiverName || stop.receiver?.name,
         receiverPhoneNumber: stop.receiverPhoneNumber || stop.receiver?.phoneNumber,
         itemDescription: stop.itemDescription ? JSON.parse(stop.itemDescription).text : '',
-        images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
+        images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : [],
+        items: stop.items,
+        totalPrice: stop.totalPrice ? Number(stop.totalPrice).toFixed(2) : null,
+        paymentMethod: stop.paymentMethod,
       })),
       vehicleType: vehicleType,
       status: "CONFIRMED",

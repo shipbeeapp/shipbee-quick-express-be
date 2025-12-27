@@ -59,7 +59,7 @@ export default class OrderService {
 
   constructor() {}
   
-  async createOrder(orderData: CreateOrderDto, userId?: string) {
+  async createOrder(orderData: CreateOrderDto, userId?: string, madeByClient: boolean = false): Promise<any> {
     console.log("Creating order with data:", orderData);
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
@@ -121,27 +121,31 @@ export default class OrderService {
       }
         
       //🔹 Step 3: Calculate total cost
-      const pricingInput = await validateObject(GetPricingDTO, {
-        serviceSubcategory: orderData.serviceSubcategory,
-        vehicleType: orderData.vehicleType,
-        distance: orderData.distance,
-        fromCountry: orderData.fromAddress.country,
-        fromCity: orderData.fromAddress.city,
-        // toCountry: orderData.stops[0]?.toAddress?.country,
-        // toCity: orderData.stops[0]?.toAddress?.city,
-        weight: orderData.shipment?.weight,
-        length: orderData.shipment?.length,
-        width: orderData.shipment?.width,
-        height: orderData.shipment?.height,
-        plannedShippingDate: orderData.pickUpDate.split('T')[0], // extract date in YYYY-MM-DD format
-        shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
-        lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
-      });
-      const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
+      let total;
+      if (!madeByClient) {
+        const pricingInput = await validateObject(GetPricingDTO, {
+          serviceSubcategory: orderData.serviceSubcategory,
+          vehicleType: orderData.vehicleType,
+          distance: orderData.distance,
+          fromCountry: orderData.fromAddress.country,
+          fromCity: orderData.fromAddress.city,
+          // toCountry: orderData.stops[0]?.toAddress?.country,
+          // toCity: orderData.stops[0]?.toAddress?.city,
+          weight: orderData.shipment?.weight,
+          length: orderData.shipment?.length,
+          width: orderData.shipment?.width,
+          height: orderData.shipment?.height,
+          plannedShippingDate: orderData.pickUpDate.split('T')[0], // extract date in YYYY-MM-DD format
+          shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
+          lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
+        });
+        const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
 
-      console.log("total cost before discount:", costBeforePromo);
-      const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
-      console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
+        console.log("total cost before discount:", costBeforePromo);
+        const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
+        total = totalCost;
+        console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
+      }
       const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
@@ -155,7 +159,7 @@ export default class OrderService {
         sender,
         fromAddress,
         distance: orderData.distance,
-        totalCost,
+        totalCost: total,
         serviceSubcategory,
         status: OrderStatus.PENDING, // Default status
         paymentStatus: orderData.paymentStatus ?? PaymentStatus.PENDING, // Default payment status
@@ -192,6 +196,9 @@ export default class OrderService {
       const receiver = await this.userService.findOrCreateUser({email: stopData.receiverEmail, phoneNumber: stopData.receiverPhoneNumber, name: stopData.receiverName}, queryRunner);
       const toAddress = await this.addressService.createAddress(stopData.toAddress, queryRunner);
 
+      if (typeof stopData.items === 'string') {
+        stopData.items = JSON.parse(stopData.items);
+      }
       const stop = queryRunner.manager.create(OrderStop, {
         order,
         receiver,
@@ -201,6 +208,10 @@ export default class OrderService {
         distance: stopData.distance,
         sequence: stopData.sequence ?? index + 1,
         lifters: stopData.lifters ?? 0,
+        clientStopId: stopData.clientStopId ?? null,
+        items: stopData.items,
+        totalPrice: stopData.totalPrice ?? null,
+        paymentMethod: stopData.paymentMethod,
       });
 
       stopEntities.push(stop);
@@ -210,12 +221,12 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
      orderData.orderNo = order.orderNo;
-     await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
+     await sendOrderConfirmation(orderData, total, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
        console.error("Error sending emaill to admin:", err);
       });
      console.log('sent mail to admin: ', env.SMTP.USER);
      if (createdByUser.email) {
-      await sendOrderConfirmation(orderData, totalCost, orderData.vehicleType, createdByUser.email).catch((err) => {
+      await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
         console.error("Error sending email to user:", err);
       }
       );
@@ -885,7 +896,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     async getAllOrderStatuses(userId: string) {
       const orders =  await this.orderRepository.find({
         where: { createdBy: { id: userId } },
-        select: ["id", "orderNo", "status", "createdAt"],
+        select: ["id", "status", "createdAt"],
         relations: ["driver"],
       });
       console.log("Fetched orders for user:", JSON.stringify(orders, null, 2));
@@ -904,31 +915,31 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }) );
     }
 
-    async getOrderStatus(userId: string, orderId?: string, orderNo?: number) {
+    async getOrderStatus(userId: string, orderId?: string) {
       try {
-          if (!orderId && !orderNo) {
+          if (!orderId) {
             throw new Error("Either orderId or orderNo must be provided");
           }
-          let order: Order;
-          if (orderId) {
-              order =  await this.orderRepository.findOne({
-                where: { id: orderId, createdBy: { id: userId } },
-                select: ["id", "orderNo", "status"],
-                relations: ["driver"],
-              });   
-            } else if (orderNo) {
-              order =  await this.orderRepository.findOne({
-                where: { orderNo: orderNo, createdBy: { id: userId } },
-                select: ["id", "orderNo", "status"],
-                relations: ["driver"],
-              });
-            }
-            if (!order) {
-              throw new Error(`Order not found for user ${userId}`);
-            }
+          const order =  await this.orderRepository.findOne({
+            where: { 
+              stops: {
+                clientStopId: orderId
+              }, 
+              createdBy: { id: userId } 
+            },
+            select: ["id", "status"],
+            relations: ["driver", "stops"],
+          });   
+          
+          if (!order) {
+            throw new Error(`Order not found for user ${userId}`);
+          }
+          const clientStop = order.stops.find(stop => stop.clientStopId === orderId);
+          if (clientStop.status === OrderStatus.COMPLETED) {
+            order.status = OrderStatus.COMPLETED;
+          }
           return {
-            id: order.id,
-            orderNo: order.orderNo,
+            orderId,
             status: order.status,
             driver: order.driver ? { 
               name: order.driver.name, 
@@ -1097,5 +1108,23 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         console.error("Error generating orders report:", error.message);
         throw new Error(`Could not generate orders report: ${error.message}`);
       }
+  }
+
+  async getCurrentActiveStop(orderId: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["stops"],
+      });
+
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      const activeStop = order.stops.find(stop => stop.status === OrderStatus.ACTIVE);
+      return activeStop || null;
+    } catch (error) {
+      console.error("Error fetching current active stop:", error.message);
+      throw new Error(`Could not fetch current active stop: ${error.message}`);
+    }
   }
 }

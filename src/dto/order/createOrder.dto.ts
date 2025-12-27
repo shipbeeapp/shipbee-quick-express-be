@@ -112,6 +112,22 @@ export class OrderStop {
   @IsNumber()
   @Transform(({ value }) => (value ? Number(value) : value))
   lifters?: number;
+
+  @IsOptional()
+  @IsString()
+  clientStopId?: string;
+
+  @IsOptional()
+  items?: any;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  totalPrice?: number;
+
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
 }
 
 export class CreateOrderDto {
@@ -154,6 +170,7 @@ export class CreateOrderDto {
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @Transform(({ value }) => (value ? Number(value) : value))
   @IsNumber()
+  @IsOptional()
   distance: number;
 
   @IsString()

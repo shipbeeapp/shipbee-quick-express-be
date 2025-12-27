@@ -44,9 +44,11 @@ export async function broadcastOrderTrackingUpdate(orderId: string, driverLocati
     } else if (client.type === "api" && client.userId) {
       console.log("Checking order ownership for userId:", client.userId);
       const isOwned = await orderService.isOrderOwnedByUser(orderId, client.userId);
+      const getCurrentActiveStop = await orderService.getCurrentActiveStop(orderId);
+      const clientStopId = getCurrentActiveStop ? getCurrentActiveStop.clientStopId : null; 
       console.log(`Order ${orderId} owned by user ${client.userId}:`, isOwned);
       if (isOwned) {
-        client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
+        client.res.write(`data: ${JSON.stringify({ orderId: clientStopId, driverLocation })}\n\n`);
       }
     }
     else if (client.type === "receiver" && client.orderId === orderId) {
