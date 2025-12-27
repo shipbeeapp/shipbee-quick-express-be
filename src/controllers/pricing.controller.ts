@@ -61,7 +61,7 @@ export class PricingController {
     private async calculatePricing(req: Request, res: Response) {
         try {
             const getPricingDTO = req.query as any;
-            const currentPricing = await this.pricingService.calculatePricing(getPricingDTO)
+            const currentPricing = await this.pricingService.getAllExpressPricings(getPricingDTO)
             res.status(200).json(currentPricing);
         } catch (error) {
             console.error('Error fetching current pricing:', error);

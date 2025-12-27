@@ -98,7 +98,7 @@ export default class PricingService {
                       width: getPricingDTO.width,
                       height: getPricingDTO.height,
                       plannedShippingDate: getPricingDTO.plannedShippingDate,
-                      isCustomsDeclarable: false,
+                      isCustomsDeclarable: true,
                       unitOfMeasurement: "metric",
                     };
                     console.log('shipping date: ', getPricingDTO.plannedShippingDate);
@@ -108,7 +108,7 @@ export default class PricingService {
                         password: env.DHL.API_SECRET,
                     }
                     const response = await axios.get(env.DHL.DOMAIN, { params, auth });
-                    const cost = response.data.products[0].totalPrice.find(p => p.currencyType === "BILLC")?.price;
+                    const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").find((price: any) => price.currencyType === "BILLC")?.price;
                     console.log('DHL pricing:', cost);
                     return {
                         totalCost: Number(cost),
@@ -142,5 +142,67 @@ export default class PricingService {
             console.error('Error fetching current pricing:', error);
             throw new Error(`Error fetching current pricing: ${error.message}`);
         }
- }   
+ }
+ 
+ async getAllExpressPricings(getPricingDTO: GetPricingDTO) {
+    try {
+        const pricingList = [];
+        // DHL Pricing
+        const params = {
+            accountNumber: env.DHL.ACCOUNT_NUMBER,
+            originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+            originCityName: getPricingDTO.fromCity,
+            destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+            destinationCityName: getPricingDTO.toCity,
+            weight: getPricingDTO.weight,
+            length: getPricingDTO.length,
+            width: getPricingDTO.width,
+            height: getPricingDTO.height,
+            plannedShippingDate: getPricingDTO.plannedShippingDate,
+            isCustomsDeclarable: true,
+            unitOfMeasurement: "metric",
+        };
+        console.log('shipping date: ', getPricingDTO.plannedShippingDate)
+        const auth = {
+            username: env.DHL.API_KEY,
+            password: env.DHL.API_SECRET,
+        }
+        const response = await axios.get(env.DHL.DOMAIN, { params, auth });
+        console.log('DHL response data:', response.data.products);
+        const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
+        const estimatedDeliveryDays =  response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
+        console.log('DHL pricing:', cost, " estimated days: ", estimatedDeliveryDays);
+        pricingList.push({
+            carrier: 'DHL',
+            totalCost: Number(cost),
+            estimatedDeliveryDays
+        });
+
+        //Qatar Post
+        const currentPricing = await this.pricingRepository.findOne({
+            where: {
+                serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                fromCountry: getPricingDTO.fromCountry,
+                toCountry: getPricingDTO.toCountry,
+                maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                isCurrent: true
+            },
+            order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
+        });
+        if (!currentPricing) {
+            throw new Error('No pricing found for the given criteria');
+        }
+        const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+        pricingList.push({
+            carrier: 'Qatar Post',
+            totalCost: Number(qpCost.toFixed(1)),
+            estimatedDeliveryDays: currentPricing.transitTime
+        });
+
+        return pricingList;
+    } catch (error) {
+        console.error('Error fetching DHL pricing:', error);
+        throw new Error(`Error fetching DHL pricing: ${error.message}`);
+    } 
+}
 }
