@@ -224,6 +224,7 @@ export default class OrderService {
         totalPrice: stopData.totalPrice ?? null,
         paymentMethod: stopData.paymentMethod,
         comments: stopData.comments ?? null,
+        deliveryFee: stopData.deliveryFee ?? null
       });
 
       stopEntities.push(stop);

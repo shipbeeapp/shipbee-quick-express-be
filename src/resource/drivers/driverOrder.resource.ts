@@ -19,6 +19,8 @@ export class DriverOrderStopResource {
     items?: any;
     totalPrice?: number
     paymentMethod?: PaymentMethod;
+    comments?: string;
+    deliveryFee?: number;
 }
 export class DriverOrderResource {
     orderId: string;
@@ -79,6 +81,8 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             items: stop.items,
             totalPrice: stop.totalPrice,
             paymentMethod: stop.paymentMethod,
+            comments: stop.comments,
+            deliveryFee: stop.deliveryFee
         };
     }) || [];
     return resource;

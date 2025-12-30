@@ -199,6 +199,7 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
         totalPrice: stop.totalPrice ? Number(stop.totalPrice).toFixed(2) : null,
         paymentMethod: stop.paymentMethod,
         comments: stop.comments ?? null,
+        deliveryFee: stop.deliveryFee ? Number(stop.deliveryFee).toFixed(2) : null
       })),
       vehicleType: vehicleType,
       status: "CONFIRMED",

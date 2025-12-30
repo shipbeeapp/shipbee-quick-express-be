@@ -206,6 +206,11 @@ export class OrderStop {
   @IsOptional()
   @IsString()
   comments?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  deliveryFee?: number;
 }
 
 export class CreateOrderDto {

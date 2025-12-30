@@ -131,6 +131,10 @@
           <p style="margin:0 0 8px;color:#000000">Comments: {{comments}}</p>
         {{/if}}
 
+        {{#if deliveryFee}}
+          <p style="margin:0 0 8px;color:#000000">Delivery Fee: QAR {{deliveryFee}}</p>
+        {{/if}}
+
         {{#if images}}
           <div style="display:flex;flex-wrap:wrap;gap:10px;">
             {{#each images}}
@@ -179,6 +183,73 @@
                 <tr>
                   <td style="padding:8px;font-weight:500;">Total Value</td>
                   <td style="padding:8px;">USD {{shipment.totalValue}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.shippingCompany}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Shipping Company</td>
+                  <td style="padding:8px;">{{shipment.shippingCompany}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.plannedShippingDateAndTime}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Planned Shipping Date & Time</td>
+                  <td style="padding:8px;">{{shipment.plannedShippingDateAndTime}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.pickupRequested}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Pickup Requested</td>
+                  <td style="padding:8px;">{{#if shipment.pickupRequested}}Yes{{else}}No{{/if}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.description}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Description</td>
+                  <td style="padding:8px;">{{shipment.description}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.invoiceNumber}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Invoice Number</td>
+                  <td style="padding:8px;">{{shipment.invoiceNumber}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.invoiceDate}}
+                <tr>
+                  <td style="padding:8px;font-weight:500;">Invoice Date</td>
+                  <td style="padding:8px;">{{shipment.invoiceDate}}</td>
+                </tr>
+                {{/if}}
+
+                {{#if shipment.lineItems}}
+                <tr>
+                  <td style="padding:8px;font-weight:500; vertical-align:top;">Line Items</td>
+                  <td style="padding:8px;">
+                    <ul style="margin:0; padding-left:20px;">
+                      {{#each shipment.lineItems}}
+                        <li>
+                          {{#if name}} Name: {{name}};{{/if}}
+                          {{#if description}} Description: {{description}};{{/if}}
+                          {{#if quantity.value}}
+                            Quantity: {{quantity.value}} <br>
+                          {{/if}}
+                          {{#if price}} Price: {{price}}{{/if}}
+                          {{#if manufacturerCountry}} Manufacturer Country: {{manufacturerCountry}}{{/if}}
+                          {{#if weight.netValue}}
+                            Gross Weight: {{weight.grossValue}} kg<br>
+                            Net Weight: {{weight.netValue}} kg<br>
+                          {{/if}}
+                        </li>
+                      {{/each}}
+                    </ul>
+                  </td>
                 </tr>
                 {{/if}}
               </tbody>

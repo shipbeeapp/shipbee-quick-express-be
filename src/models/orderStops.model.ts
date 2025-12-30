@@ -58,6 +58,9 @@ export class OrderStop extends BaseEntity {
   @Column({ type: "text", nullable: true })
   comments: string;
 
+  @Column({ type: "float", nullable: true })
+  deliveryFee: number;
+
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;
 }
