@@ -107,8 +107,8 @@ export default class PricingService {
                         username: env.DHL.API_KEY,
                         password: env.DHL.API_SECRET,
                     }
-                    const response = await axios.get(env.DHL.DOMAIN, { params, auth });
-                    const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").find((price: any) => price.currencyType === "BILLC")?.price;
+                    const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
+                    const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
                     console.log('DHL pricing:', cost);
                     return {
                         totalCost: Number(cost),

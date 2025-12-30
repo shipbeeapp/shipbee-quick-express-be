@@ -87,6 +87,7 @@ import { AddResetFields1766495848820 } from '../migrations/1766495848820-AddRese
 import {AddExtraFieldsForStops1766610543221} from "../migrations/1766610543221-AddExtraFieldsForStops.js";
 import {AddCommentsInStops1767086905430} from "../migrations/1767086905430-AddCommentsInStops.js";
 import { AddIsSandboxInUser1767088062249 } from '../migrations/1767088062249-AddIsSandboxInUser.js';
+import { AddFieldsInShipment1767103859531 } from "../migrations/1767103859531-AddFieldsInShipment.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -186,6 +187,7 @@ export const AppDataSource = new DataSource({
     AddExtraFieldsForStops1766610543221,
     AddCommentsInStops1767086905430,
     AddIsSandboxInUser1767088062249,
+    AddFieldsInShipment1767103859531,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

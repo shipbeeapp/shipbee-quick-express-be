@@ -41,6 +41,9 @@ import PromoCodeService from "./promoCode.service.js";
 import { User } from "../models/user.model.js";
 import { OrderStop } from "../models/orderStops.model.js";
 import { OrderType } from "../utils/enums/orderType.enum.js";
+import axios from "axios";
+import { getCountryIsoCode } from "../utils/dhl.utils.js";
+import {formatAddress}  from "../services/email.service.js";
 
 @Service()
 export default class OrderService {
@@ -119,6 +122,7 @@ export default class OrderService {
         shipment = await this.shipmentService.createShipment(orderData.shipment, queryRunner);
         console.log("Shipment created:", shipment);
       }
+      console.log("orderData.shipment:", orderData.shipment);
         
       //🔹 Step 3: Calculate total cost
       let total;
@@ -129,13 +133,13 @@ export default class OrderService {
           distance: orderData.distance,
           fromCountry: orderData.fromAddress.country,
           fromCity: orderData.fromAddress.city,
-          // toCountry: orderData.stops[0]?.toAddress?.country,
-          // toCity: orderData.stops[0]?.toAddress?.city,
+          toCountry: orderData.stops[0]?.toAddress?.country,
+          toCity: orderData.stops[0]?.toAddress?.city,
           weight: orderData.shipment?.weight,
           length: orderData.shipment?.length,
           width: orderData.shipment?.width,
           height: orderData.shipment?.height,
-          plannedShippingDate: orderData.pickUpDate.split('T')[0], // extract date in YYYY-MM-DD format
+          plannedShippingDate: orderData.shipment.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
           shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
           lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
         });
@@ -180,16 +184,23 @@ export default class OrderService {
     let stopEntities: OrderStop[] = [];
     if (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
       orderData.stops = [{
-        toAddress: orderData.toAddress,
-        receiverEmail: orderData.receiverEmail,
-        receiverName: orderData.receiverName,
-        receiverPhoneNumber: orderData.receiverPhoneNumber,
-        itemType: orderData.itemType,
+        toAddress: orderData.stops[0].toAddress,
+        receiverEmail: orderData.stops[0].receiverEmail,
+        receiverName: orderData.stops[0].receiverName,
+        receiverPhoneNumber: orderData.stops[0].receiverPhoneNumber,
+        itemType: orderData.stops[0].itemType,
         distance: 0,
         sequence: 1
     }
     ];
+
+    if (orderData.shipment.shippingCompany === 'DHL') {
+      const dhlTrackingNumber = await this.createDHLShipment(orderData)
+      console.log("tracking number:", dhlTrackingNumber);
+      order.shipment.trackingNumber = dhlTrackingNumber;
+      await queryRunner.manager.save(order.shipment);
     }
+  }
 
      for (const [index, stopData] of orderData.stops.entries()) {
       console.log("Creating stop:", stopData);
@@ -1127,6 +1138,101 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     } catch (error) {
       console.error("Error fetching current active stop:", error.message);
       throw new Error(`Could not fetch current active stop: ${error.message}`);
+    }
+  }
+
+  async createDHLShipment(orderData: CreateOrderDto) {
+    console.log("from address:", orderData.fromAddress);
+    console.log("STOP:", orderData.stops[0]);
+    try {
+      const data = {
+        plannedShippingDateAndTime: orderData.shipment.plannedShippingDateAndTime,
+        pickup: {
+          isRequested: orderData.shipment.pickupRequested,
+        },
+        getRateEstimates: true,
+        productCode: "P",
+        accounts: [{
+          typeCode: "shipper",
+          number: env.DHL.ACCOUNT_NUMBER,
+        }],
+        customerDetails: {
+          shipperDetails: {
+            postalAddress: {
+              postalCode: "",
+              cityName: orderData.fromAddress.city,
+              countryCode: getCountryIsoCode(orderData.fromAddress.country),
+              addressLine1: formatAddress(orderData.fromAddress),
+            },
+            contactInformation: {
+              phone: orderData.senderPhoneNumber,
+              companyName: orderData.senderName,
+              fullName: orderData.senderName,
+          }
+        },
+        receiverDetails: {
+          postalAddress: {
+            postalCode: "",
+            cityName: orderData.stops[0].toAddress.city,
+            countryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
+            addressLine1: formatAddress(orderData.stops[0].toAddress),
+          },
+          contactInformation: {
+            phone: orderData.stops[0].receiverPhoneNumber,
+            companyName: orderData.stops[0].receiverName,
+            fullName: orderData.stops[0].receiverName,
+        }
+      },
+    },
+    content: {
+      packages: [
+        { 
+          weight: orderData.shipment.weight,  // Weight in KG
+          dimensions: {
+            length: orderData.shipment.length,
+            width: orderData.shipment.width,
+            height: orderData.shipment.height,
+          }
+        }
+      ],
+      description: orderData.shipment.description,
+      unitOfMeasurement: "metric",
+      declaredValue: orderData.shipment.totalValue,
+      declaredValueCurrency: "USD",
+      isCustomsDeclarable: true,
+      incoterm: orderData.shipment.incoterm || "DAF",
+      exportDeclaration: {
+        lineItems: orderData.shipment.lineItems,
+        invoice: {
+          number: orderData.shipment.invoiceNumber || "INV-" + Math.floor(Math.random() * 1000000),
+          date: orderData.shipment.invoiceDate || new Date().toISOString().split('T')[0],
+        }
+      }
+    }
+        
+    };
+    const config = {
+      auth: {
+        username: env.DHL.API_KEY,
+        password: env.DHL.API_SECRET,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+    console.log("url:", env.DHL.DOMAIN + '/shipments');
+    const response = await axios.post(env.DHL.DOMAIN + '/shipments', data, config);
+    console.log("DHL shipment created successfully:", response.data);
+    if (response.data.status && response.data.status.code !== "200") {
+      console.error("DHL API error:", response.data);
+      throw new Error(`DHL API error: ${response.data.detail}`);
+    }
+    return response.data.shipmentTrackingNumber;
+  }
+    catch (error) {
+      console.error("Error creating DHL shipment:", error.message);
+      console.error("Full error:", error.response.data);
+      throw new Error(`Could not create DHL shipment: ${error.response.data.detail}`);
     }
   }
 }

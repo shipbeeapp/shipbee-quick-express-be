@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf } from "class-validator";
+import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf, IsBoolean } from "class-validator";
 import { Type, Transform } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
@@ -43,6 +43,50 @@ class AddressDto {
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
+class QuantityDto {
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  value: number;
+
+  @IsString()
+  unitOfMeasurement: string;
+}
+
+class WeightDto {
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  netValue: number;
+
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  grossValue: number;
+}
+
+class LineItemDto {
+  @IsNumber()
+  @Type(() => Number)
+  number: number;
+  
+  @IsString()
+  description: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  price: number;
+
+  @ValidateNested()
+  @Type(() => QuantityDto)
+  quantity: QuantityDto;
+
+  @IsString()
+  manufacturerCountry: string;
+
+  @ValidateNested()
+  @Type(() => WeightDto)
+  weight: WeightDto;
+
+}
+
 class ShipmentDto {
     @IsNumber()
     @Type(() => Number)
@@ -71,6 +115,36 @@ class ShipmentDto {
     @IsNumber()
     @Type(() => Number)
     totalValue: number; // total value in USD
+
+    @IsBoolean()
+    @IsOptional()
+    @Transform(({ value }) => (value === 'true' || value === true))
+    pickupRequested?: boolean; // whether pickup is requested
+
+    @IsString()
+    @IsOptional()
+    description: string; // description of the shipment
+
+    @IsString()
+    @IsOptional()
+    invoiceNumber: string; // invoice number
+
+    @IsDateString()
+    @IsOptional()
+    invoiceDate: string; // invoice date
+
+    @IsString()
+    @IsOptional()
+    plannedShippingDateAndTime: string; // allow "GMT+01:00" format
+
+    @IsString()
+    @IsOptional()
+    incoterm?: string; // Incoterm for international shipments
+
+    @ValidateNested({ each: true })
+    @Type(() => LineItemDto)
+    @IsOptional()
+    lineItems?: LineItemDto[];
 
 }
 

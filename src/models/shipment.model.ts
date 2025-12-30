@@ -32,6 +32,31 @@ export class Shipment extends BaseEntity {
 
     @Column({type: "varchar", length: 100, nullable: true})
     shippingCompany: string; // e.g., 'DHL', 'Qatar Post'
+
+    @Column({type: "date", nullable: true})
+    plannedShippingDateAndTime: string; // in YYYY-MM-DD format
+
+    @Column({type: "boolean", default: false})
+    pickupRequested: boolean; // whether pickup is requested
+
+    @Column({type: "text", nullable: true})
+    description: string; // description of the shipment
+
+    @Column({type: "text", nullable: true})
+    invoiceNumber: string; // invoice number
+
+    @Column({type: "date", nullable: true})
+    invoiceDate: string; // invoice date
+
+    @Column({type: "jsonb", nullable: true})
+    lineItems: any; // array of line items
+
+    @Column({type: "text", nullable: true})
+    trackingNumber: string; // tracking number from shipping company
+
+    @Column({type: "text", nullable: true})
+    incoterm: string; // Incoterm for international shipments
+
 }
 
 import { Order } from "./order.model.js";

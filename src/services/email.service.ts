@@ -97,7 +97,7 @@ export async function sendOtpToUser(phoneNumber: string, otp: string, phoneExten
   }
 }
 
-function formatAddress(address: any): string {
+export function formatAddress(address: any): string {
     if (!address) return '';
   
     const parts = [
