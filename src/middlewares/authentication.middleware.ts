@@ -45,7 +45,7 @@ export const apiKeyAuthenticationMiddleware = async (req: AuthenticatedRequest, 
 
     try {
         const userService = new UserService();
-        const userId = await userService.getUserIdByApiKey(apiKey);
+        const {userId} = await userService.getUserIdByApiKey(apiKey);
         if (!userId) {
             res.status(401).json({ success: false, message: "Invalid API key" });
             return;

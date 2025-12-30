@@ -59,7 +59,7 @@ export default class OrderService {
 
   constructor() {}
   
-  async createOrder(orderData: CreateOrderDto, userId?: string, madeByClient: boolean = false): Promise<any> {
+  async createOrder(orderData: CreateOrderDto, userId?: string, madeByClient: boolean = false, isSandbox: boolean = false): Promise<any> {
     console.log("Creating order with data:", orderData);
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
@@ -244,7 +244,8 @@ export default class OrderService {
     //  }
      // Broadcast to online drivers with matching vehicleType
      order.stops = stopEntities;
-     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) {
+     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK && !isSandbox) {
+      console.log("Emitting order to drivers for order ID:", order.id);
        scheduleOrderEmission(order);
      }
      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the new order

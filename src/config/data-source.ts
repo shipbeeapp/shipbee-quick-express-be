@@ -86,6 +86,7 @@ import {MakeVehicleTypeInOrderCorrect1765884622888} from "../migrations/17658846
 import { AddResetFields1766495848820 } from '../migrations/1766495848820-AddResetFields.js';
 import {AddExtraFieldsForStops1766610543221} from "../migrations/1766610543221-AddExtraFieldsForStops.js";
 import {AddCommentsInStops1767086905430} from "../migrations/1767086905430-AddCommentsInStops.js";
+import { AddIsSandboxInUser1767088062249 } from '../migrations/1767088062249-AddIsSandboxInUser.js';
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -184,6 +185,7 @@ export const AppDataSource = new DataSource({
     AddResetFields1766495848820,
     AddExtraFieldsForStops1766610543221,
     AddCommentsInStops1767086905430,
+    AddIsSandboxInUser1767088062249,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

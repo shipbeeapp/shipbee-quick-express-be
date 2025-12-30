@@ -45,6 +45,9 @@ export class User extends BaseEntity {
   @Column({ type: "text", nullable: true, unique: true })
   apiKey?: string;
 
+  @Column({ type: "boolean", nullable: true, default: true })
+  isSandboxUser: boolean;
+
   @Column({ type: "text", nullable: true })
   resetPasswordToken: string;
 

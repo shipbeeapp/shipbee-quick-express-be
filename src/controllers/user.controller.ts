@@ -215,7 +215,7 @@ export class UserController {
           return res.status(400).json({ error: "api key is required" });
         }
 
-        const userId = await this.userService.getUserIdByApiKey(apiKey as string);
+        const {userId} = await this.userService.getUserIdByApiKey(apiKey as string);
         if (!userId) {
           return res.status(401).json({ success: false, message: "Invalid API key" });
         }

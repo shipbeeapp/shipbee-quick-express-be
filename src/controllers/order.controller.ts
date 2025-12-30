@@ -125,7 +125,8 @@ export class OrderController {
   private async createOrder(req: Request, res: Response) {
     try {
       let userId: string | undefined;
-      let madeByClient; // Flag to indicate if order is made by a client using API integration
+      let isSandbox: boolean | undefined;
+      let madeByClient = false; // Flag to indicate if order is made by a client using API integration
       const authHeader = req.headers.authorization;
       const apiKey = req.headers["x-api-key"] as string | undefined;
       if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -141,10 +142,12 @@ export class OrderController {
       }
       else if (apiKey) {
         // Validate API key and get associated user ID
-        userId = await this.userService.getUserIdByApiKey(apiKey);
-        if (!userId) {
+        const result = await this.userService.getUserIdByApiKey(apiKey);
+        if (!result?.userId) {
           return res.status(401).json({ success: false, message: "Invalid API key" });
         }
+        userId = result.userId;
+        isSandbox = result.isSandbox;
         madeByClient = true;
       }
       console.log("req.body in create order", req.body);
@@ -178,7 +181,7 @@ export class OrderController {
     }
 
       // orderData.stops = stops;
-      const order = await this.orderService.createOrder(orderData, userId, madeByClient);
+      const order = await this.orderService.createOrder(orderData, userId, madeByClient, isSandbox);
       res.status(201).json({ success: true, data: order });
     } catch (error) {
       console.error("Error in order controller creating order:", error.message);

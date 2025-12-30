@@ -105,10 +105,10 @@ export default class UserService {
     }
   }
 
-  async getUserIdByApiKey(apiKey: string): Promise<string | undefined> {
+  async getUserIdByApiKey(apiKey: string): Promise<{userId: string, isSandbox: boolean} | undefined> {
     try {
       const user = await this.userRepository.findOneBy({ apiKey });
-      return user ? user.id : undefined;
+      return user ? {userId: user.id, isSandbox: user.isSandboxUser} : undefined;
     } catch (error) {
       console.error("Error fetching user by API key:", error);
       throw error;
