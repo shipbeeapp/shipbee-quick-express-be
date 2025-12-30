@@ -97,6 +97,7 @@ export class OrderResponseDto {
       items?: any;
       totalPrice?: number;
       paymentMethod?: PaymentMethod;
+      comments?: string;
   }[];
   
     statusHistory: {
@@ -218,6 +219,7 @@ export class OrderResponseDto {
       items: stop.items,
       totalPrice: stop.totalPrice,
       paymentMethod: stop.paymentMethod,
+      comments: stop.comments,
     };
   }) || [];
     return {

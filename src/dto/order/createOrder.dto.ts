@@ -128,6 +128,10 @@ export class OrderStop {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  comments?: string;
 }
 
 export class CreateOrderDto {

@@ -127,6 +127,10 @@
           <p style="margin:0 0 8px;color:#000000">Payment Method: {{paymentMethod}}</p>
         {{/if}}
 
+        {{#if comments}}
+          <p style="margin:0 0 8px;color:#000000">Comments: {{comments}}</p>
+        {{/if}}
+
         {{#if images}}
           <div style="display:flex;flex-wrap:wrap;gap:10px;">
             {{#each images}}

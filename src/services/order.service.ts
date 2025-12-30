@@ -212,6 +212,7 @@ export default class OrderService {
         items: stopData.items,
         totalPrice: stopData.totalPrice ?? null,
         paymentMethod: stopData.paymentMethod,
+        comments: stopData.comments ?? null,
       });
 
       stopEntities.push(stop);

@@ -55,6 +55,9 @@ export class OrderStop extends BaseEntity {
   @Column({ type: "enum", enum: PaymentMethod, nullable: true, default: PaymentMethod.CASH_ON_DELIVERY })
   paymentMethod: PaymentMethod;
 
+  @Column({ type: "text", nullable: true })
+  comments: string;
+
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;
 }
