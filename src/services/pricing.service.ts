@@ -167,7 +167,7 @@ export default class PricingService {
             username: env.DHL.API_KEY,
             password: env.DHL.API_SECRET,
         }
-        const response = await axios.get(env.DHL.DOMAIN, { params, auth });
+        const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
         console.log('DHL response data:', response.data.products);
         const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
         const estimatedDeliveryDays =  response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
