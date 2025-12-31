@@ -139,8 +139,8 @@ export default class OrderService {
           length: orderData.shipment?.length,
           width: orderData.shipment?.width,
           height: orderData.shipment?.height,
-          plannedShippingDate: orderData.shipment.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
-          shippingCompany: orderData.shipment ? orderData.shipment.shippingCompany : null,
+          plannedShippingDate: orderData.shipment?.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
+          shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
           lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
         });
         const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
