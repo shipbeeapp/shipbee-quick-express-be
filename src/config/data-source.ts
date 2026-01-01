@@ -89,6 +89,7 @@ import {AddCommentsInStops1767086905430} from "../migrations/1767086905430-AddCo
 import { AddIsSandboxInUser1767088062249 } from '../migrations/1767088062249-AddIsSandboxInUser.js';
 import { AddFieldsInShipment1767103859531 } from "../migrations/1767103859531-AddFieldsInShipment.js";
 import { AddDeliveryFeeInStop1767108713906 } from '../migrations/1767108713906-AddDeliveryFeeInStop.js';
+import { MakePickUpDateNullable1767260830156 } from '../migrations/1767260830156-MakePickUpDateNullable.js';
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -190,6 +191,7 @@ export const AppDataSource = new DataSource({
     AddIsSandboxInUser1767088062249,
     AddFieldsInShipment1767103859531,
     AddDeliveryFeeInStop1767108713906,
+    MakePickUpDateNullable1767260830156,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

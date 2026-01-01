@@ -140,7 +140,8 @@ export default class PricingService {
             }
         } catch (error) {
             console.error('Error fetching current pricing:', error);
-            throw new Error(`Error fetching current pricing: ${error.message}`);
+            console.error(error.response?.data?.message);
+            throw new Error(`Error fetching current pricing: ${error.message} ${error.response?.data?.detail || ''}`.trim());
         }
  }
  

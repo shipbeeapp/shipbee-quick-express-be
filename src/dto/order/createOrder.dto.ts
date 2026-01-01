@@ -242,6 +242,7 @@ export class CreateOrderDto {
   // @IsString()
   // itemDescription?: string;
 
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsDateString()
   pickUpDate: string;
 
