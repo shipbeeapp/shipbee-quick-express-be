@@ -115,6 +115,21 @@ export function formatAddress(address: any): string {
     return parts.join(', '); // joins with comma breaks for HTML formatting
   }
 
+  export function formatAddressSingleLine(address: any): string {
+    if (!address) return '';
+  
+    const parts = [
+        address.district && `${address.district}`,
+        address.street && `${address.street}`,
+        address.buildingNumber && `${address.buildingNumber}`,
+        address.floor && `${address.floor}`,
+        address.apartmentNumber && `${address.apartmentNumber}`,
+        address.zone && `${address.zone}`,
+        address.landmarks && `${address.landmarks}`,
+      ].filter(Boolean);
+
+    return parts.join(', '); // joins with comma breaks for HTML formatting
+  }
 
 export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string, stopNumber?: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', `${emailType}.html`);

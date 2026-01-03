@@ -13,7 +13,8 @@ import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation, 
         sendOrderCancellationEmail, 
         sendOrderDetailsViaSms,
-        sendArrivalNotification
+        sendArrivalNotification,
+        formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import { Between, MoreThan, In } from "typeorm";
@@ -44,6 +45,7 @@ import { OrderType } from "../utils/enums/orderType.enum.js";
 import axios from "axios";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import {formatAddress}  from "../services/email.service.js";
+import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 
 @Service()
 export default class OrderService {
@@ -234,10 +236,13 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
      orderData.orderNo = order.orderNo;
-     await sendOrderConfirmation(orderData, total, orderData.vehicleType, env.SMTP.USER, 'admin').catch((err) => {
+     let recipientAdminMail;
+     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
+     else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
+     await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
        console.error("Error sending emaill to admin:", err);
       });
-     console.log('sent mail to admin: ', env.SMTP.USER);
+     console.log('sent mail to admin: ', recipientAdminMail);
      if (createdByUser.email) {
       await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
         console.error("Error sending email to user:", err);
@@ -1163,10 +1168,10 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               postalCode: "",
               cityName: orderData.fromAddress.city,
               countryCode: getCountryIsoCode(orderData.fromAddress.country),
-              addressLine1: formatAddress(orderData.fromAddress),
+              addressLine1: formatAddressSingleLine(orderData.fromAddress),
             },
             contactInformation: {
-              phone: orderData.senderPhoneNumber,
+              phone: `+${getCountryCallingCode(getCountryIsoCode(orderData.fromAddress.country) as CountryCode)} ${orderData.senderPhoneNumber}`,
               companyName: orderData.senderName,
               fullName: orderData.senderName,
           }
@@ -1176,10 +1181,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
             postalCode: "",
             cityName: orderData.stops[0].toAddress.city,
             countryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
-            addressLine1: formatAddress(orderData.stops[0].toAddress),
+            addressLine1: formatAddressSingleLine(orderData.stops[0].toAddress),
           },
           contactInformation: {
-            phone: orderData.stops[0].receiverPhoneNumber,
+            
+            phone: `+${getCountryCallingCode(getCountryIsoCode(orderData.stops[0].toAddress.country) as CountryCode)} ${orderData.stops[0].receiverPhoneNumber}`,
             companyName: orderData.stops[0].receiverName,
             fullName: orderData.stops[0].receiverName,
         }
@@ -1210,8 +1216,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         }
       }
     }
-        
-    };
+
+    
+  };
+    console.log("phone number from:", data.customerDetails.shipperDetails.contactInformation.phone)
+    console.log("phone number to:", data.customerDetails.receiverDetails.contactInformation.phone)
     const config = {
       auth: {
         username: env.DHL.API_KEY,
@@ -1223,7 +1232,6 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     };
     console.log("url:", env.DHL.DOMAIN + '/shipments');
     const response = await axios.post(env.DHL.DOMAIN + '/shipments', data, config);
-    console.log("DHL shipment created successfully:", response.data);
     if (response.data.status && response.data.status.code !== "200") {
       console.error("DHL API error:", response.data);
       throw new Error(`DHL API error: ${response.data.detail}`);

@@ -69,5 +69,6 @@ export const env = {
   },
   GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
   GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-  FIREBASE_CONFIG_PATH: process.env.FIREBASE_CONFIG_PATH || "/etc/secrets/firebase-account.json", 
+  FIREBASE_CONFIG_PATH: process.env.FIREBASE_CONFIG_PATH || "/etc/secrets/firebase-account.json",
+  EXPRESS_ADMIN_EMAIL: process.env.EXPRESS_ADMIN_EMAIL || 'ems@shipbee.io' 
 };

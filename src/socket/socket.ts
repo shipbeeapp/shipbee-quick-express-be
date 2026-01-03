@@ -15,6 +15,7 @@ import { Driver } from "../models/driver.model.js"; // Assuming you have a Drive
 import { broadcastDriverStatusUpdate, broadcastOrderTrackingUpdate, broadcastDriverTrackingUpdate } from "../controllers/user.controller.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import {sendFcmNotification} from "../firebase/fcm.utils.js";
+import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -228,6 +229,11 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       console.log(`❌ Driver ${driverId} vehicle type ${vehicleType} does not match order ${order.id} vehicle type ${order.vehicleType}`);
       continue;
     }
+
+    if (order.status !== OrderStatus.PENDING) {
+      console.log(`❌ Order ${order.id} is not in PENDING status, current status: ${order.status}`);
+      continue;
+    }
     if (socketId) {
       console.log(`🚚 Checking driver ${driverId} for order ${order.id} with vehicleType ${vehicleType} and location ${currentLocation}`);
       console.log(`checking if this is a cancellation emit with locationOnCancel: ${locationOnCancel}`);
@@ -327,6 +333,11 @@ export async function emitOrderToDriver(driverId: string, order: Order, fcmToken
   const io = getSocketInstance();
   const onlineDrivers = getOnlineDrivers();
   const driver = onlineDrivers.get(driverId);
+
+  if (order.status !== OrderStatus.PENDING) {
+    console.log(`❌ Order ${order.id} is not in PENDING status, current status: ${order.status}`);
+    return;
+  }
 
   if (driver) {
     if (driver.socketId) {
