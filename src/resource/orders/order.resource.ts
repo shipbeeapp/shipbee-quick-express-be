@@ -39,6 +39,13 @@ export class OrderResponseDto {
       email: string;
       phoneNumber: string;
     };
+
+    createdBy: {
+      id: string;
+      name: string;
+      email: string;
+      phoneNumber: string;
+    };
   
     receiver?: {
       id: string;
@@ -246,6 +253,12 @@ export class OrderResponseDto {
         name: order.sender?.name,
         email: order.sender?.email,
         phoneNumber: order.sender?.phoneNumber,
+      },
+      createdBy: {
+        id: order.createdBy?.id,
+        name: order.createdBy?.name,
+        email: order.createdBy?.email,
+        phoneNumber: order.createdBy?.phoneNumber,
       },
       stops,
       serviceSubcategory: {
