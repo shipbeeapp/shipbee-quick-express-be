@@ -382,7 +382,7 @@ export default class OrderService {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ["sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
-            "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle"
+            "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle", "createdBy"
       ],
     });
     if (!order) {

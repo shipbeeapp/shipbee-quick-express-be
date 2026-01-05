@@ -232,7 +232,7 @@ export class OrderController {
       }
       const order = await this.orderService.getOrderDetails(orderId);
       // Check if the authenticated user is the sender or an admin
-      if (req.userId !== order.sender.id && req.email !== env.ADMIN.EMAIL) {
+      if (req.userId !== order.createdBy.id && req.email !== env.ADMIN.EMAIL) {
         return res.status(403).json({ success: false, message: "You are not authorized to view this order." });
       }
       if (!order) {
