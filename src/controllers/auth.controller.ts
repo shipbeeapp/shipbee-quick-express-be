@@ -344,7 +344,7 @@ export class AuthController {
     }
 
     private verifyOtp = async (req, res) => {
-        const { emailOrPhone, otp } = req.body;
+        const { emailOrPhone, otp, serviceType } = req.body;
         // Here you would typically verify the OTP against your database or cache
         // For this example, we'll just return a success message
         if (!emailOrPhone || !otp) {
@@ -364,6 +364,13 @@ export class AuthController {
         if (user.otp !== otp) {
             return res.status(400).json({ success: false, message: 'Invalid OTP.' });
         }
+        if (serviceType && serviceType === ServiceSubcategoryName.INTERNATIONAL){
+            user.hasLoggedInExpress = true;
+        }
+        if (serviceType && serviceType === ServiceSubcategoryName.PERSONAL_QUICK){
+            user.hasLoggedInQuick = true;
+        }
+        await this.userService.saveUser(user);
         const userData = { 
             email: user.email,
             name: user.name,

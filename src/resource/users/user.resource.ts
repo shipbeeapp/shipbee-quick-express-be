@@ -10,6 +10,8 @@ export class UserResponseDto {
     updatedAt: Date;
     companyName: string;
     type: userType;
+    hasLoggedInQuick?: boolean;
+    hasLoggedInExpress?: boolean;
 }
 
 export function toUserResponseDto(user: User): UserResponseDto {
@@ -22,5 +24,7 @@ export function toUserResponseDto(user: User): UserResponseDto {
     userResponseDto.updatedAt = user.updatedAt;
     userResponseDto.companyName = user.companyName;
     userResponseDto.type = user.type;
+    userResponseDto.hasLoggedInQuick = user.hasLoggedInQuick;
+    userResponseDto.hasLoggedInExpress = user.hasLoggedInExpress;
     return userResponseDto;
 }

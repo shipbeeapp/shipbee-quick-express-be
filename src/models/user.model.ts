@@ -54,6 +54,12 @@ export class User extends BaseEntity {
   @Column({ type: "timestamp", nullable: true })
   resetPasswordExpires: Date;
 
+  @Column({ type: "boolean", nullable: true })
+  hasLoggedInQuick: boolean;
+
+  @Column({ type: "boolean", nullable: true })
+  hasLoggedInExpress: boolean;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];
