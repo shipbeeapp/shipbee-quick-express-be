@@ -75,7 +75,7 @@ export class AuthController {
 
     private login = async (req, res) => {
         // This is a placeholder for the actual implementation
-        const { emailOrPhone, password } = req.body;
+        const { emailOrPhone, password, serviceType } = req.body;
 
         if (!emailOrPhone || !password) {
             return res.status(400).json({ success: false, message: 'Email or phone number and password are required.' });
@@ -94,6 +94,19 @@ export class AuthController {
             if (!isPasswordValid) {
                 return res.status(401).json({ success: false, message: 'Invalid user credentials.' });
             }
+
+            if (serviceType === ServiceSubcategoryName.PERSONAL_QUICK) {
+                if (!user.hasLoggedInQuick) { 
+                    user.hasLoggedInQuick = true;
+                    await this.userService.saveUser(user);
+                }
+            } else if (serviceType === ServiceSubcategoryName.INTERNATIONAL) {
+                if (!user.hasLoggedInExpress) {
+                    user.hasLoggedInExpress = true;
+                    await this.userService.saveUser(user);
+                }
+            }
+            
             const userData = {
                 name: user.name,
                 email: user.email,
@@ -365,12 +378,18 @@ export class AuthController {
             return res.status(400).json({ success: false, message: 'Invalid OTP.' });
         }
         if (serviceType && serviceType === ServiceSubcategoryName.INTERNATIONAL){
-            user.hasLoggedInExpress = true;
+            if (!user.hasLoggedInExpress) {
+                user.hasLoggedInExpress = true;
+                await this.userService.saveUser(user);
+            }
         }
         if (serviceType && serviceType === ServiceSubcategoryName.PERSONAL_QUICK){
-            user.hasLoggedInQuick = true;
+            if (!user.hasLoggedInQuick) {
+                user.hasLoggedInQuick = true;
+                await this.userService.saveUser(user);
+            }
         }
-        await this.userService.saveUser(user);
+
         const userData = { 
             email: user.email,
             name: user.name,
