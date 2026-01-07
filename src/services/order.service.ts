@@ -1066,12 +1066,13 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
   }
   
   // Check if a given order belongs to the user
-  async isOrderOwnedByUser(orderId: string, userId: string): Promise<boolean> {
+  async isOrderOwnedByUser(orderId: string, userId: string): Promise<Order | null> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId, createdBy: { id: userId } },
-      select: ["id"],
+      select: ["id", "status"],
+      relations: ["stops"]
     });
-    return !!order;
+    return order;
   }
 
   async validateReceiverTrackingToken(token: string) {

@@ -43,12 +43,20 @@ export async function broadcastOrderTrackingUpdate(orderId: string, driverLocati
       client.res.write(`data: ${JSON.stringify({ orderId, driverLocation })}\n\n`);
     } else if (client.type === "api" && client.userId) {
       console.log("Checking order ownership for userId:", client.userId);
-      const isOwned = await orderService.isOrderOwnedByUser(orderId, client.userId);
-      const getCurrentActiveStop = await orderService.getCurrentActiveStop(orderId);
-      const clientStopId = getCurrentActiveStop ? getCurrentActiveStop.clientStopId : null; 
-      console.log(`Order ${orderId} owned by user ${client.userId}:`, isOwned);
-      if (isOwned) {
-        client.res.write(`data: ${JSON.stringify({ orderId: clientStopId, driverLocation })}\n\n`);
+      const order = await orderService.isOrderOwnedByUser(orderId, client.userId);
+      if (order) {
+        console.log(`Order ${orderId} owned by user ${client.userId}:`);
+        const nonCompletedStops = order.stops.filter(stop => stop.status !== OrderStatus.COMPLETED);
+        for (const stop of nonCompletedStops) {
+          let status: OrderStatus;
+          if (order.status === OrderStatus.EN_ROUTE_TO_PICKUP)
+            status = OrderStatus.EN_ROUTE_TO_PICKUP;
+          else if (order.status === OrderStatus.ACTIVE)
+            status = OrderStatus.ACTIVE;
+          else status = order.status;
+          console.log("Sending tracking update for stop:", stop.clientStopId, "with status:", status); 
+          client.res.write(`data: ${JSON.stringify({ orderId: stop.clientStopId, driverLocation, status })}\n\n`);
+        }
       }
     }
     else if (client.type === "receiver" && client.orderId === orderId) {
