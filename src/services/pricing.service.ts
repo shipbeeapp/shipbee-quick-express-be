@@ -191,15 +191,16 @@ export default class PricingService {
             order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
         });
         if (!currentPricing) {
-            throw new Error('No pricing found for the given criteria');
+            console.error(`No pricing Found for given criteria...from ${getPricingDTO.fromCountry} to ${getPricingDTO.toCountry} `)
         }
-        const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
-        pricingList.push({
-            carrier: 'Qatar Post',
-            totalCost: Number(qpCost.toFixed(1)),
-            estimatedDeliveryDays: currentPricing.transitTime
-        });
-
+        else {
+            const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+            pricingList.push({
+                carrier: 'Qatar Post',
+                totalCost: Number(qpCost.toFixed(1)),
+                estimatedDeliveryDays: currentPricing.transitTime
+            });
+        }
         return pricingList;
     } catch (error) {
         console.error('Error fetching DHL pricing:', error);
