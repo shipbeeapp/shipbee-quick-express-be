@@ -104,6 +104,7 @@ export class OrderResponseDto {
       items?: any;
       totalPrice?: number;
       paymentMethod?: PaymentMethod;
+      clientStopId?: string;
       comments?: string;
   }[];
   
@@ -226,6 +227,7 @@ export class OrderResponseDto {
       items: stop.items,
       totalPrice: stop.totalPrice,
       paymentMethod: stop.paymentMethod,
+      clientStopId: stop.clientStopId,
       comments: stop.comments,
     };
   }) || [];
