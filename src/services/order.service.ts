@@ -961,6 +961,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           return {
             orderId,
             status: order.status,
+            amount: clientStop.totalPrice,
+            deliveryFee: clientStop.deliveryFee,
             driver: order.driver ? { 
               name: order.driver.name, 
               phoneNumber: order.driver.phoneNumber,
@@ -968,6 +970,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               qid: order.driver.qid,
               licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
               licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,
+              currentLocation: getCurrentLocationOfDriver(order.driver.id)
             } : null,
           };
       } catch (error) {
