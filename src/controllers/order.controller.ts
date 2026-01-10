@@ -44,6 +44,7 @@ export class OrderController {
     );
 
     this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
+    this.router.get("/orders/dashboard", authenticationMiddleware, this.getOrdersDashboard.bind(this))
       
     this.router.get(
       "/orders/view-order-status",
@@ -497,6 +498,22 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller getting orders report:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async getOrdersDashboard(req: AuthenticatedRequest, res: Response) {
+    try {
+      console.log("Authenticated user ID:", req.userId);
+      console.log("Authenticated user email:", req.email);
+      let dashboard;
+      console.log("admin in email: ", env.ADMIN.EMAIL);
+      const {serviceType} = req.query;
+      if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard("admin");
+      else dashboard = await this.orderService.getOrdersDashboard(req.userId, serviceType as string);
+      res.status(200).json({ success: true, dashboard: dashboard });
+    } catch (error) {
+      console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

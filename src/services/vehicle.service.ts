@@ -65,13 +65,13 @@ export default class VehicleService {
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Canter_Truck_l8vhbt.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Flat_Bed_Truck_crrd0d.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Low_Bed_Truck_gopie7.png",
-      "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473702/Garbage_Removal_Truck_vdljnt.png",
+      // "https://res.cloudinary.com/dgzd4faca/image/upload//v1760473702/Garbage_Removal_Truck_vdljnt.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Chiller_Van_w8gf6o.png",
       "https://res.cloudinary.com/dgzd4faca/image/upload/v1760473703/Freezer_Van_e9wzef.png",
 
     ];
 
-    const vehicleNames = Object.values(VehicleType);
+    const vehicleNames = Object.values(VehicleType).filter(type => type != VehicleType.GARBAGE_REMOVAL_TRUCK);
 
     // Combine name and image in a single structure
     const vehicleData = vehicleNames.map((name, index) => ({
@@ -153,7 +153,7 @@ export default class VehicleService {
       }
 
       else if (vehicle.name == VehicleType.FLAT_BED_TRAILER || vehicle.name == VehicleType.LOW_BED_TRAILER 
-              || vehicle.name == VehicleType.GARBAGE_REMOVAL_TRUCK || vehicle.name == VehicleType.CHILLER_VAN
+             || vehicle.name == VehicleType.CHILLER_VAN
               || vehicle.name == VehicleType.FREEZER_VAN || vehicle.name == VehicleType.CANTER_TRUCK) 
       {
         reason = "Price at request";

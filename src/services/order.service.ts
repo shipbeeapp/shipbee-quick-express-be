@@ -1249,4 +1249,34 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       throw new Error(`Could not create DHL shipment: ${error.response.data.detail}`);
     }
   }
+
+  async getOrdersDashboard(userId: string, serviceType?: string) {
+    try {
+        const dashboardQuery = this.orderRepository
+          .createQueryBuilder("order")
+          .innerJoin("order.serviceSubcategory", "subcategory")
+          .select("order.status", "status")
+          .addSelect("COUNT(order.id)", "count")
+
+        if (userId !== "admin") {
+          dashboardQuery.andWhere("order.createdById = :userId", {
+            userId
+          })
+        }
+
+        if (serviceType) {
+          dashboardQuery.andWhere("subcategory.name = :serviceType", {
+            serviceType,
+          });
+        }
+
+        dashboardQuery.groupBy("order.status")
+        const dashboard = await dashboardQuery.getRawMany();
+        return dashboard;
+      }
+    catch (err) {
+      console.error(err)
+      throw new Error(`Couldn't fetch orders dashboard: ${err.message}`)
+    }
+  }
 }
