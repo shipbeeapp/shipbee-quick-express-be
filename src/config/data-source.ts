@@ -91,6 +91,7 @@ import { AddFieldsInShipment1767103859531 } from "../migrations/1767103859531-Ad
 import { AddDeliveryFeeInStop1767108713906 } from '../migrations/1767108713906-AddDeliveryFeeInStop.js';
 import { MakePickUpDateNullable1767260830156 } from '../migrations/1767260830156-MakePickUpDateNullable.js';
 import {AddLoggedInFieldsInUser1767619399914} from "../migrations/1767619399914-AddLoggedInFieldsInUser.js";
+import {AddVehicleApprovalInDriverTable1768251957627} from "../migrations/1768251957627-AddVehicleApprovalInDriverTable.js"
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -194,6 +195,7 @@ export const AppDataSource = new DataSource({
     AddDeliveryFeeInStop1767108713906,
     MakePickUpDateNullable1767260830156,
     AddLoggedInFieldsInUser1767619399914,
+    AddVehicleApprovalInDriverTable1768251957627,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

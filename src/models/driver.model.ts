@@ -133,6 +133,12 @@ export class Driver extends BaseEntity {
     @Column({ type: "text", nullable: true })
     fcmToken: string;
 
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    vehicleInfoApprovalStatus: ApprovalStatus;
+
+    @Column({ type: "text", nullable: true })
+    vehicleInfoRejectionReason: string;
+    
     @OneToMany(() => DriverBroadcastMessage, (driverBroadcastMessage) => driverBroadcastMessage.driver)
     broadcastMessages: DriverBroadcastMessage[];
 }

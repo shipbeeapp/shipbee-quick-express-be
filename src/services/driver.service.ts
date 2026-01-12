@@ -229,6 +229,8 @@ export default class DriverService {
                     "driver.licenseRejectionReason",
                     "driver.businessDocsApprovalStatus",
                     "driver.businessDocsRejectionReason",
+                    "driver.vehicleInfoApprovalStatus",
+                    "driver.vehicleInfoRejectionReason",
                     "businessOwner.id",
                     "businessOwner.name",
                     "businessOwner.phoneNumber",
@@ -250,9 +252,7 @@ export default class DriverService {
                     "vehicle.leftPhoto",
                     "vehicle.rightPhoto",
                     "vehicle.registrationFront",
-                    "vehicle.registrationBack",
-                    "vehicle.infoApprovalStatus",
-                    "vehicle.infoRejectionReason"
+                    "vehicle.registrationBack"
                 ])
     }
 
@@ -863,10 +863,9 @@ export default class DriverService {
   }
 
   //approvedWithoutVehicle flag used so that admin can approve a driver even if he hasnt entered his vehicle details yet
-  async updateDriverSignUpStatus(driverId: string, approvedWithoutVehicle: ApprovalStatus = null) {
+  async updateDriverSignUpStatus(driverId: string) {
     const driver = await this.driverRepository.findOne({
       where: { id: driverId },
-      relations: ["vehicle"],
     });
 
     if (!driver) throw new Error("Driver not found");
@@ -875,14 +874,12 @@ export default class DriverService {
     const allApproved =
       driver.qidApprovalStatus === ApprovalStatus.APPROVED &&
       driver.licenseApprovalStatus === ApprovalStatus.APPROVED &&
-      (driver.vehicle?.infoApprovalStatus || approvedWithoutVehicle) === ApprovalStatus.APPROVED;
+      driver.vehicleInfoApprovalStatus === ApprovalStatus.APPROVED;
 
-    console.log("approvedWithoutvehicle: ", approvedWithoutVehicle)
     const anyRejected =
       driver.qidApprovalStatus === ApprovalStatus.REJECTED ||
       driver.licenseApprovalStatus === ApprovalStatus.REJECTED ||
-      driver.vehicle?.infoApprovalStatus === ApprovalStatus.REJECTED ||
-      approvedWithoutVehicle === ApprovalStatus.REJECTED;
+      driver.vehicleInfoApprovalStatus === ApprovalStatus.REJECTED
     
     console.log("any Rejected:" , anyRejected)
     console.log("all approved: ", allApproved)
@@ -928,27 +925,17 @@ export default class DriverService {
   
   async approveVehicleInfo(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
     const driver = await this.driverRepository.findOne({
-      where: { id: driverId },
-      relations: ["vehicle", "businessOwner"],
+      where: { id: driverId }
     });
 
     if (!driver) {
       throw new Error(`Driver with ID ${driverId} not found`);
     }
-    // if (!driver.vehicle) {
-    //   throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
-    // }
-    let approvedWithoutVehicle;
-    if (driver.vehicle) {
-        driver.vehicle.infoApprovalStatus = status;
-        driver.vehicle.infoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
-        await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
-    }
-    else {
-        if (driver.businessOwner) approvedWithoutVehicle = status;
-    }
-    console.log("approvedWithoutVehicle in approve veh: ", approvedWithoutVehicle)
-    await this.updateDriverSignUpStatus(driverId, approvedWithoutVehicle);
+
+    driver.vehicleInfoApprovalStatus = status;
+    driver.vehicleInfoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    await this.driverRepository.save(driver);
+    await this.updateDriverSignUpStatus(driverId);
   }
 
   async approveBusinessDocs(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
