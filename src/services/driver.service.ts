@@ -862,7 +862,8 @@ export default class DriverService {
     }
   }
 
-  async updateDriverSignUpStatus(driverId: string) {
+  //approvedWithoutVehicle flag used so that admin can approve a driver even if he hasnt entered his vehicle details yet
+  async updateDriverSignUpStatus(driverId: string, approvedWithoutVehicle: ApprovalStatus = null) {
     const driver = await this.driverRepository.findOne({
       where: { id: driverId },
       relations: ["vehicle"],
@@ -874,13 +875,17 @@ export default class DriverService {
     const allApproved =
       driver.qidApprovalStatus === ApprovalStatus.APPROVED &&
       driver.licenseApprovalStatus === ApprovalStatus.APPROVED &&
-      driver.vehicle?.infoApprovalStatus === ApprovalStatus.APPROVED;
+      (driver.vehicle?.infoApprovalStatus || approvedWithoutVehicle) === ApprovalStatus.APPROVED;
 
+    console.log("approvedWithoutvehicle: ", approvedWithoutVehicle)
     const anyRejected =
       driver.qidApprovalStatus === ApprovalStatus.REJECTED ||
       driver.licenseApprovalStatus === ApprovalStatus.REJECTED ||
-      driver.vehicle?.infoApprovalStatus === ApprovalStatus.REJECTED;
-
+      driver.vehicle?.infoApprovalStatus === ApprovalStatus.REJECTED ||
+      approvedWithoutVehicle === ApprovalStatus.REJECTED;
+    
+    console.log("any Rejected:" , anyRejected)
+    console.log("all approved: ", allApproved)
     if (anyRejected) {
       driver.signUpStatus = DriverSignupStatus.REJECTED;
     } else if (allApproved) {
@@ -924,21 +929,26 @@ export default class DriverService {
   async approveVehicleInfo(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
     const driver = await this.driverRepository.findOne({
       where: { id: driverId },
-      relations: ["vehicle"],
+      relations: ["vehicle", "businessOwner"],
     });
 
     if (!driver) {
       throw new Error(`Driver with ID ${driverId} not found`);
     }
-    if (!driver.vehicle) {
-      throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
+    // if (!driver.vehicle) {
+    //   throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
+    // }
+    let approvedWithoutVehicle;
+    if (driver.vehicle) {
+        driver.vehicle.infoApprovalStatus = status;
+        driver.vehicle.infoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+        await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
     }
-
-    driver.vehicle.infoApprovalStatus = status;
-    driver.vehicle.infoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
-    await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
-
-    await this.updateDriverSignUpStatus(driverId);
+    else {
+        if (driver.businessOwner) approvedWithoutVehicle = status;
+    }
+    console.log("approvedWithoutVehicle in approve veh: ", approvedWithoutVehicle)
+    await this.updateDriverSignUpStatus(driverId, approvedWithoutVehicle);
   }
 
   async approveBusinessDocs(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
