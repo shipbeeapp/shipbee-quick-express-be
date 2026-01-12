@@ -17,6 +17,7 @@ import { PricingController } from "./controllers/pricing.controller.js";
 import { PromoCodeController } from "./controllers/promoCode.controller.js";
 import { ShopSettingsController } from "./controllers/shopSettings.controller.js";
 import { BroadcastMessageController } from "./controllers/broadcastMessage.controller.js";
+import { externalTrackingSocket } from "./socket/external-tracking-socket.js";
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
@@ -47,6 +48,8 @@ const app = new App(
 const server = http.createServer(app.app);
 initializeSocket(server); // ✅ inject socket here
 
+externalTrackingSocket.connect()
+
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
@@ -55,6 +58,7 @@ app.initializeDataSource()
   console.log("Data Source initialized successfully!");
   const orderService = Container.get(OrderService);
   await schedulePendingOrdersOnStartup(orderService);
+  await orderService.preloadAnsarOrders()
   server.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
   });

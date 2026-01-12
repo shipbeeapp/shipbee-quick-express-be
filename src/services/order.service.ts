@@ -17,7 +17,7 @@ import {sendOrderConfirmation,
         formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import { Between, MoreThan, In } from "typeorm";
+import { Between, MoreThan, In, Not } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
@@ -47,6 +47,11 @@ import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import {formatAddress}  from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 
+interface AnsarOrderInfo {
+  orderNo: number;
+  status: OrderStatus;
+}
+
 @Service()
 export default class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -60,6 +65,7 @@ export default class OrderService {
   private orderCancellationRequestRepository = AppDataSource.getRepository(OrderCancellationRequest);
   private promoCodeService = Container.get(PromoCodeService);
   private orderStopRepository = AppDataSource.getRepository(OrderStop);
+  private ansarOrders: Map<string, AnsarOrderInfo> = new Map();
   // private mailService = Container.get(MailService);  
 
   constructor() {}
@@ -177,6 +183,9 @@ export default class OrderService {
       });
 
     await queryRunner.manager.save(order);
+    if (madeByClient) {
+      this.addAnsarOrder(order.id, order.orderNo, order.status)
+    }
 
     // 🔹 Step 4: Create multiple stops
     if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK && (!orderData.stops || orderData.stops.length === 0)) {
@@ -504,6 +513,7 @@ export default class OrderService {
     console.log('sent mail to admin');
     broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
     broadcastDriverStatusUpdate(driverId, DriverStatus.ON_DUTY); // Notify all connected clients about the driver status update
+    this.updateAnsarOrderStatus(order.id, OrderStatus.ASSIGNED)
   } catch (err) {
     await queryRunner.rollbackTransaction();
     throw err;
@@ -546,6 +556,7 @@ export default class OrderService {
         // Reload order with relations
         console.log('sent mail to admin');
         broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+        this.updateAnsarOrderStatus(order.id, OrderStatus.EN_ROUTE_TO_PICKUP);
       }
       
       else {
@@ -576,6 +587,7 @@ export default class OrderService {
         stopNumber = currentStop.sequence;
         console.log(`Order ${orderId} by driver ${driverId} is going to stop #${currentStop.sequence}`);
         broadcastOrderUpdate(order.id, order.status, currentStop.sequence); // Notify all connected clients about the order status update
+        this.updateAnsarOrderStatus(order.id, OrderStatus.ACTIVE)
       }
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status', isPickup ? "pickup": stopNumber.toString()).catch((err) => {
         console.error("Error sending email to admin:", err);
@@ -637,6 +649,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         });
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+      this.removeAnsarOrder(order.id)
     }
     else {
       console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
@@ -1279,4 +1292,53 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       throw new Error(`Couldn't fetch orders dashboard: ${err.message}`)
     }
   }
+
+  async preloadAnsarOrders() {
+
+    const ansarOrdersFromDB = await this.orderRepository.find({
+      where: {
+        createdBy: { name: "Ansar" },
+        status: Not(In([OrderStatus.COMPLETED, OrderStatus.CANCELED]))
+      },
+      select: ["id", "orderNo", "status"]
+    });
+
+    ansarOrdersFromDB.forEach(order => {
+      this.ansarOrders.set(order.id, { orderNo: order.orderNo, status: order.status });
+    });
+
+    console.log(`Preloaded Ansar orders: ${JSON.stringify(this.ansarOrders, null, 2)}`);
+    console.log(`Number of Ansar orders: ${this.ansarOrders.size}`)
+  }
+
+  addAnsarOrder(orderId: string, orderNo: number, status: OrderStatus) {
+    console.log(`added ansar order with order id: ${orderId} orderNo: ${orderNo} status: ${status}`)
+    this.ansarOrders.set(orderId, { orderNo, status });
+  }
+
+  /** Remove order (completed or reassigned) */
+  removeAnsarOrder(orderId: string) {
+    console.log("removed orderId from ansar", orderId)
+    this.ansarOrders.delete(orderId);
+  }
+
+  /** Check if order belongs to Ansar */
+  isAnsarOrder(orderId: string): boolean {
+    return this.ansarOrders.has(orderId);
+  }
+
+  /** Get Ansar order info */
+  getAnsarOrderInfo(orderId: string): AnsarOrderInfo | null {
+    return this.ansarOrders.get(orderId) || null;
+  }
+
+  updateAnsarOrderStatus(orderId: string, status: OrderStatus) {
+    console.log(`updated order status for orderId: ${orderId} to status: ${status}`)
+    const orderInfo = this.ansarOrders.get(orderId);
+    if (orderInfo) {
+      orderInfo.status = status;
+      this.ansarOrders.set(orderId, orderInfo);
+    }
+  }
+
 }

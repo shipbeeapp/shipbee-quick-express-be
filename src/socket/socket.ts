@@ -16,6 +16,7 @@ import { broadcastDriverStatusUpdate, broadcastOrderTrackingUpdate, broadcastDri
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import {sendFcmNotification} from "../firebase/fcm.utils.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
+import { externalTrackingSocket } from "./external-tracking-socket.js";
 
 type OnlineDriver = {
     socketId: string;
@@ -139,6 +140,22 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         console.log(`Emitting location update for order ID: ${orderId}`);
         broadcastOrderTrackingUpdate(orderId, currentLocation);
         io.to(`order-${orderId}`).emit("order-location", { orderId, currentLocation });
+        if (orderService.isAnsarOrder(orderId)) {
+          console.log("sending location update to ansar WS")
+          const [latStr, lngStr] = currentLocation.split(",");
+          const latitude = parseFloat(latStr);
+          const longitude = parseFloat(lngStr);
+          const order = orderService.getAnsarOrderInfo(orderId)
+          externalTrackingSocket.send({
+            route: "locationUpdate",
+            payload: {
+              id: order.orderNo,
+              status: order.status,
+              latitude,
+              longitude
+            }
+          })
+        }
     }
 });
 
