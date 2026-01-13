@@ -147,7 +147,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
           const longitude = parseFloat(lngStr);
           const order = orderService.getAnsarOrderInfo(orderId)
           externalTrackingSocket.send({
-            route: "locationUpdate",
+            route: "shipbeeUpdate",
             payload: {
               id: order.orderNo,
               status: order.status,
