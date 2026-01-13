@@ -219,6 +219,10 @@ export default class PricingService {
                 console.log(vehicleName)
                 console.log("distance: ", distance)
                 console.log("lifters: ", lifters)
+                if (distance > 15 && vehicleName == VehicleType.MOTORCYCLE) {
+                    console.warn('Max for motorcycle is 15km')
+                }
+                else {
                 const pricing = await this.calculatePricing({
                   vehicleType: vehicleName,
                   serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
@@ -230,6 +234,7 @@ export default class PricingService {
                     vehicleType: vehicleName,
                     totalCost: pricing.totalCost
                 }
+            }
               } catch (err) {
                   console.warn(`No pricing found for ${vehicleName}: ${err.message}`);
               }
