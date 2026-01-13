@@ -641,6 +641,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     if (allCompleted) {
       order.status = OrderStatus.COMPLETED;
       order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
+      order.driver.status = DriverStatus.ACTIVE;
       await this.orderRepository.save(order);
       await this.orderStatusHistoryService.createOrderStatusHistory(order);
       console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
@@ -649,6 +650,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         });
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+      broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
       this.removeAnsarOrder(order.id)
     }
     else {
