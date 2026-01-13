@@ -7,6 +7,7 @@ import { LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
 import { env } from "../config/environment.js";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import axios from "axios";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 
 @Service()
 export default class PricingService {
@@ -145,66 +146,97 @@ export default class PricingService {
         }
  }
  
- async getAllExpressPricings(getPricingDTO: GetPricingDTO) {
-    try {
-        const pricingList = [];
-        // DHL Pricing
-        const params = {
-            accountNumber: env.DHL.ACCOUNT_NUMBER,
-            originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
-            originCityName: getPricingDTO.fromCity,
-            destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
-            destinationCityName: getPricingDTO.toCity,
-            weight: getPricingDTO.weight,
-            length: getPricingDTO.length,
-            width: getPricingDTO.width,
-            height: getPricingDTO.height,
-            plannedShippingDate: getPricingDTO.plannedShippingDate,
-            isCustomsDeclarable: true,
-            unitOfMeasurement: "metric",
-        };
-        console.log('shipping date: ', getPricingDTO.plannedShippingDate)
-        const auth = {
-            username: env.DHL.API_KEY,
-            password: env.DHL.API_SECRET,
-        }
-        const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
-        console.log('DHL response data:', response.data.products);
-        const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
-        const estimatedDeliveryDays =  response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
-        console.log('DHL pricing:', cost, " estimated days: ", estimatedDeliveryDays);
-        pricingList.push({
-            carrier: 'DHL',
-            totalCost: Number(cost),
-            estimatedDeliveryDays
-        });
-
-        //Qatar Post
-        const currentPricing = await this.pricingRepository.findOne({
-            where: {
-                serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
-                fromCountry: getPricingDTO.fromCountry,
-                toCountry: getPricingDTO.toCountry,
-                maxWeight: MoreThanOrEqual(getPricingDTO.weight),
-                isCurrent: true
-            },
-            order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
-        });
-        if (!currentPricing) {
-            console.error(`No pricing Found for given criteria...from ${getPricingDTO.fromCountry} to ${getPricingDTO.toCountry} `)
-        }
-        else {
-            const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+    async getAllExpressPricings(getPricingDTO: GetPricingDTO) {
+        try {
+            const pricingList = [];
+            // DHL Pricing
+            const params = {
+                accountNumber: env.DHL.ACCOUNT_NUMBER,
+                originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+                originCityName: getPricingDTO.fromCity,
+                destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+                destinationCityName: getPricingDTO.toCity,
+                weight: getPricingDTO.weight,
+                length: getPricingDTO.length,
+                width: getPricingDTO.width,
+                height: getPricingDTO.height,
+                plannedShippingDate: getPricingDTO.plannedShippingDate,
+                isCustomsDeclarable: true,
+                unitOfMeasurement: "metric",
+            };
+            console.log('shipping date: ', getPricingDTO.plannedShippingDate)
+            const auth = {
+                username: env.DHL.API_KEY,
+                password: env.DHL.API_SECRET,
+            }
+            const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
+            console.log('DHL response data:', response.data.products);
+            const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
+            const estimatedDeliveryDays =  response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
+            console.log('DHL pricing:', cost, " estimated days: ", estimatedDeliveryDays);
             pricingList.push({
-                carrier: 'Qatar Post',
-                totalCost: Number(qpCost.toFixed(1)),
-                estimatedDeliveryDays: currentPricing.transitTime
+                carrier: 'DHL',
+                totalCost: Number(cost),
+                estimatedDeliveryDays
+            }); 
+
+            //Qatar Post
+            const currentPricing = await this.pricingRepository.findOne({
+                where: {
+                    serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                    fromCountry: getPricingDTO.fromCountry,
+                    toCountry: getPricingDTO.toCountry,
+                    maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                    isCurrent: true
+                },
+                order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
             });
-        }
-        return pricingList;
-    } catch (error) {
-        console.error('Error fetching DHL pricing:', error);
-        throw new Error(`Error fetching DHL pricing: ${error.message}`);
-    } 
-}
+            if (!currentPricing) {
+                console.error(`No pricing Found for given criteria...from ${getPricingDTO.fromCountry} to ${getPricingDTO.toCountry} `)
+            }
+            else {
+                const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+                pricingList.push({
+                    carrier: 'Qatar Post',
+                    totalCost: Number(qpCost.toFixed(1)),
+                    estimatedDeliveryDays: currentPricing.transitTime
+                });
+            }
+            return pricingList;
+        } catch (error) {
+            console.error('Error fetching DHL pricing:', error);
+            throw new Error(`Error fetching DHL pricing: ${error.message}`);
+        } 
+    }
+
+    async getAllQuickPricings(distance: number, lifters: number) {
+        const vehicleNames = Object.values(VehicleType).filter(type => type != VehicleType.GARBAGE_REMOVAL_TRUCK);
+        console.log("vehicle names")
+        console.log(vehicleNames)
+        const pricings = (await Promise.all(
+            vehicleNames.map(async (vehicleName) => {
+              try {
+                console.log(vehicleName)
+                console.log("distance: ", distance)
+                console.log("lifters: ", lifters)
+                const pricing = await this.calculatePricing({
+                  vehicleType: vehicleName,
+                  serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                  distance,
+                  lifters
+                });
+
+                return {
+                    vehicleType: vehicleName,
+                    totalCost: pricing.totalCost
+                }
+              } catch (err) {
+                  console.warn(`No pricing found for ${vehicleName}: ${err.message}`);
+              }
+            }
+           )
+         )
+        ).filter(Boolean);
+     return pricings;
+    }
 }

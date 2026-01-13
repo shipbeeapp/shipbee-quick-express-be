@@ -24,6 +24,7 @@ export class PricingController {
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updatePricing.bind(this));
     //get current pricing
     this.router.get(`${this.path}/calculate`, validateDto(GetPricingDTO), this.calculatePricing.bind(this));
+    this.router.get(`${this.path}/quick`, this.getQuickPricing.bind(this))
   }
 
     private async createPricing(req: AuthenticatedRequest, res: Response) {
@@ -66,6 +67,22 @@ export class PricingController {
         } catch (error) {
             console.error('Error fetching current pricing:', error);
             res.status(400).json({ error: `${error.message}` });
+        }
+    }
+
+    private async getQuickPricing(req: Request, res: Response) {
+        try {
+            const {distance, lifters} = req.body as {distance: number, lifters: number}
+            if (!distance) {
+                return res.status(400).json({success: false, message: "Distance is required"})
+            }
+            console.log("distance in req.body: ", distance, " lifters in req.body: ", lifters)
+            const quickPricings = await this.pricingService.getAllQuickPricings(distance, lifters);
+            res.status(200).json({success: true, pricing: quickPricings})
+        }
+        catch (err) {
+            console.error(err.message)
+            throw new Error(`Error fetching quick pricing: ${err.message}`)
         }
     }
 }
