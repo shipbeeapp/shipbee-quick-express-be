@@ -69,12 +69,15 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       const sessions = driverSessions.get(driverId) || [];
       sessions.push([now, null]);
       driverSessions.set(driverId, sessions);
-      await AppDataSource.getRepository(Driver).update(
-        { id: driverId },
-        { status: DriverStatus.ACTIVE, updatedAt: new Date()}
-      );
-      console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
-      broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
+      if (driver.status != DriverStatus.BUSY) {
+        await AppDataSource.getRepository(Driver).update(
+          { id: driverId },
+          { status: DriverStatus.ACTIVE, updatedAt: new Date()}
+        );
+        console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
+        broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
+      }
+      else console.log(`Driver ${driverId} is now busy with vehicle type ${vehicleType}`)
 
       console.log(`⏰ Current time is ${now.toISOString()}`);
       let window: Date;
