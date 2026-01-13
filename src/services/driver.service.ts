@@ -849,7 +849,7 @@ export default class DriverService {
           Total: invitedDrivers.length,
           Active: Number(rawCounts.find(r => r.status === DriverStatus.ACTIVE)?.count || 0),
           Offline: Number(rawCounts.find(r => r.status === DriverStatus.OFFLINE)?.count || 0),
-          OnDelivery: Number(rawCounts.find(r => r.status === DriverStatus.ON_DUTY)?.count || 0),
+          OnDelivery: Number(rawCounts.find(r => r.status === DriverStatus.BUSY)?.count || 0),
         };
 
         return {

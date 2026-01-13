@@ -485,7 +485,7 @@ export default class OrderService {
     // Update driver status to ON_DUTY
     await queryRunner.manager.getRepository(Driver).update(
       { id: driverId },
-      { status: DriverStatus.ON_DUTY }
+      { status: DriverStatus.BUSY }
     );
     // Add to order status history
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
@@ -512,7 +512,7 @@ export default class OrderService {
     });
     console.log('sent mail to admin');
     broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-    broadcastDriverStatusUpdate(driverId, DriverStatus.ON_DUTY); // Notify all connected clients about the driver status update
+    broadcastDriverStatusUpdate(driverId, DriverStatus.BUSY); // Notify all connected clients about the driver status update
     this.updateAnsarOrderStatus(order.id, OrderStatus.ASSIGNED)
   } catch (err) {
     await queryRunner.rollbackTransaction();
