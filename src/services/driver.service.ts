@@ -639,9 +639,9 @@ export default class DriverService {
             if (order.driver.id !== driverId) {
                 throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
             }
-            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null });
+            await this.orderRepository.update(orderId, { status: OrderStatus.PENDING, driver: null });
             // Add to order status history
-            order.status = OrderStatus.CANCELED; // update status for history record
+            order.status = OrderStatus.PENDING; // update status for history record
             await this.orderStatusHistoryService.createOrderStatusHistory(order, cancellationReason);
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
             sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
@@ -1014,8 +1014,8 @@ export default class DriverService {
     driver.vehicle.productionYear = vehicleData.productionYear;
 
     // Reset approval status to pending on edit
-    driver.vehicle.infoApprovalStatus = ApprovalStatus.PENDING;
-    driver.vehicle.infoRejectionReason = null;
+    driver.vehicleInfoApprovalStatus = ApprovalStatus.PENDING;
+    driver.vehicleInfoRejectionReason = null;
 
     await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
     await this.updateDriverSignUpStatus(driverId);

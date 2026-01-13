@@ -110,10 +110,18 @@ export class OrderController {
       this.updateOrder.bind(this)
     )
 
+    //cancel by client on shipbee website
     this.router.post(
       "/orders/:orderId/client-cancel",
       authenticationMiddleware,
       this.clientCancelOrder.bind(this)
+    )
+
+    // cancel by client integrating via API
+    this.router.post(
+      "/orders/cancel",
+      apiKeyAuthenticationMiddleware,
+      this.cancelOrder.bind(this)
     )
 
     this.router.post(
@@ -515,6 +523,24 @@ export class OrderController {
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  //canceling order by a client using our API integration
+  private async cancelOrder(req: AuthenticatedRequest, res: Response) {
+    try {
+      const {orderNo} = req.query
+      if (!orderNo) {
+        res.status(400).json({success: false, message: "Order Id is required"})
+      }
+      console.log("orderNo: ", orderNo) 
+      console.log("client with id: ", req.userId, " requested to cancel order")
+      await this.orderService.cancelOrder(Number(orderNo), req.userId)
+      res.status(200).json({success: true, message: "Order canceled successfully"})
+    }
+    catch (err) {
+      console.error(`Error in canceling order: ${err.message}`)
+      res.status(400).json({success: false, message: err.message})
     }
   }
 }

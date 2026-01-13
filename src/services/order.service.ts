@@ -1295,6 +1295,42 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
   }
 
+  async cancelOrder(orderNo: number, userId: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: {
+          orderNo,
+          createdBy: {id: userId}
+        },
+        relations: ["driver"]
+      })
+
+      if (!order) {
+        console.error(`Order with number ${orderNo} and userId: ${userId} not found`)
+        throw new Error(`Order not found`)
+      }
+
+      if (order.status === OrderStatus.CANCELED) {
+        throw new Error(`Order with ID ${orderNo} is already canceled`);
+      }
+
+      if (order.status === OrderStatus.COMPLETED) {
+        throw new Error(`Order with ID ${orderNo} is already completed and cannot be canceled`);
+      }
+
+      order.status = OrderStatus.CANCELED;
+      await this.orderRepository.save(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory(order, 'Cancellation by client (Ansar)');
+      broadcastOrderUpdate(order.id, order.status);
+      if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
+      return;
+
+    } catch (err) {
+      console.error(err.message)
+      throw new Error(`Error canceling order: ${err.message}`)
+    }
+  }
+
   async preloadAnsarOrders() {
 
     const ansarOrdersFromDB = await this.orderRepository.find({
