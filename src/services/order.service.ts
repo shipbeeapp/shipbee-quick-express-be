@@ -46,6 +46,7 @@ import axios from "axios";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import {formatAddress}  from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
+import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -376,6 +377,21 @@ export default class OrderService {
         emitOrderCompletionUpdate(order.driver.id, order.id);
     
       this.updateAnsarOrderStatus(order.id, status)
+      if (this.isAnsarOrder(order.id)) {
+        const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
+        const [latStr, lngStr] = driverCurrentLocation?.split(",");
+        const latitude = parseFloat(latStr);
+        const longitude = parseFloat(lngStr);
+        externalTrackingSocket.send({
+              route: "shipbeeUpdate",
+              payload: {
+                id: order.orderNo,
+                status: order.status,
+                latitude,
+                longitude
+              }
+            })
+      }
       console.log("Order status updated successfully");
     } catch (error) {
       console.error("Error updating order status:", error.message);
