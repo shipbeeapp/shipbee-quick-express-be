@@ -780,12 +780,15 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           order.status = OrderStatus.PENDING;
           order.driver = null;
           await this.orderRepository.save(order);
+          //Update driver status to Active
+          await this.driverService.updateDriverStatus(driverId, DriverStatus.ACTIVE)
         
           // 3. Broadcast updates
           await this.orderStatusHistoryService.createOrderStatusHistory(order, reason);
           resetNotifiedDrivers(order.id);
           await emitOrderToDrivers(order);
           broadcastOrderUpdate(order.id, order.status);
+          broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE)
         
           return cancellationRequest.id;
         }
@@ -833,6 +836,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
                 await queryRunner.manager.save(cancellationRequest);
                 const order = cancellationRequest.order;
                 order.status = OrderStatus.PENDING;
+                await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE, queryRunner)
+                broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
                 order.driver = null;
                 await queryRunner.manager.save(order);
                 await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);

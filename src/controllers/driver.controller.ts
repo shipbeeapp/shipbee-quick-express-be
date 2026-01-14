@@ -118,7 +118,9 @@ export class DriverController {
             this.editBusinessDocs.bind(this));
         
         this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
+        this.router.put(`/admin${this.path}/:id/switch-type`, authenticationMiddleware, this.switchDriverType.bind(this));
         this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, this.adminUpdateDriver.bind(this))
+        this.router.get(`/admin${this.path}/businesses`, authenticationMiddleware, this.getDriverBusinesses.bind(this))
         this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
     }
 
@@ -695,6 +697,39 @@ export class DriverController {
         }       
         catch (error) {
             console.error("Error fetching all online drivers:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private switchDriverType = async (req: AuthenticatedRequest, res: Response) => {
+         try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+             const driverId = req.params.id;
+             const {businessOwnerId}  = req.query as {businessOwnerId: string};
+
+            await this.driverService.switchDriverType(driverId, businessOwnerId)
+            res.status(200).json({ success: true, message: "Driver type switched successfully"});
+        }       
+        catch (error) {
+            console.error("Error switching driver type:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getDriverBusinesses = async (req: AuthenticatedRequest, res: Response) => {
+         try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            const driverBusinesses = await this.driverService.getAllDriverBusinesses()
+            res.status(200).json({ success: true, data: driverBusinesses});
+        }       
+        catch (error) {
+            console.error("Error getting driver businesses:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

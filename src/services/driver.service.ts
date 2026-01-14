@@ -1133,4 +1133,83 @@ export default class DriverService {
             throw error;
         }
     }
+
+    async switchDriverType(driverId: string, businessOwnerId: string) {
+        try {
+            const driver = await this.driverRepository.findOne({
+                where: {id: driverId},
+                relations: ["businessOwner"]
+            })
+
+            if (driver.type === DriverType.BUSINESS) {
+                console.error(`Cannot switch a business`)
+                throw new Error(`Cannot switch a business`)
+            }
+
+            // if he is already under a business
+            if (driver.businessOwner) {
+                //switch to another business
+                if (businessOwnerId) {
+                    driver.businessOwner.id = businessOwnerId;
+                }
+                //make him a freelance driver (no business owner)
+                else {
+                    console.log("driver has a business and will be freelance")
+                    driver.businessOwner = null;
+                }
+            }
+            // he is a freelance driver
+            else {
+                if (!businessOwnerId) throw new Error(`Driver is already freelance`)
+                //switch driver to be under a business
+                driver.businessOwner = {id: businessOwnerId} as any;
+            }
+
+            await this.saveDriver(driver)
+        } catch (err) {
+            console.error(`Error switching driver type: ${err.message}`)
+            throw new Error(`Error switching driver type: ${err.message}`)
+        }
+    }
+
+    async updateDriverStatus(driverId: string, status: DriverStatus, queryRunner?: any) {
+        try {
+            const manager = queryRunner
+              ? queryRunner.manager
+              : this.driverRepository;
+
+            const driver = await manager.findOne(Driver, {
+              where: { id: driverId },
+            });
+        
+            if (!driver) {
+              throw new Error(`Couldn't find driver to update status`);
+            }
+        
+            driver.status = status;
+            await manager.save(driver);
+        } catch (err) {
+            console.error(`Error updating driver status: ${err.message}`)
+            throw new Error(`Error updating driver status: ${err.message}`)
+        }
+    }
+
+    async getAllDriverBusinesses() {
+        try {
+            const driverBusinesses = await this.driverRepository.find({
+                where: {type: DriverType.BUSINESS}
+            })
+
+            return driverBusinesses.map((driverBusiness) => ({
+                id: driverBusiness.id,
+                name: driverBusiness.name,
+                phoneNumber: driverBusiness.phoneNumber,
+                businessName: driverBusiness.businessName
+            }))
+
+        } catch (err) {
+            console.error(`Error getting driver businesses: ${err.message}`)
+            throw new Error(`Error getting driver businesses: ${err.message}`)
+        }
+    }
 }
