@@ -104,7 +104,7 @@ export class UserController {
             const paramUserId = req.params.id;
             const authenticatedUserId = req.userId;
 
-            if (paramUserId !== authenticatedUserId) {
+            if (paramUserId !== authenticatedUserId && req.email != env.ADMIN.EMAIL) {
               return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
             const userData = {
