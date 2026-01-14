@@ -118,6 +118,7 @@ export class DriverController {
             this.editBusinessDocs.bind(this));
         
         this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
+        this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, this.adminUpdateDriver.bind(this))
         this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
     }
 
@@ -673,6 +674,24 @@ export class DriverController {
 
             const drivers = await this.driverService.getAllOnlineDrivers();
             res.status(200).json({ success: true, data: drivers });
+        }       
+        catch (error) {
+            console.error("Error fetching all online drivers:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private adminUpdateDriver =  async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+             const driverId = req.params.id;
+             const driverData: UpdateDriverDto = req.body;
+
+            await this.driverService.updateDriver(driverId, driverData)
+            res.status(200).json({ success: true, message: "Driver Data updated successfully"});
         }       
         catch (error) {
             console.error("Error fetching all online drivers:", error.message);
