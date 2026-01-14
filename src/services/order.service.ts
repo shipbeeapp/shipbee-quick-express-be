@@ -374,6 +374,8 @@ export default class OrderService {
         emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
       else if (status === OrderStatus.COMPLETED)
         emitOrderCompletionUpdate(order.driver.id, order.id);
+    
+      this.updateAnsarOrderStatus(order.id, status)
       console.log("Order status updated successfully");
     } catch (error) {
       console.error("Error updating order status:", error.message);
@@ -651,6 +653,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
+      this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
       this.removeAnsarOrder(order.id)
     }
     else {
