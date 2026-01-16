@@ -47,6 +47,7 @@ export class DriverController {
         this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
         this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
         this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
+        this.router.get(`${this.path}/active-order`, authenticationMiddleware, this.getCurrentActiveOrderForDriver.bind(this))
         this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
         this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
@@ -730,6 +731,17 @@ export class DriverController {
         }       
         catch (error) {
             console.error("Error getting driver businesses:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getCurrentActiveOrderForDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.driverId;
+            const activeOrder = await this.orderService.getCurrentActiveOrder(driverId);
+            res.status(200).json({success: true, data: activeOrder})
+        } catch (error) {
+            console.error("Error getting current active order:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

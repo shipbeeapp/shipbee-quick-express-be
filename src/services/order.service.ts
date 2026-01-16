@@ -47,6 +47,7 @@ import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import {formatAddress}  from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
+import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -371,10 +372,15 @@ export default class OrderService {
       // Commit transaction
       await queryRunner.commitTransaction();
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-      if (status === OrderStatus.CANCELED)
+      if (status === OrderStatus.CANCELED) {
         emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
-      else if (status === OrderStatus.COMPLETED)
+        if (order.driver.id) await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
+      }
+
+      else if (status === OrderStatus.COMPLETED) {
         emitOrderCompletionUpdate(order.driver.id, order.id);
+        await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
+      }
     
       this.updateAnsarOrderStatus(order.id, status)
       if (this.isAnsarOrder(order.id)) {
@@ -670,6 +676,22 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
       this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
+     if (this.isAnsarOrder(order.id)) {
+        const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
+        const [latStr, lngStr] = driverCurrentLocation?.split(",");
+        const latitude = parseFloat(latStr);
+        const longitude = parseFloat(lngStr);
+        externalTrackingSocket.send({
+              route: "shipbeeUpdate",
+              payload: {
+                id: order.orderNo,
+                status: order.status,
+                latitude,
+                longitude
+              }
+            })
+        console.log(`Sent location update to ansar upon completion for order #${order.orderNo}`)
+      }
       this.removeAnsarOrder(order.id)
     }
     else {
@@ -1352,6 +1374,24 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     } catch (err) {
       console.error(err.message)
       throw new Error(`Error canceling order: ${err.message}`)
+    }
+  }
+
+  async getCurrentActiveOrder(driverId: string) {
+    try {
+      const activeOrder = await this.orderRepository.findOne({
+        where: {
+          driver: { id: driverId },
+          status: In([OrderStatus.ASSIGNED, OrderStatus.ACTIVE, OrderStatus.EN_ROUTE_TO_PICKUP])
+        },
+        relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"]
+      }) 
+      console.log(`cuurent active order: ${JSON.stringify(activeOrder, null, 2)}`)
+      return createDriverOrderResource(activeOrder, null, null)
+
+    } catch (err) {
+      console.error(err.message)
+      throw new Error(`Error getting current active order: ${err.message}`)
     }
   }
 

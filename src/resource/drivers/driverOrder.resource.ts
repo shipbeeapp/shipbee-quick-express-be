@@ -24,6 +24,7 @@ export class DriverOrderStopResource {
 }
 export class DriverOrderResource {
     orderId: string;
+    orderNo: string;
     itemType: itemType;
     itemDescription?: string;
     itemImages?: string[];
@@ -50,6 +51,10 @@ export class DriverOrderResource {
 export function createDriverOrderResource(order: any, distanceToPickup: number, timeToPickup: number): DriverOrderResource {
     const resource = new DriverOrderResource();
     resource.orderId = order.id;
+    const orderNo = order.stops[0]?.clientStopId
+        ? order.stops.map(stop => stop.clientStopId).join(",")
+        : order.orderNo;
+    resource.orderNo = orderNo
     resource.itemType = order.itemType;
     resource.paymentMethod = order.paymentMethod;
     resource.totalCost = order.totalCost;
@@ -59,13 +64,17 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.fromCoordinates = order.fromAddress.coordinates;
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
     resource.senderName = order.sender.name;
-    resource.senderPhoneNumber = order.sender.phoneNumber;
+    const senderPhone =  order.sender.phoneNumber
+    resource.senderPhoneNumber = senderPhone.startsWith(env.PHONE_EXTENSION)
+        ? senderPhone
+        : `${env.PHONE_EXTENSION}${senderPhone}`;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
     resource.payer = order.payer;
     // Map each stop
     resource.stops = order.stops?.map((stop: any) => {
         const stopDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : null;
+        const receiverPhone = stop.receiver?.phoneNumber;
         return {
             stopId: stop.id,
             sequence: stop.sequence,
@@ -76,7 +85,9 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             toCoordinates: stop.toAddress?.coordinates,
             additionalToAddressInfo: stop.toAddress?.landmarks,
             receiverName: stop.receiver?.name,
-            receiverPhoneNumber: stop.receiver?.phoneNumber,
+            receiverPhoneNumber: receiverPhone.startsWith(env.PHONE_EXTENSION)
+                ? receiverPhone
+                : `${env.PHONE_EXTENSION}${receiverPhone}`,
             lifters: stop.lifters,
             items: stop.items,
             totalPrice: stop.totalPrice,

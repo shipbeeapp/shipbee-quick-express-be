@@ -192,10 +192,10 @@ export default class DriverService {
             throw error;
         }
     }
-    constructDriverQuery() {
+    baseDriverQuery() {
         return this.driverRepository.createQueryBuilder("driver")
                 .leftJoin("driver.vehicle", "vehicle")
-                .leftJoin("driver.orders", "orders")
+                // .leftJoin("driver.orders", "orders")
                 .leftJoin("driver.businessOwner", "businessOwner")
                 .select([
                     "driver.id",
@@ -252,16 +252,16 @@ export default class DriverService {
                     "vehicle.leftPhoto",
                     "vehicle.rightPhoto",
                     "vehicle.registrationFront",
-                    "vehicle.registrationBack"
+                    "vehicle.registrationBack",
                 ])
     }
 
     async findDriverById(driverId: string, type?: string): Promise<Driver | null> {
         try {
-            if (type) return await this.constructDriverQuery()
+            if (type) return await this.baseDriverQuery()
                     .where("driver.id = :driverId", { driverId })
                     .getOne();
-            else return await this.constructDriverQuery()
+            else return await this.baseDriverQuery()
                     .where("driver.id = :driverId", { driverId })
                     .getRawOne();
         } catch (error) {
@@ -333,7 +333,8 @@ export default class DriverService {
     }
     async findAllDrivers(): Promise<any> {
         try {
-            const result = await this.constructDriverQuery()
+            const result = await this.baseDriverQuery()
+            .leftJoin("driver.orders", "orders")
             .addSelect("COUNT(DISTINCT orders.id)", "orderCount")
             .addSelect("SUM(CASE WHEN orders.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
             .addSelect(`
@@ -1174,13 +1175,15 @@ export default class DriverService {
 
     async updateDriverStatus(driverId: string, status: DriverStatus, queryRunner?: any) {
         try {
-            const manager = queryRunner
-              ? queryRunner.manager
-              : this.driverRepository;
+            let driver: Driver;
+            const manager = queryRunner ? queryRunner.manager : this.driverRepository;
 
-            const driver = await manager.findOne(Driver, {
-              where: { id: driverId },
-            });
+            // Find the driver
+            if (queryRunner) {
+                driver = await manager.findOne(Driver, { where: { id: driverId } });
+            } else {
+                driver = await manager.findOne({ where: { id: driverId } });
+            }
         
             if (!driver) {
               throw new Error(`Couldn't find driver to update status`);
