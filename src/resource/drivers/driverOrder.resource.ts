@@ -3,6 +3,7 @@ import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { env } from "../../config/environment.js";
 import { Payer } from "../../utils/enums/payer.enum.js";
 import { OrderType } from "../../utils/enums/orderType.enum.js";
+import { OrderStatus } from "../../utils/enums/orderStatus.enum.js";
 
 
 export class DriverOrderStopResource {
@@ -15,6 +16,7 @@ export class DriverOrderStopResource {
     additionalToAddressInfo: string;
     receiverName: string;
     receiverPhoneNumber: string;
+    status: OrderStatus;
     lifters: number | null;
     items?: any;
     totalPrice?: number
@@ -25,6 +27,7 @@ export class DriverOrderStopResource {
 export class DriverOrderResource {
     orderId: string;
     orderNo: string;
+    status: OrderStatus;
     itemType: itemType;
     itemDescription?: string;
     itemImages?: string[];
@@ -54,7 +57,8 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     const orderNo = order.stops[0]?.clientStopId
         ? order.stops.map(stop => stop.clientStopId).join(",")
         : order.orderNo;
-    resource.orderNo = orderNo
+    resource.orderNo = orderNo;
+    resource.status = order.status;
     resource.itemType = order.itemType;
     resource.paymentMethod = order.paymentMethod;
     resource.totalCost = order.totalCost;
@@ -88,6 +92,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             receiverPhoneNumber: receiverPhone.startsWith(env.PHONE_EXTENSION)
                 ? receiverPhone
                 : `${env.PHONE_EXTENSION}${receiverPhone}`,
+            status: stop.status,
             lifters: stop.lifters,
             items: stop.items,
             totalPrice: stop.totalPrice,
