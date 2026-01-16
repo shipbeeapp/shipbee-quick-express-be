@@ -380,6 +380,8 @@ export default class OrderService {
       else if (status === OrderStatus.COMPLETED) {
         emitOrderCompletionUpdate(order.driver.id, order.id);
         await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
+        order.completedAt = new Date();
+        await this.saveOrder(order);
       }
     
       this.updateAnsarOrderStatus(order.id, status)
