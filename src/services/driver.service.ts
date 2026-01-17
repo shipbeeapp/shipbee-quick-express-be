@@ -7,7 +7,7 @@ import { Not } from "typeorm";
 import { Between } from "typeorm";
 import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import { calculateActiveHoursToday } from "../socket/socket.js";
+import { calculateActiveHoursToday, getCurrentLocationOfDriver } from "../socket/socket.js";
 import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
 import { resetNotifiedDrivers, markDriverNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
@@ -321,7 +321,10 @@ export default class DriverService {
             // Update driver fields
             Object.assign(driver, rest);
         
-            await driverRepository.save(driver);
+            await driverRepository.update(
+                {id: driverId},
+                rest
+            )
             await queryRunner.commitTransaction();
         } catch (error) {
             await queryRunner.rollbackTransaction();
@@ -711,32 +714,36 @@ export default class DriverService {
         pickUpCoordinates: string
     ): Promise<any[]> {
         try {
-          const onlineDrivers = getOnlineDrivers();
-        
-          // Convert map to array and filter by vehicle type first
-          const candidates = Array.from(onlineDrivers.entries())
-            .filter(([_, driver]) => driver.vehicleType === vehicleType);
+          const onlineDrivers = await this.driverRepository.find
+          ({
+            where: {
+                status: DriverStatus.ACTIVE,
+                vehicle: {type: vehicleType}
+            },
+            relations: ["vehicle"]
+          })
+
         
           // Run all lookups + distance calculations in parallel
-          const driverPromises = candidates.map(async ([driverId, driver]) => {
-            const driverDetails = await this.driverRepository.findOne({
-              where: { id: driverId }
-            });
-        
-            if (!driverDetails) return null;
-            if (driverDetails.status !== DriverStatus.ACTIVE) return null;
-        
-            const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
-              driver.currentLocation,
-              pickUpCoordinates
-            );
+          const driverPromises = onlineDrivers.map(async (driver) => {
+            const driverCurrentLocation = getCurrentLocationOfDriver(driver.id)
+            let distanceMeters;
+            let durationMinutes;
+            if (driverCurrentLocation) {
+                const distanceResults = await getDrivingDistanceInKm(
+                  driverCurrentLocation,
+                  pickUpCoordinates
+                );
+                distanceMeters = distanceResults.distanceMeters
+                durationMinutes = distanceResults.durationMinutes
+            }
         
             return {
-              id: driverId,
-              name: driverDetails.name,
-              phoneNumber: driverDetails.phoneNumber,
-              currentLocation: driver.currentLocation,
-              vehicleType: driver.vehicleType,
+              id: driver.id,
+              name: driver.name,
+              phoneNumber: driver.phoneNumber,
+              currentLocation: driverCurrentLocation,
+              vehicleType: driver.vehicle.type,
               distanceMeters,
               durationMinutes
             };
@@ -745,13 +752,11 @@ export default class DriverService {
           // Wait for all promises to finish
           const results = await Promise.all(driverPromises);
       
-          // Filter out any null results
-          const filteredDrivers = results.filter(Boolean);
       
           // Sort by distance (nearest first)
-          filteredDrivers.sort((a, b) => a.distanceMeters - b.distanceMeters);
-          console.log("Nearest active drivers:", filteredDrivers);
-          return filteredDrivers;
+          results.sort((a, b) => a.distanceMeters - b.distanceMeters);
+          console.log("Nearest active drivers:", results);
+          return results;
         } catch (error) {
           console.error("Error fetching nearest active drivers:", error);
           throw error;
