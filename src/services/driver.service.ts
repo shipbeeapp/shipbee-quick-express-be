@@ -712,17 +712,19 @@ export default class DriverService {
     async getNearestActiveDrivers(
         vehicleType: VehicleType,
         pickUpCoordinates: string
-    ): Promise<any[]> {
+    ): Promise<{
+        matchingDrivers: any[];
+        nonMatchingDrivers: any[]
+    }> {
         try {
           const onlineDrivers = await this.driverRepository.find
           ({
             where: {
                 status: DriverStatus.ACTIVE,
-                vehicle: {type: vehicleType}
             },
             relations: ["vehicle"]
           })
-
+          console.log("length of driver array:" , onlineDrivers.length)
         
           // Run all lookups + distance calculations in parallel
           const driverPromises = onlineDrivers.map(async (driver) => {
@@ -754,9 +756,24 @@ export default class DriverService {
       
       
           // Sort by distance (nearest first)
-          results.sort((a, b) => a.distanceMeters - b.distanceMeters);
-          console.log("Nearest active drivers:", results);
-          return results;
+          // Split drivers by vehicle type
+          const matchingDrivers = results.filter(
+            (driver) => driver.vehicleType === vehicleType
+          );
+      
+          const nonMatchingDrivers = results.filter(
+            (driver) => driver.vehicleType !== vehicleType
+          );
+          // Sort each group by distance (nearest first)
+          const sortByDistance = (a, b) =>
+            (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);
+      
+          matchingDrivers.sort(sortByDistance);
+          nonMatchingDrivers.sort(sortByDistance);
+      
+          console.log("Matching drivers:", matchingDrivers);
+          console.log("Non-matching drivers:", nonMatchingDrivers);
+          return { matchingDrivers, nonMatchingDrivers };
         } catch (error) {
           console.error("Error fetching nearest active drivers:", error);
           throw error;
