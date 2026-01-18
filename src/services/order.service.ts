@@ -355,7 +355,7 @@ export default class OrderService {
       const orderRepository = queryRunner.manager.getRepository(Order);
       const order = await orderRepository.findOne({
         where: { id: orderId },
-        relations: ["orderStatusHistory", "driver"],
+        relations: ["driver"],
       });
 
       if (!order) {
@@ -387,9 +387,13 @@ export default class OrderService {
       this.updateAnsarOrderStatus(order.id, status)
       if (this.isAnsarOrder(order.id)) {
         const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
-        const [latStr, lngStr] = driverCurrentLocation?.split(",");
-        const latitude = parseFloat(latStr);
-        const longitude = parseFloat(lngStr);
+        let latitude: number | null;
+        let longitude: number | null;
+        if (driverCurrentLocation) {
+          const [latStr, lngStr] = driverCurrentLocation?.split(",");
+          latitude = parseFloat(latStr);
+          longitude = parseFloat(lngStr);
+        }
         externalTrackingSocket.send({
               route: "shipbeeUpdate",
               payload: {
@@ -403,8 +407,11 @@ export default class OrderService {
       console.log("Order status updated successfully");
     } catch (error) {
       console.error("Error updating order status:", error.message);
-      // Rollback transaction in case of error
-      await queryRunner.rollbackTransaction();
+      // 🛡 Safe rollback
+      if (queryRunner.isTransactionActive) {
+        console.error("Rolling back transaction")
+        await queryRunner.rollbackTransaction();
+      }
       throw new Error(`${error.message}`);
     }
     finally {
