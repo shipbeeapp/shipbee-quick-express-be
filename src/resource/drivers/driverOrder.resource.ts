@@ -61,10 +61,15 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.status = order.status;
     resource.itemType = order.itemType;
     resource.paymentMethod = order.paymentMethod;
-    resource.totalCost = order.totalCost;
+    resource.totalCost = order.stops[0]?.clientStopId
+        ? order.stops.reduce(
+            (sum, stop) => sum + (stop.totalPrice ?? 0),
+            0
+          )
+        : order.totalCost;
     resource.distance = order.distance;
     resource.type = order.type;
-    resource.fromAddress = order.fromAddress?.city;
+    resource.fromAddress = order.fromAddress?.city ? order.fromAddress?.city: order.fromAddress?.landmarks;
     resource.fromCoordinates = order.fromAddress.coordinates;
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
     resource.senderName = order.sender.name;
