@@ -73,17 +73,19 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.fromCoordinates = order.fromAddress.coordinates;
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
     resource.senderName = order.sender.name;
-    const senderPhone =  order.sender.phoneNumber
-    resource.senderPhoneNumber = senderPhone.startsWith(env.PHONE_EXTENSION)
+    const senderPhone =  order.sender.phoneNumber ?? null;
+    resource.senderPhoneNumber = senderPhone ? 
+        senderPhone.startsWith(env.PHONE_EXTENSION)
         ? senderPhone
-        : `${env.PHONE_EXTENSION}${senderPhone}`;
+        : `${env.PHONE_EXTENSION}${senderPhone}`
+        : null;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
     resource.payer = order.payer;
     // Map each stop
     resource.stops = order.stops?.map((stop: any) => {
         const stopDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : null;
-        const receiverPhone = stop.receiver?.phoneNumber;
+        const receiverPhone = stop.receiver?.phoneNumber ?? null;
         return {
             stopId: stop.id,
             sequence: stop.sequence,
@@ -94,9 +96,11 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             toCoordinates: stop.toAddress?.coordinates,
             additionalToAddressInfo: stop.toAddress?.landmarks,
             receiverName: stop.receiver?.name,
-            receiverPhoneNumber: receiverPhone.startsWith(env.PHONE_EXTENSION)
+            receiverPhoneNumber: receiverPhone ? 
+                receiverPhone.startsWith(env.PHONE_EXTENSION)
                 ? receiverPhone
-                : `${env.PHONE_EXTENSION}${receiverPhone}`,
+                : `${env.PHONE_EXTENSION}${receiverPhone}`
+                : null,
             status: stop.status,
             lifters: stop.lifters,
             items: stop.items,
