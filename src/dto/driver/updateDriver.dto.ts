@@ -21,4 +21,8 @@ export class UpdateDriverDto {
     @IsString()
     @IsOptional()
     fcmToken: string; // FCM token for push notifications
+
+    @IsBoolean()
+    @IsOptional()
+    hasCardOnDelivery: boolean
 }

@@ -19,11 +19,13 @@ export class OrderResponseDto {
     lifters: number;
     distance: number;
     totalCost: number;
+    clientCost: number | null;
     currentStatus: string;
     createdAt: Date;
     updatedAt: Date;
     orderNo: number;
     vehicleType: VehicleType;
+    hasCardOnDelivery: boolean;
     payer: Payer;
     isViewed: boolean;
     viewedAt: Date | null;
@@ -231,6 +233,28 @@ export class OrderResponseDto {
       comments: stop.comments,
     };
   }) || [];
+
+    // --- Determine if any stop has CARD_ON_DELIVERY ---
+    const hasCardOnDelivery = order.stops?.some(
+        stop => stop.paymentMethod === PaymentMethod.CARD_ON_DELIVERY
+    ) ?? false;
+
+    // --- sum of totalPrice ---
+    const clientCost = (() => {
+      if (!order.stops || order.stops.length === 0) return null;
+
+      // Filter only stops that have a valid totalPrice
+      const prices = order.stops
+        .map(stop => stop.totalPrice)
+        .filter((price): price is number => typeof price === 'number');
+
+      // If no stops have a totalPrice, return null
+      if (prices.length === 0) return null;
+
+      // Sum the prices
+      return prices.reduce((sum, price) => sum + price, 0);
+    })();
+    
     return {
       id: order.id,
       createdAt: order.createdAt,
@@ -243,8 +267,10 @@ export class OrderResponseDto {
       lifters: order.lifters,
       distance: order.distance,
       totalCost: order.totalCost ? Number(order.totalCost) : null,
+      clientCost,
       currentStatus: order.status,
       vehicleType: order.vehicleType,
+      hasCardOnDelivery,
       payer: order.payer,
       isViewed: order.isViewed,
       viewedAt: order.viewedAt,

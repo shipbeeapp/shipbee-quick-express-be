@@ -384,8 +384,12 @@ export class DriverController {
             if (req.email !== env.ADMIN.EMAIL) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-            const { vehicleType, pickUpCoordinates } = req.query;
-            const drivers = await this.driverService.getNearestActiveDrivers(vehicleType as VehicleType, pickUpCoordinates as string);
+            const { vehicleType, pickUpCoordinates, hasCardOnDelivery} = req.query;
+            const hasCardOnDeliveryBool =
+            typeof hasCardOnDelivery === 'string'
+              ? hasCardOnDelivery === 'true'
+              : Boolean(hasCardOnDelivery);
+            const drivers = await this.driverService.getNearestActiveDrivers(vehicleType as VehicleType, pickUpCoordinates as string, hasCardOnDeliveryBool);
             res.status(200).json({ success: true, data: drivers });
         }
         catch (error) {

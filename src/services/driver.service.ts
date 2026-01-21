@@ -711,17 +711,23 @@ export default class DriverService {
 
     async getNearestActiveDrivers(
         vehicleType: VehicleType,
-        pickUpCoordinates: string
+        pickUpCoordinates: string,
+        hasCardOnDelivery: boolean
     ): Promise<{
         matchingDrivers: any[];
         nonMatchingDrivers: any[]
     }> {
         try {
+          const filterOptions: any = {
+            status: DriverStatus.ACTIVE,
+          };
+          
+          if (hasCardOnDelivery) {
+            filterOptions.hasCardOnDelivery = true;
+          }
           const onlineDrivers = await this.driverRepository.find
           ({
-            where: {
-                status: DriverStatus.ACTIVE,
-            },
+            where: filterOptions,
             relations: ["vehicle"]
           })
           console.log("length of driver array:" , onlineDrivers.length)

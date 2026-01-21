@@ -141,6 +141,9 @@ export class Driver extends BaseEntity {
     
     @OneToMany(() => DriverBroadcastMessage, (driverBroadcastMessage) => driverBroadcastMessage.driver)
     broadcastMessages: DriverBroadcastMessage[];
+
+    @Column({type: "boolean", default: false})
+    hasCardOnDelivery: boolean
 }
 
 import { Vehicle } from "./vehicle.model.js";
