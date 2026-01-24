@@ -10,10 +10,7 @@ import swaggerUi from "swagger-ui-express";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const serverUrl =
-    process.env.APP_ENV === "development"
-        ? "https://api.staging.shipbee.io"
-        : "http://localhost:7501";
+const serverUrl = 'https://api.shipbee.io/'
 /**
  * Step 1: Define the basic Swagger info
  */
