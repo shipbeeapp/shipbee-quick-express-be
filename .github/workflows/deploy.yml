@@ -31,7 +31,7 @@ jobs:
             echo "ENV=production" >> $GITHUB_ENV
             echo "IMAGE_TAG=latest" >> $GITHUB_ENV
             echo "SERVICE_NAME=shipbee-task-def-service-a0b0xli9" >> $GITHUB_ENV
-            echo "TASK_DEF_NAME=shipbee-task-def" >> $GITHUB_ENV
+            echo "TASK_DEF_NAME=shipbee-task-def-4" >> $GITHUB_ENV
             echo "CONTAINER_NAME=shipbee-container-2" >> $GITHUB_ENV
           else
             echo "ENV=staging" >> $GITHUB_ENV
