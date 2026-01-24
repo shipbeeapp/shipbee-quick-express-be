@@ -205,7 +205,9 @@ const swaggerDefinition = {
  */
 const options = {
     swaggerDefinition,
-    apis: [path.join(__dirname, "../controllers/*.ts")],
+    apis: [
+        path.join(__dirname, "../controllers/*.{js,ts}")
+    ],
 };
 
 /**
