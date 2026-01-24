@@ -25,6 +25,7 @@ export class PricingController {
     //get current pricing
     this.router.get(`${this.path}/calculate`, validateDto(GetPricingDTO), this.calculatePricing.bind(this));
     this.router.get(`${this.path}/quick`, this.getQuickPricing.bind(this))
+    this.router.post(`/user-pricing`, authenticationMiddleware, this.createUserPricing.bind(this))
   }
 
     private async createPricing(req: AuthenticatedRequest, res: Response) {
@@ -41,6 +42,22 @@ export class PricingController {
             res.status(500).json({ error: 'Internal server error' });
         }
     }
+
+    private async createUserPricing(req: AuthenticatedRequest, res: Response) {
+        if (req.email != env.ADMIN.EMAIL) {
+            return res.status(403).json({ error: 'Unauthorized access' });
+        }
+        const pricingData: CreatePricingDTO[] = Array.isArray(req.body) ? req.body : [req.body];
+
+        try {
+            const newPricing = await this.pricingService.createUserPricing(pricingData);
+            res.status(201).json(newPricing);
+        } catch (error) {
+            console.error('Error creating pricing:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
 
     private async updatePricing(req: AuthenticatedRequest, res: Response) {
         try {

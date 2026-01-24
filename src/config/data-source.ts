@@ -95,6 +95,8 @@ import {AddVehicleApprovalInDriverTable1768251957627} from "../migrations/176825
 import { ModifyDriverStatusOnDutyToBusy1768296334869 } from "../migrations/1768296334869-ModifyDriverStatusOnDutyToBusy.js";
 import {AddDefaultDriverStatus1768297449812} from "../migrations/1768297449812-AddDefaultDriverStatus.js"
 import {AddCardOnDeliveryOption1768989836638} from "../migrations/1768989836638-AddCardOnDeliveryOption.js"
+import {AddUserPricingTable1769079453736} from "../migrations/1769079453736-AddUserPricingTable.js"
+import { UserPricing } from "../models/userPricing.model.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -125,6 +127,7 @@ export const AppDataSource = new DataSource({
     ShopSettings, // ✅ Add ShopSettings entity
     BroadcastMessage,
     DriverBroadcastMessage,
+    UserPricing,
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -202,6 +205,7 @@ export const AppDataSource = new DataSource({
     ModifyDriverStatusOnDutyToBusy1768296334869,
     AddDefaultDriverStatus1768297449812,
     AddCardOnDeliveryOption1768989836638,
+    AddUserPricingTable1769079453736,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
