@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
-import OrderService  from "../services/order.service.js";
-import {Container} from "typedi";
+import OrderService from "../services/order.service.js";
+import { Container } from "typedi";
 import validateDto from "../middlewares/validation.middleware.js";
-import {CreateOrderDto} from "../dto/order/createOrder.dto.js";
+import { CreateOrderDto } from "../dto/order/createOrder.dto.js";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../utils/cloudinary.js";
 import { AuthenticatedRequest, authenticationMiddleware, apiKeyAuthenticationMiddleware } from "../middlewares/authentication.middleware.js";
@@ -12,11 +12,18 @@ import jwt from 'jsonwebtoken';
 import UserService from "../services/user.service.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 
+
+/**
+ * @swagger
+ * tags:
+ *   name: Orders
+ *   description: API for managing orders
+ */
 export class OrderController {
   public router: Router = Router();
   private orderService: OrderService = Container.get(OrderService);
   private userService = Container.get(UserService);
-  
+
   constructor() {
     this.initializeRoutes();
   }
@@ -35,23 +42,103 @@ export class OrderController {
       },
     });
     const upload = multer({ storage });
-
+    /**
+     * @swagger
+     * /api/orders:
+     *   post:
+     *     summary: Create a new order
+     *     tags: [Orders]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         multipart/form-data:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               body:
+     *                 $ref: '#/components/schemas/CreateOrderDto'
+     *               files:
+     *                 type: array
+     *                 items:
+     *                   type: string
+     *                   format: binary
+     *     responses:
+     *       201:
+     *         description: Order created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/OrderResponse'
+     *       400:
+     *         description: Validation error or bad request
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success: { type: boolean }
+     *                 message: { type: string }
+     *       401:
+     *         description: Unauthorized (invalid token or API key)
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success: { type: boolean }
+     *                 message: { type: string }
+     */
     this.router.post(
       "/orders",
-      upload.any(), 
-      validateDto(CreateOrderDto), 
+      upload.any(),
+      validateDto(CreateOrderDto),
       this.createOrder.bind(this)
     );
 
     this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
     this.router.get("/orders/dashboard", authenticationMiddleware, this.getOrdersDashboard.bind(this))
-      
+    /**
+     * @swagger
+     * /api/orders/view-order-status:
+     *   get:
+     *     summary: Get the status of a specific order stop
+     *     tags: [Orders]
+     *     security:
+     *       - ApiKeyAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: orderId
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: The client stop ID
+     *     responses:
+     *       200:
+     *         description: Successfully retrieved order status
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/OrderStatusResponse'
+     *       401:
+     *         description: Unauthorized - missing or invalid API key
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *       400:
+     *         description: Bad Request - invalid orderId or other error
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     */
+
     this.router.get(
       "/orders/view-order-status",
       apiKeyAuthenticationMiddleware,
       this.viewOrderStatus.bind(this),
     )
-    
+
     this.router.get("/orders", authenticationMiddleware, this.getOrders.bind(this));
     // route to update order status. I want only admin to be able to update order status
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
@@ -180,14 +267,14 @@ export class OrderController {
       if (orderData.ServiceSubcategoryName === ServiceSubcategoryName.PERSONAL_QUICK && !orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
       // Ensure itemDescription is a JSON string with { text, images }
       if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK) {
-      orderData.stops = orderData.stops.map(stop => ({
-        ...stop,
-        itemDescription: JSON.stringify({
-          text: stop.itemDescription || "",
-          images: stop.images || []
-        })
-      }));
-    }
+        orderData.stops = orderData.stops.map(stop => ({
+          ...stop,
+          itemDescription: JSON.stringify({
+            text: stop.itemDescription || "",
+            images: stop.images || []
+          })
+        }));
+      }
 
       // orderData.stops = stops;
       const order = await this.orderService.createOrder(orderData, userId, madeByClient, isSandbox);
@@ -204,7 +291,7 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let orders;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const {serviceType} = req.query;
+      const { serviceType } = req.query;
       if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders();
       else orders = await this.orderService.getOrdersbyUser(req.userId, serviceType as string);
       res.status(200).json({ success: true, orders: orders });
@@ -219,7 +306,7 @@ export class OrderController {
       const { orderId } = req.params;
       const { status } = req.body;
       if (req.email !== env.ADMIN.EMAIL) {
-          return res.status(403).json({ success: false, message: "You are not authorized to update order status." });
+        return res.status(403).json({ success: false, message: "You are not authorized to update order status." });
 
       }
       if (!orderId || !status) {
@@ -326,7 +413,7 @@ export class OrderController {
       const driverId = req.driverId; // Get driverId from the authenticated request
       // const { otp } = req.body; // Get OTP from request body
       if (!orderId || !driverId) {
-      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
       }
       if (!req.file) {
         return res.status(400).json({ success: false, message: "Proof of order file is required." });
@@ -380,7 +467,7 @@ export class OrderController {
       const { cancelRequestId } = req.params;
       const { action } = req.body; // 'APPROVE' or 'DECLINE'
       if (req.email !== env.ADMIN.EMAIL) {
-          return res.status(403).json({ success: false, message: "You are not authorized to process order cancellations." });
+        return res.status(403).json({ success: false, message: "You are not authorized to process order cancellations." });
       }
       await this.orderService.processOrderCancellation(cancelRequestId, action);
       res.status(200).json({ success: true, message: "Order cancellation processed successfully." });
@@ -426,7 +513,7 @@ export class OrderController {
   private async updateOrder(req: AuthenticatedRequest, res: Response) {
     try {
       if (req.email !== env.ADMIN.EMAIL) {
-          return res.status(403).json({ success: false, message: "You are not authorized to update orders." });
+        return res.status(403).json({ success: false, message: "You are not authorized to update orders." });
       }
       const { orderId } = req.params;
       if (!orderId) {
@@ -465,7 +552,7 @@ export class OrderController {
       if (!orderId) {
         return res.status(400).json({ success: false, message: "Order ID is required." });
       }
-      const {reason} = req.body;
+      const { reason } = req.body;
       await this.orderService.clientCancelOrder(userId, orderId, reason);
       res.status(200).json({ success: true, message: "Order cancelled successfully." });
     }
@@ -479,16 +566,16 @@ export class OrderController {
     try {
       const { orderId } = req.params;
       const cancellationRequestId = req.query.cancellationRequestId as string;
-      const {status, reason} = req.body;
+      const { status, reason } = req.body;
       if (req.email !== env.ADMIN.EMAIL) {
-          return res.status(403).json({ success: false, message: "You are not authorized to approve order cancellations." });
+        return res.status(403).json({ success: false, message: "You are not authorized to approve order cancellations." });
       }
       if (!orderId) {
         return res.status(400).json({ success: false, message: "Order ID is required." });
       }
       await this.orderService.adminApproveClientCancellation(orderId, cancellationRequestId, status, reason);
       res.status(200).json({ success: true, message: "Order cancellation approved successfully." });
-    } 
+    }
     catch (error) {
       console.error("Error in order controller approving order cancellation:", error.message);
       res.status(400).json({ success: false, message: error.message });
@@ -516,7 +603,7 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let dashboard;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const {serviceType} = req.query;
+      const { serviceType } = req.query;
       if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard("admin");
       else dashboard = await this.orderService.getOrdersDashboard(req.userId, serviceType as string);
       res.status(200).json({ success: true, dashboard: dashboard });
@@ -529,18 +616,18 @@ export class OrderController {
   //canceling order by a client using our API integration
   private async cancelOrder(req: AuthenticatedRequest, res: Response) {
     try {
-      const {orderNo} = req.query
+      const { orderNo } = req.query
       if (!orderNo) {
-        res.status(400).json({success: false, message: "Order Id is required"})
+        res.status(400).json({ success: false, message: "Order Id is required" })
       }
-      console.log("orderNo: ", orderNo) 
+      console.log("orderNo: ", orderNo)
       console.log("client with id: ", req.userId, " requested to cancel order")
       await this.orderService.cancelOrder(Number(orderNo), req.userId)
-      res.status(200).json({success: true, message: "Order canceled successfully"})
+      res.status(200).json({ success: true, message: "Order canceled successfully" })
     }
     catch (err) {
       console.error(`Error in canceling order: ${err.message}`)
-      res.status(400).json({success: false, message: err.message})
+      res.status(400).json({ success: false, message: err.message })
     }
   }
 }
