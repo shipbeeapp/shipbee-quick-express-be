@@ -246,20 +246,20 @@ export default class OrderService {
      //Step 5: Add Order Status History
     await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
      orderData.orderNo = order.orderNo;
-    //  let recipientAdminMail;
-    //  if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
-    //  else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
-    //  await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
-    //    console.error("Error sending emaill to admin:", err);
-    //   });
-    //  console.log('sent mail to admin: ', recipientAdminMail);
-    //  if (createdByUser.email) {
-    //   await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
-    //     console.error("Error sending email to user:", err);
-    //   }
-    //   );
-    //   console.log('sent mail to user: ', createdByUser.email);
-    //  }
+     let recipientAdminMail;
+     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
+     else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
+     await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
+       console.error("Error sending emaill to admin:", err);
+      });
+     console.log('sent mail to admin: ', recipientAdminMail);
+     if (createdByUser.email) {
+      await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
+        console.error("Error sending email to user:", err);
+      }
+      );
+      console.log('sent mail to user: ', createdByUser.email);
+     }
 
     
      //🔹 Step 5: Create Payment
