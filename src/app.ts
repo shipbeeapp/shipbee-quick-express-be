@@ -1,6 +1,6 @@
 import express, { Application, Request, Response } from "express";
 import { AppDataSource } from "./config/data-source.js";
-import {env} from "./config/environment.js";
+import { env } from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
@@ -12,6 +12,8 @@ import { fileURLToPath } from "url";
 import { itemType } from "./utils/enums/itemType.enum.js";
 import { VehicleType } from "./utils/enums/vehicleType.enum.js";
 import ShopSettingsService from "./services/shopSettings.service.js";
+import { setupSwagger } from "./config/swagger.js";
+
 
 // Fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +30,7 @@ class App {
     // this.initializeDataSource();
     this.initializeMiddlewares();
     this.initializeControllers(controllers);
+    setupSwagger(this.app); // <-- Add here
     this.initializeErrorHandling();
   }
 
@@ -51,9 +54,9 @@ class App {
         httpOnly: true,
       }
     }));
-     // ---- VIEW ENGINE CONFIG ----
+    // ---- VIEW ENGINE CONFIG ----
     this.app.engine("html", ejs.renderFile);
-    
+
     this.app.set(
       "views",
       path.join(__dirname, "..", "private", "shopify")
@@ -63,7 +66,7 @@ class App {
     this.app.use((req, res, next) => {
       console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
       next();
-});
+    });
 
   }
 
@@ -100,7 +103,7 @@ class App {
       console.log("Received request for /welcome");
       const { shop } = req.query;
       console.log("Shop query parameter:", shop);
-      console.log({oauthStateStore});
+      console.log({ oauthStateStore });
       if (!oauthStateStore[shop as string]?.shopifyToken) {
         console.log("No Shopify token found in session, redirecting to /api/auth");
         return res.redirect(`/api/auth?shop=${shop}`); // start OAuth if missing
@@ -108,7 +111,7 @@ class App {
       console.log("Shopify token found, sending welcome message");
       const shopSettingsService = new ShopSettingsService();
       const shopSettings = await shopSettingsService.getSettings(shop as string);
-      res.render('welcome_page.html', { 
+      res.render('welcome_page.html', {
         shop,
         senderName: shopSettings?.senderName || "",
         pickupAddress: shopSettings?.pickupAddress || "",
@@ -117,14 +120,14 @@ class App {
         latitude: shopSettings?.latitude || "",
         isNew: shopSettings ? false : true,
         itemTypes: Object.values(itemType),
-        vehicleTypes: Object.values(VehicleType), 
+        vehicleTypes: Object.values(VehicleType),
       });
     });
 
     this.app.get('/stay-active', (req: Request, res: Response) => {
       res.send('I am still active!');
     });
-}
+  }
 
   private initializeErrorHandling() {
     this.app.use(errorMiddleware);
