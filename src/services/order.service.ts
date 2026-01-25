@@ -285,23 +285,20 @@ export default class OrderService {
     }
   }
 
-  async getOrdersbyUser(userId: string, serviceType?: string) {
+  async getOrdersbyUser(userId: string[], serviceType?: string) {
     try {
     console.log("Fetching orders for user ID:", userId);
-    const user = await this.userService.getUserById(userId);
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
-    }
     const orders = await this.orderRepository.find({
       where: {
-        createdBy: { id: userId },
+        createdBy: { id: In(userId) },
         serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined
       },
       relations: [
         "sender", "fromAddress", "serviceSubcategory", 
         "orderStatusHistory", "shipment", 
         "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
-        "stops", "stops.receiver", "stops.toAddress"
+        "stops", "stops.receiver", "stops.toAddress",
+        "createdBy"
       ],
       order: {
         createdAt: "DESC",

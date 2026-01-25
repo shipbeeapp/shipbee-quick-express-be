@@ -90,6 +90,7 @@ export class UserController {
         // Define your routes here
         //update user endpoint using id
         this.router.get(`/admin${this.path}`, authenticationMiddleware, this.getUsers.bind(this));
+        this.router.get(`/admin${this.path}/integrated-businesses`, authenticationMiddleware, this.getIntegratedBusinesses.bind(this))
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
@@ -131,6 +132,21 @@ export class UserController {
         }
         catch (error) {
             console.error("Error fetching users:", error.message);
+            res.status(500).json({success: false, message: error.message})
+        }
+    }
+
+    private getIntegratedBusinesses = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        try {
+            const email = req.email;
+            if (email !== env.ADMIN.EMAIL) {
+              return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const integratedBusinesses =  await this.userService.getIntegratedBusiness();
+            res.status(200).json({ success: true, data: integratedBusinesses });
+        }
+        catch (error) {
+            console.error("Error fetching integrated businesses:", error.message);
             res.status(500).json({success: false, message: error.message})
         }
     }

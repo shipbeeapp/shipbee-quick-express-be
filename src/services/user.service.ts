@@ -8,6 +8,7 @@ import { userType } from "../utils/enums/userType.enum.js";
 import crypto from "crypto";
 import { env } from "../config/environment.js";
 import {sendPasswordResetEmail} from "./email.service.js";
+import { IsNull, Not } from "typeorm";
 
 @Service()
 export default class UserService {
@@ -101,6 +102,21 @@ export default class UserService {
       return users.map(toUserResponseDto); 
     } catch (error) {
       console.error("Error fetching users:", error);
+      throw error;
+    }
+  }
+
+  async getIntegratedBusiness() {
+    try {
+      const integratedBusinesses = await this.userRepository.find({
+        select: ['id', 'companyName'],
+        where: {apiKey: Not(IsNull())}
+      })
+      console.log({integratedBusinesses})
+      return integratedBusinesses;
+    }
+    catch (error) {
+      console.error("Error fetching integrated businesses:", error);
       throw error;
     }
   }

@@ -139,6 +139,12 @@ export class OrderController {
       this.viewOrderStatus.bind(this),
     )
 
+    this.router.get(
+      "/orders/integrated-business",
+      authenticationMiddleware,
+      this.getOrdersPerIntegratedBusiness.bind(this)
+    )
+
     this.router.get("/orders", authenticationMiddleware, this.getOrders.bind(this));
     // route to update order status. I want only admin to be able to update order status
     this.router.put("/orders/:orderId/status", authenticationMiddleware, this.updateOrderStatus.bind(this));
@@ -293,7 +299,7 @@ export class OrderController {
       console.log("admin in email: ", env.ADMIN.EMAIL);
       const { serviceType } = req.query;
       if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders();
-      else orders = await this.orderService.getOrdersbyUser(req.userId, serviceType as string);
+      else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
       res.status(200).json({ success: true, orders: orders });
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
@@ -618,7 +624,7 @@ export class OrderController {
     try {
       const { orderNo } = req.query
       if (!orderNo) {
-        res.status(400).json({ success: false, message: "Order Id is required" })
+        return res.status(400).json({ success: false, message: "Order Id is required" })
       }
       console.log("orderNo: ", orderNo)
       console.log("client with id: ", req.userId, " requested to cancel order")
@@ -627,6 +633,38 @@ export class OrderController {
     }
     catch (err) {
       console.error(`Error in canceling order: ${err.message}`)
+      res.status(400).json({ success: false, message: err.message })
+    }
+  }
+
+  private async getOrdersPerIntegratedBusiness(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { userId } = req.query as {userId: string}
+      console.log("fetching orders for integrated business with id: ", userId)
+      let userIds: string[];
+
+      if (userId) {
+      // userId may come as JSON string
+        try {
+          userIds = Array.isArray(userId)
+            ? userId
+            : JSON.parse(userId);
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid userId format",
+          });
+        }
+      }
+      else {
+        const integratedBusinesses = await this.userService.getIntegratedBusiness()
+        userIds = integratedBusinesses.map(u => u.id)
+      } 
+      const orders = await this.orderService.getOrdersbyUser(userIds)
+      return res.status(200).json({ success: true, data: orders})
+    }
+    catch (err) {
+      console.error(`Error in fetching orders for integrated business: ${err.message}`)
       res.status(400).json({ success: false, message: err.message })
     }
   }
