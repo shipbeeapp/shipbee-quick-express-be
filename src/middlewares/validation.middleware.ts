@@ -28,6 +28,27 @@ export async function validateObject<T extends object>(
 const validateDto = (dtoClass: any, skipMissingProperties = false) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+      if (req.body.fromAddress && typeof req.body.fromAddress === "string") {
+        try {
+          req.body.fromAddress = JSON.parse(req.body.fromAddress);
+        } catch (err) {
+           res.status(400).json({ 
+            success: false, 
+            message: "Invalid JSON format for 'stops'" 
+          });
+        }
+      }
+        if (req.body.stops && typeof req.body.stops === "string") {
+          try {
+            const parsedStops = JSON.parse(req.body.stops);
+            req.body.stops = Array.isArray(parsedStops) ? parsedStops : [parsedStops]; // ✅ wrap single object in array
+          } catch (err) {
+             res.status(400).json({ 
+              success: false, 
+              message: "Invalid JSON format for 'stops'" 
+            });
+          }
+        }
       if (req.body && Object.keys(req.body).length > 0) {
         console.log("Validating request body:", req.body);
         req.body = await validateObject(dtoClass, req.body, skipMissingProperties);

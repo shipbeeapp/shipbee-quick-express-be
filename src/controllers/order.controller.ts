@@ -48,20 +48,14 @@ export class OrderController {
      *   post:
      *     summary: Create a new order
      *     tags: [Orders]
+     *     security:
+     *       - ApiKeyAuth: []
      *     requestBody:
      *       required: true
      *       content:
      *         multipart/form-data:
      *           schema:
-     *             type: object
-     *             properties:
-     *               body:
-     *                 $ref: '#/components/schemas/CreateOrderDto'
-     *               files:
-     *                 type: array
-     *                 items:
-     *                   type: string
-     *                   format: binary
+     *             $ref: '#/components/schemas/CreateOrderDto' 
      *     responses:
      *       201:
      *         description: Order created successfully
@@ -76,7 +70,7 @@ export class OrderController {
      *             schema:
      *               type: object
      *               properties:
-     *                 success: { type: boolean }
+     *                 success: { type: boolean, default: false }
      *                 message: { type: string }
      *       401:
      *         description: Unauthorized (invalid token or API key)
@@ -85,7 +79,7 @@ export class OrderController {
      *             schema:
      *               type: object
      *               properties:
-     *                 success: { type: boolean }
+     *                 success: { type: boolean, default: false }
      *                 message: { type: string }
      */
     this.router.post(
@@ -94,6 +88,66 @@ export class OrderController {
       validateDto(CreateOrderDto),
       this.createOrder.bind(this)
     );
+    /**
+     * @swagger
+     * /api/orders/report:
+     *   get:
+     *     summary: Get orders report
+     *     description: |
+     *       Generates a report for the authenticated user between `startDate` and `endDate`. 
+     *       Returns total orders, average distance per order, and average duration per order in minutes.
+     *     tags:
+     *       - Orders
+     *     security:
+     *       - ApiKeyAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: startDate
+     *         schema:
+     *           type: string
+     *           format: date-time
+     *         required: true
+     *         description: Start date for the report (ISO 8601 format)
+     *       - in: query
+     *         name: endDate
+     *         schema:
+     *           type: string
+     *           format: date-time
+     *         required: true
+     *         description: End date for the report (ISO 8601 format)
+     *     responses:
+     *       200:
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/OrderReportResponse'
+     *       400:
+     *         description: Missing or invalid query parameters / Error generating report
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Start date and end date are required."
+     *       401:
+     *         description: Unauthorized (API key missing or invalid)
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Unauthorized"
+     */
 
     this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
     this.router.get("/orders/dashboard", authenticationMiddleware, this.getOrdersDashboard.bind(this))
@@ -211,6 +265,66 @@ export class OrderController {
     )
 
     // cancel by client integrating via API
+    /**
+     * @swagger
+     * /api/orders/cancel:
+     *   post:
+     *     summary: Cancel an order
+     *     description: |
+     *       Allows a client to cancel an existing order using the API integration. 
+     *       The `orderNo` query parameter is required.
+     *     tags:
+     *       - Orders
+     *     security:
+     *       - ApiKeyAuth: []   # ✅ Requires x-api-key in header
+     *     parameters:
+     *       - in: query
+     *         name: orderNo
+     *         schema:
+     *           type: number
+     *         required: true
+     *         description: The order number of the order to cancel
+     *     responses:
+     *       200:
+     *         description: Order canceled successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: true
+     *                 message:
+     *                   type: string
+     *                   example: "Order canceled successfully"
+     *       400:
+     *         description: Missing order number or error canceling order
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Order Id is required"
+     *       401:
+     *         description: Unauthorized (API key missing or invalid)
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Unauthorized"
+     */
     this.router.post(
       "/orders/cancel",
       apiKeyAuthenticationMiddleware,
