@@ -13,9 +13,11 @@ import {env} from "./environment.js"
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const serverUrl = env.APP_ENV === "development" ?
-                  "http://localhost:7501":
-                  "https://api.shipbee.io"
+const serverUrl = {
+  development: "https://api.staging.shipbee.io",
+  production: "https://api.shipbee.io",
+  local: "http://localhost:7501"
+}[env.APP_ENV] // default fallback
 /**
  * Step 1: Define the basic Swagger info
  */
