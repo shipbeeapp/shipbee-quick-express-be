@@ -412,7 +412,7 @@ export class OrderController {
       let orders;
       console.log("admin in email: ", env.ADMIN.EMAIL);
       const { serviceType } = req.query;
-      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders();
+      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(serviceType as ServiceSubcategoryName);
       else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
       res.status(200).json({ success: true, orders: orders });
     } catch (error) {
