@@ -313,7 +313,7 @@ export default class OrderService {
   }
   }
 
-  async getOrders() {
+  async getOrders(serviceType: ServiceSubcategoryName) {
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
       await AppDataSource.initialize();
@@ -321,6 +321,11 @@ export default class OrderService {
     }
     console.log("Fetching all orders for admin");
     const orders = await this.orderRepository.find({
+      where: {
+        serviceSubcategory: {
+          name: serviceType
+        }
+      },
       relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
           "driver", "driver.vehicle", "shipment", 
