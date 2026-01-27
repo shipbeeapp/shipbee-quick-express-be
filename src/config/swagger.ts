@@ -3,6 +3,9 @@ import { fileURLToPath } from "url";
 import { Application } from "express";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
+import { itemType } from "../utils/enums/itemType.enum.js";
+import {env} from "./environment.js"
 
 /**
  * Fix for __dirname in ES modules
@@ -10,10 +13,11 @@ import swaggerUi from "swagger-ui-express";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const serverUrl =
-    process.env.APP_ENV === "development"
-        ? "https://api.staging.shipbee.io"
-        : "http://localhost:7501";
+const serverUrl = {
+  development: "https://api.staging.shipbee.io",
+  production: "https://api.shipbee.io",
+  local: "http://localhost:7501"
+}[env.APP_ENV] // default fallback
 /**
  * Step 1: Define the basic Swagger info
  */
@@ -36,17 +40,28 @@ const swaggerDefinition = {
      * Step 4: Define all schemas (DTOs) in components.schemas
      */
     components: {
+        securitySchemes: {
+            ApiKeyAuth: {
+              type: "apiKey",
+              in: "header",
+              name: "x-api-key",
+            },
+        },
         schemas: {
             AddressDto: {
                 type: "object",
                 properties: {
-                    street: { type: "string" },
-                    city: { type: "string" },
-                    state: { type: "string" },
-                    postalCode: { type: "string" },
                     country: { type: "string" },
+                    city: { type: "string" },
+                    street: { type: "string" },
+                    buildingNumber: { type: "string"},
+                    floor: { type: "number" },
+                    apartmentNumber: {type: "string"},
+                    landmarks: { type: "string" },
+                    zone: { type: "string" },
+                    coordinates: { type: "string" }
                 },
-                required: ["street", "city", "country"],
+                required: ["coordinates"],
             },
             ShipmentDto: {
                 type: "object",
@@ -60,62 +75,94 @@ const swaggerDefinition = {
             OrderStop: {
                 type: "object",
                 properties: {
-                    address: { $ref: "#/components/schemas/AddressDto" },
-                    stopType: { type: "string" },
+                    receiverName: { type: "string" },
+                    receiverPhoneNumber: {type: "string"},
+                    receiverEmail: {type: "string", format: "email", nullable: true, default: "user@gmail.com"},
+                    toAddress: { $ref: "#/components/schemas/AddressDto"},
+                    itemDescription: { type: "string"},
+                    sequence: {type: "number"},
+                    items: { type: "string", default: `[{"name": "Shoes", "price": 100}]`},
+                    itemType: { type: "string", enum: itemType, default: "Gifts"},
+                    totalPrice: { type: "number" },
+                    paymentMethod: {
+                        type: "string",
+                        enum: PaymentMethod,
+                        default: PaymentMethod.CASH_ON_DELIVERY
+                    },
+                    clientStopId: { type: "string" },
+                    comments: {type: "string", nullable: true},
+                    deliveryFee: { type: "number" }
                 },
-                required: ["address"],
+                required: ["receiverName", "receiverPhoneNumber", "itemType", "sequence", "totalPrice", "paymentMethod"],
             },
             CreateOrderDto: {
                 type: "object",
                 properties: {
-                    vehicleId: { type: "string", nullable: true },
+                    type: {
+                        type: "string",
+                        enum: ["SINGLE_STOP", "MULTI_STOP"],
+                        description: "Order type (single or multiple delivery stops)",
+                        example: "SINGLE_STOP",
+                    },
                     serviceSubcategory: {
                         type: "string",
-                        enum: ["PERSONAL_QUICK", "INTERNATIONAL"],
+                        enum: ["Personal - Quick", "International"]
                     },
                     senderName: { type: "string" },
                     senderPhoneNumber: { type: "string" },
-                    senderEmail: { type: "string", format: "email", nullable: true },
-                    pickUpDate: { type: "string", format: "date", nullable: true },
-                    distance: { type: "number", nullable: true },
-                    fromAddress: { $ref: "#/components/schemas/AddressDto" },
-                    toAddress: { $ref: "#/components/schemas/AddressDto", nullable: true },
-                    receiverName: { type: "string", nullable: true },
-                    receiverPhoneNumber: { type: "string", nullable: true },
-                    receiverEmail: { type: "string", format: "email", nullable: true },
+                    senderEmail: { type: "string", format: "email", nullable: true, default: "user@mail.com" },
                     vehicleType: {
                         type: "string",
-                        enum: ["CAR", "TRUCK", "MOTORCYCLE"],
-                        nullable: true,
+                        enum: [
+                            "Motorcycle", 
+                            "Sedan Car", 
+                            "Pickup Truck 2 Tons", 
+                            "Pickup Truck 3 Tons",
+                            "Chiller Truck",
+                            "Van",
+                            "Freezer Truck",
+                            "Canter Truck",
+                            "Flat Bed Trailer",
+                            "Low Bed Trailer",
+                            "Garbage Removal Truck",
+                            "Chiller Van",
+                            "Freezer Van"
+                        ]
                     },
+                    pickUpDate: { type: "string", format: "date-time", nullable: true },
+                    lifters: { type: "number", nullable: true },
+                    distance: { type: "number", default: 10 },
+                    fromAddress: { $ref: "#/components/schemas/AddressDto" },
                     paymentMethod: {
                         type: "string",
-                        enum: ["CASH", "CARD", "ONLINE"],
+                        enum: ["CASH_ON_DELIVERY", "CREDIT_DEBIT", "WALLET", "CARD_ON_DELIVERY"],
                         nullable: true,
                     },
                     paymentStatus: {
                         type: "string",
-                        enum: ["PAID", "PENDING", "FAILED"],
+                        enum: [
+                            "pending",
+                            "successful",
+                            "failed",
+                            "refunded",
+                            "canceled"
+                        ],
                         nullable: true,
                     },
-                    shipment: { $ref: "#/components/schemas/ShipmentDto", nullable: true },
-                    orderNo: { type: "number", nullable: true },
                     payer: {
                         type: "string",
-                        enum: ["SENDER", "RECEIVER"],
+                        enum: [
+                            "SENDER",
+                            "RECEIVER"
+                        ],
                         nullable: true,
                     },
                     stops: {
                         type: "array",
                         items: { $ref: "#/components/schemas/OrderStop" },
                     },
-                    type: {
-                        type: "string",
-                        enum: ["SINGLE_STOP", "MULTI_STOP"],
-                        nullable: true,
-                    },
                 },
-                required: ["serviceSubcategory", "senderName", "senderPhoneNumber", "fromAddress"],
+                required: ["serviceSubcategory", "senderName", "senderPhoneNumber", "fromAddress", "vehicleType"],
             },
             ViewOrderStatusQuery: {
                 type: "object",
@@ -174,7 +221,6 @@ const swaggerDefinition = {
                     paymentMethod: { type: "string", enum: ["CASH", "CARD", "ONLINE"] },
                     status: { type: "string" },
                     stops: { type: "array", items: { $ref: "#/components/schemas/OrderStop" } },
-                    shipment: { $ref: "#/components/schemas/ShipmentDto", nullable: true },
                     sender: {
                         type: "object",
                         properties: {
@@ -192,11 +238,25 @@ const swaggerDefinition = {
                     data: { $ref: "#/components/schemas/OrderDto" },
                 },
             },
+            OrderReportResponse: {
+                type: "object",
+                properties: {
+                    success: {type: "boolean"},
+                    data: {
+                        type: "object",
+                        properties: {
+                            totalOrders: { type: "number"},
+                            avgDistancePerOrder: { type: "number"},
+                            avgDurationMinutesPerOrder: {type: "number"}
+                        }
+                    }
+                }
+            }, 
             ErrorResponse: {
                 type: "object",
                 properties: {
-                    success: { type: "boolean" },
-                    message: { type: "string" },
+                    success: { type: "boolean", default: false },
+                    message: { type: "string",  },
                 },
             },
         },
@@ -208,7 +268,9 @@ const swaggerDefinition = {
  */
 const options = {
     swaggerDefinition,
-    apis: [path.join(__dirname, "../controllers/*.ts")],
+    apis: [
+        path.join(__dirname, "../controllers/*.{js,ts}")
+    ],
 };
 
 /**

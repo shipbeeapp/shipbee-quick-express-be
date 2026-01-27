@@ -144,6 +144,12 @@ export class Driver extends BaseEntity {
 
     @Column({type: "boolean", default: false})
     hasCardOnDelivery: boolean
+
+    @Column({type: "bigint", default: 0})
+    income: number
+
+    @Column({type: "bigint", default: 0})
+    cashBalance: number
 }
 
 import { Vehicle } from "./vehicle.model.js";

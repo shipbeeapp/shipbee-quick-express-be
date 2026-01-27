@@ -90,10 +90,74 @@ export class UserController {
         // Define your routes here
         //update user endpoint using id
         this.router.get(`/admin${this.path}`, authenticationMiddleware, this.getUsers.bind(this));
+        this.router.get(`/admin${this.path}/integrated-businesses`, authenticationMiddleware, this.getIntegratedBusinesses.bind(this))
         this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
         this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));
         this.router.get("/admin/driver-status-update", this.driverStatusUpdate.bind(this));
         this.router.get("/admin/new-driver", this.newDriver.bind(this));
+        /**
+        * @swagger
+        * /api/order-tracking:
+        *   get:
+        *     summary: Real-time order tracking (SSE)
+        *     description: |
+        *       Establishes a Server-Sent Events (SSE) connection for real-time order tracking.
+        *       Authentication should be provided via `apiKey` for integration
+        *     tags:
+        *       - Orders
+        *     parameters:
+        *       - in: query
+        *         name: apiKey
+        *         schema:
+        *           type: string
+        *         description: API key for external integrated clients
+        *         required: false
+        *     responses:
+        *       200:
+        *         description: SSE connection established successfully. Returns a stream of order updates.
+        *         content:
+        *           text/event-stream:
+        *             schema:
+        *               type: string
+        *               example: |
+        *                 data: {"orderId":"123","driverLocation":"30.1038273,31.6386179"}
+        *       400:
+        *         description: Missing required parameter
+        *         content:
+        *           application/json:
+        *             schema:
+        *               type: object
+        *               properties:
+        *                 error:
+        *                   type: string
+        *                   example: "api key is required"
+        *       401:
+        *         description: Invalid API key
+        *         content:
+        *           application/json:
+        *             schema:
+        *               type: object
+        *               properties:
+        *                 success:
+        *                   type: boolean
+        *                   example: false
+        *                 message:
+        *                   type: string
+        *                   example: "Invalid API key"
+        *       403:
+        *         description: Unauthorized or invalid token
+        *         content:
+        *           application/json:
+        *             schema:
+        *               type: object
+        *               properties:
+        *                 success:
+        *                   type: boolean
+        *                   example: false
+        *                 message:
+        *                   type: string
+        *                   example: "Unauthorized access"   # <- only one string here
+        */
         this.router.get("/order-tracking", this.orderTracking.bind(this));
         this.router.get("/driver-tracking", this.driverTracking.bind(this));
         this.router.post(`${this.path}/generate-api-key`, authenticationMiddleware, this.generateApiKey.bind(this));
@@ -131,6 +195,21 @@ export class UserController {
         }
         catch (error) {
             console.error("Error fetching users:", error.message);
+            res.status(500).json({success: false, message: error.message})
+        }
+    }
+
+    private getIntegratedBusinesses = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+        try {
+            const email = req.email;
+            if (email !== env.ADMIN.EMAIL) {
+              return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const integratedBusinesses =  await this.userService.getIntegratedBusiness();
+            res.status(200).json({ success: true, data: integratedBusinesses });
+        }
+        catch (error) {
+            console.error("Error fetching integrated businesses:", error.message);
             res.status(500).json({success: false, message: error.message})
         }
     }

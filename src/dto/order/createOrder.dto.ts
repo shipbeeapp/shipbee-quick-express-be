@@ -231,6 +231,7 @@ export class CreateOrderDto {
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
+  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
   fromAddress: AddressDto  
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)

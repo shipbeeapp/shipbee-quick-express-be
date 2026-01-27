@@ -24,6 +24,81 @@ export class PricingController {
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updatePricing.bind(this));
     //get current pricing
     this.router.get(`${this.path}/calculate`, validateDto(GetPricingDTO), this.calculatePricing.bind(this));
+    /**
+     * @swagger
+     * /api/pricing/quick:
+     *   get:
+     *     summary: Get quick pricing
+     *     description: |
+     *       Retrieves pricing for all available vehicles for a quick delivery based on `distance` and optional `lifters`. 
+     *       Vehicles like Motorcycle have a max distance limit (e.g., 15 km).
+     *     tags:
+     *       - Pricing
+     *     parameters:
+     *       - in: query
+     *         name: distance
+     *         schema:
+     *           type: number
+     *           example: 10
+     *         required: true
+     *         description: Distance in kilometers
+     *       - in: query
+     *         name: lifters
+     *         schema:
+     *           type: number
+     *           example: 0
+     *         required: false
+     *         description: Number of lifters
+     *     responses:
+     *       200:
+     *         description: Quick pricing calculated successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: true
+     *                 pricing:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       vehicleType:
+     *                         type: string
+     *                         example: "Sedan Car"
+     *                       totalCost:
+     *                         type: number
+     *                         example: 120
+     *       400:
+     *         description: Missing required parameter or invalid request
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Distance is required"
+     *       500:
+     *         description: Error calculating pricing
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Error fetching quick pricing"
+     */
+
     this.router.get(`${this.path}/quick`, this.getQuickPricing.bind(this))
   }
 
@@ -72,12 +147,12 @@ export class PricingController {
 
     private async getQuickPricing(req: Request, res: Response) {
         try {
-            const {distance, lifters} = req.body as {distance: number, lifters: number}
+            const {distance, lifters} = req.query
             if (!distance) {
                 return res.status(400).json({success: false, message: "Distance is required"})
             }
             console.log("distance in req.body: ", distance, " lifters in req.body: ", lifters)
-            const quickPricings = await this.pricingService.getAllQuickPricings(distance, lifters);
+            const quickPricings = await this.pricingService.getAllQuickPricings(Number(distance), Number(lifters));
             res.status(200).json({success: true, pricing: quickPricings})
         }
         catch (err) {
