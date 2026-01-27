@@ -23,6 +23,7 @@ import { generatePhotoLink } from "../utils/global.utils.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
 import { BroadcastMessageService } from "./broadcastMessage.service.js";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -199,6 +200,8 @@ export default class DriverService {
                 .leftJoin("driver.businessOwner", "businessOwner")
                 .select([
                     "driver.id",
+                    "driver.income",
+                    "driver.cashBalance",
                     "driver.name",
                     "driver.phoneNumber",
                     "driver.status",
@@ -370,80 +373,55 @@ export default class DriverService {
 
     async getDriverIncome(driverId: string): Promise<any> {
         try {
-            // Qatar is UTC+3
-            const offsetHours = 3;
-                    
-            // Get current UTC time
-            const now = new Date();
-                    
-            // Start of today in Qatar time
-            const startOfToday = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                0 - offsetHours, // shift UTC midnight to Qatar midnight
-                0,
-                0,
-                0
-              )
-            );
-            
-            // End of today in Qatar time
-            const endOfToday = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                23 - offsetHours, // shift UTC to Qatar
-                59,
-                59,
-                999
-              )
-            );
-            // 1. Query today's completed orders for income
-            const todayOrders = await this.orderRepository.find({
-                where: {
-                    driver: { id: driverId },
-                    status: OrderStatus.COMPLETED,
-                    completedAt: Between(startOfToday, endOfToday)
-                },
-                select: ["id", "totalCost", "completedAt"]
-            });
-
-            const totalIncome = todayOrders.reduce(
-                (sum, order) => sum + Number(order.totalCost || 0),
-                0
-            );
-            // 2. Query all completed orders for list
             const allOrders = await this.orderRepository.find({
                 where: {
                     driver: { id: driverId },
                     status: OrderStatus.COMPLETED
                 },
                 select: ["id", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
+                relations: ["stops"],
                 order: { completedAt: "DESC" }
             });
-            const orders = allOrders.map(order => ({
-                id: order.id,
-                date: order.completedAt.toLocaleString("en-US", {
-                    timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-                    day: "numeric",
-                    month: "numeric",
-                    year: "numeric"
-                }),
-                time: order.completedAt.toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                    timeZone: "Asia/Qatar"
-                }),
-                driverShare: Number(order.totalCost) || 0,
-                paymentMethod: order.paymentMethod
-            }));
+            const driver = await this.findDriverById(driverId, "get-income")
+            const orders = allOrders.map(order => {
+                const driverShare = Number(order.totalCost) || 0;
+
+                // Sum totalPrice from stops (if any)
+                const totalStopsPrice = order.stops?.reduce((sum, stop: any) => {
+                  return sum + (Number(stop.totalPrice) || 0);
+                }, 0) || 0;
+            
+                const remainingShare =
+                  totalStopsPrice > 0 ? totalStopsPrice - driverShare : 0;
+                
+                const paymentMethods = new Set<string>();
+                if (order.paymentMethod) paymentMethods.add(order.paymentMethod);
+                order.stops?.forEach((stop: any) => {
+                  if (stop.paymentMethod) paymentMethods.add(stop.paymentMethod);
+                });
+                return {
+                    id: order.id,
+                    date: order.completedAt.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric"
+                    }),
+                    time: order.completedAt.toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Qatar"
+                    }),
+                    driverShare: Number(order.totalCost) || 0,
+                    remainingShare,
+                    paymentMethod: Array.from(paymentMethods)
+                }
+            });
 
             return {
-                totalIncome,
+                income: Number(driver.income) || 0,
+                cashBalance: Number(driver.cashBalance) || 0,
                 orders
             };
         } catch (error) {
@@ -1241,6 +1219,98 @@ export default class DriverService {
         } catch (err) {
             console.error(`Error getting driver businesses: ${err.message}`)
             throw new Error(`Error getting driver businesses: ${err.message}`)
+        }
+    }
+
+    async updateDriverIncomeAndCashBalance(driverId: string, order: Order) {
+        try {
+            const driver = await this.driverRepository.findOne({
+                where: { id: driverId }, 
+                relations: ["businessOwner"]
+            })
+            if (!driver) {
+              console.error("driver not found")
+              throw new Error("Driver not found");
+            }
+            console.log("order totalCost:", order.totalCost)
+            console.log("driver current income:" , driver.income)
+            driver.income = Number(driver.income || 0) + Number(order.totalCost || 0); 
+            console.log("new driver income: ", driver.income)
+            const stops = order.stops || [];
+
+            const cashStops = stops.filter(
+              s => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY);
+        
+            const cardStops = stops.filter(
+              s =>
+                s.paymentMethod === PaymentMethod.CREDIT_DEBIT ||
+                s.paymentMethod === PaymentMethod.CARD_ON_DELIVERY ||
+                s.paymentMethod === PaymentMethod.WALLET
+            );
+
+            const hasAnyTotalPrice = stops.some(
+              s => s.totalPrice !== null && s.totalPrice !== undefined
+            );
+        
+            const cashStopsTotal = cashStops.reduce(
+              (sum, s) => sum + (Number(s.totalPrice) || 0),
+              0
+            );
+
+            // 2️⃣ DRIVER HAS BUSINESS OWNER
+            // then only add to the cash balance in case of cash orders
+            // and never subtract from it in any case (business need)
+            console.log("current cash balance: ", driver.cashBalance)
+            if (driver.businessOwner) {
+              console.log("order has a business owner")
+              if (!hasAnyTotalPrice) {
+                if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                    driver.cashBalance =
+                      Number(driver.cashBalance || 0) + Number(order.totalCost) || 0;
+                  }
+              }
+              else {
+                driver.cashBalance = 
+                    Number(driver.cashBalance) + cashStopsTotal
+              }
+            }
+
+            // 3️⃣ DRIVER DOES NOT HAVE BUSINESS OWNER
+            else {
+                const allCash = cashStops.length === stops.length;
+                const allCard = cardStops.length === stops.length;
+                const mixed = cashStops.length > 0 && cardStops.length > 0; 
+                // 🔹 NO totalPrice ON ANY STOP (means order made via website)
+                // check if order payment method is 
+                if (!hasAnyTotalPrice) {
+                  console.log("order is made via website so no total price")
+                  //revisit this later if a payment would be made per stop when ordering from site
+                  if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                    driver.cashBalance =
+                      Number(driver.cashBalance || 0) + Number(order.totalCost) || 0;
+                  } else {
+                    driver.cashBalance =
+                      Number(driver.cashBalance || 0) - Number(order.totalCost) || 0;
+                  }
+                }
+                else {
+                  console.log("order is made by a client")
+                  if (allCash || mixed) {
+                    driver.cashBalance =
+                      Number(driver.cashBalance || 0) +
+                      (cashStopsTotal - Number(order.totalCost) || 0);
+                  } 
+                  else if (allCard) {
+                    driver.cashBalance =
+                      Number(driver.cashBalance || 0) - Number(order.totalCost) || 0;
+                  } 
+                }
+            }
+            console.log("new driver cash balance: ", driver.cashBalance)
+            await this.driverRepository.save(driver);
+        } catch (err) {
+            console.error(`Error getting updating driver income: ${err.message}`)
+            throw new Error(`Error getting updating driver income: ${err.message}`)
         }
     }
 }

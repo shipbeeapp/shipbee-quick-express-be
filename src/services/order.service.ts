@@ -679,6 +679,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
+      await this.driverService.updateDriverIncomeAndCashBalance(driverId, order)
       this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
      if (this.isAnsarOrder(order.id)) {
         const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
@@ -695,8 +696,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               }
             })
         console.log(`Sent location update to ansar upon completion for order #${order.orderNo}`)
+        this.removeAnsarOrder(order.id)
       }
-      this.removeAnsarOrder(order.id)
     }
     else {
       console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
