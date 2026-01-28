@@ -136,28 +136,34 @@ export default class OrderService {
         
       //🔹 Step 3: Calculate total cost
       let total;
-      const pricingInput = await validateObject(GetPricingDTO, {
-        serviceSubcategory: orderData.serviceSubcategory,
-        vehicleType: orderData.vehicleType,
-        distance: orderData.distance,
-        fromCountry: orderData.fromAddress.country,
-        fromCity: orderData.fromAddress.city,
-        toCountry: orderData.stops[0]?.toAddress?.country,
-        toCity: orderData.stops[0]?.toAddress?.city,
-        weight: orderData.shipment?.weight,
-        length: orderData.shipment?.length,
-        width: orderData.shipment?.width,
-        height: orderData.shipment?.height,
-        plannedShippingDate: orderData.shipment?.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
-        shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
-        lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
-      });
-      const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
-      console.log("total cost before discount:", costBeforePromo);
-      const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
-      total = totalCost;
-      console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
-      
+       if (orderData.vehicleType == VehicleType.FLAT_BED_TRAILER || orderData.vehicleType == VehicleType.LOW_BED_TRAILER 
+             || orderData.vehicleType == VehicleType.CHILLER_VAN
+              || orderData.vehicleType == VehicleType.FREEZER_VAN || orderData.vehicleType  == VehicleType.CANTER_TRUCK) {
+                total = null;
+      }
+      else {
+        const pricingInput = await validateObject(GetPricingDTO, {
+          serviceSubcategory: orderData.serviceSubcategory,
+          vehicleType: orderData.vehicleType,
+          distance: orderData.distance,
+          fromCountry: orderData.fromAddress.country,
+          fromCity: orderData.fromAddress.city,
+          toCountry: orderData.stops[0]?.toAddress?.country,
+          toCity: orderData.stops[0]?.toAddress?.city,
+          weight: orderData.shipment?.weight,
+          length: orderData.shipment?.length,
+          width: orderData.shipment?.width,
+          height: orderData.shipment?.height,
+          plannedShippingDate: orderData.shipment?.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
+          shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
+          lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
+        });
+        const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
+        console.log("total cost before discount:", costBeforePromo);
+        const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
+        total = totalCost;
+        console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
+    }
       const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
