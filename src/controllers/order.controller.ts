@@ -411,10 +411,15 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let orders;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType } = req.query;
-      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(serviceType as ServiceSubcategoryName);
+      const { serviceType, fromStatus, toStatus, thresholdMinutes } = req.query;
+      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
+        serviceType as ServiceSubcategoryName, 
+        fromStatus as string,
+        toStatus as string,
+        thresholdMinutes ? Number(thresholdMinutes) : undefined
+      );
       else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
-      res.status(200).json({ success: true, orders: orders });
+      res.status(200).json({ success: true, total: orders.length, orders: orders });
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
@@ -753,8 +758,10 @@ export class OrderController {
 
   private async getOrdersPerIntegratedBusiness(req: AuthenticatedRequest, res: Response) {
     try {
-      const { userId } = req.query as {userId: string}
+      const { userId, isLate } = req.query as {userId: string, isLate?: string}
       console.log("fetching orders for integrated business with id: ", userId)
+      const parsedIsLate =
+        isLate === undefined ? undefined : isLate === "true";
       let userIds: string[];
 
       if (userId) {
@@ -774,7 +781,7 @@ export class OrderController {
         const integratedBusinesses = await this.userService.getIntegratedBusiness()
         userIds = integratedBusinesses.map(u => u.id)
       } 
-      const orders = await this.orderService.getOrdersbyUser(userIds)
+      const orders = await this.orderService.getOrdersbyUser(userIds, undefined, parsedIsLate)
       return res.status(200).json({ success: true, data: orders})
     }
     catch (err) {

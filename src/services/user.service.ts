@@ -111,10 +111,8 @@ export default class UserService {
           .select("order.createdById", "userId")
           .where("subcategory.name = :serviceType", { serviceType })
           .getRawMany();
-        console.log({ orders });
         
         const userIds = orders.map(o => o.userId);
-        console.log({ userIds });
 
         if (userIds.length === 0) return []; // no users found
 

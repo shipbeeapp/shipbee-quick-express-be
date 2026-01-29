@@ -90,7 +90,7 @@ export class UserController {
   private initializeRoutes() {
     // Define your routes here
     //update user endpoint using id
-    this.router.get(`/admin${this.path}`, this.getUsers.bind(this));
+    this.router.get(`/admin${this.path}`, authenticationMiddleware, this.getUsers.bind(this));
     this.router.get(`/admin${this.path}/integrated-businesses`, authenticationMiddleware, this.getIntegratedBusinesses.bind(this))
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updateUser.bind(this));
     this.router.get("/admin/order-status-update", this.orderStatusUpdate.bind(this));

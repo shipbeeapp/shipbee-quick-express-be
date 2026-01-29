@@ -403,6 +403,7 @@ export default class DriverService {
                 });
                 return {
                     id: order.id,
+                    orderNo: order.orderNo,
                     date: order.completedAt.toLocaleString("en-US", {
                         timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
                         day: "numeric",
@@ -1313,6 +1314,22 @@ export default class DriverService {
         } catch (err) {
             console.error(`Error getting updating driver income: ${err.message}`)
             throw new Error(`Error getting updating driver income: ${err.message}`)
+        }
+    }
+
+    async resolveCashBalance(driverId: string): Promise<void> {
+        try {
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            driver.cashBalance = 0;
+            console.log(`Driver ${driverId} cash balance resolved to zero.`);
+            await this.driverRepository.save(driver);
+        }
+        catch (error) {
+            console.error("Error resolving driver cash balance:", error);
+            throw error;
         }
     }
 }
