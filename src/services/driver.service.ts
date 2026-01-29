@@ -1315,4 +1315,20 @@ export default class DriverService {
             throw new Error(`Error getting updating driver income: ${err.message}`)
         }
     }
+
+    async resolveCashBalance(driverId: string): Promise<void> {
+        try {
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            driver.cashBalance = 0;
+            console.log(`Driver ${driverId} cash balance resolved to zero.`);
+            await this.driverRepository.save(driver);
+        }
+        catch (error) {
+            console.error("Error resolving driver cash balance:", error);
+            throw error;
+        }
+    }
 }

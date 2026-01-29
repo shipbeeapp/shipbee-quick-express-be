@@ -84,6 +84,7 @@ export class DriverController {
         this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
         this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
         this.router.put(`/admin${this.path}/:id/approve-business-docs`, authenticationMiddleware, this.approveBusinessDocs.bind(this));
+        this.router.put(`/admin${this.path}/:id/resolve-cash-balance`, authenticationMiddleware, this.resolveCashBalance.bind(this));
         this.router.put(`${this.path}/:id/edit-qid`, 
             authenticationMiddleware, 
             upload.fields([
@@ -746,6 +747,20 @@ export class DriverController {
             res.status(200).json({success: true, data: activeOrder})
         } catch (error) {
             console.error("Error getting current active order:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private resolveCashBalance = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            await this.driverService.resolveCashBalance(driverId);
+            res.status(200).json({ success: true, message: "Driver cash balance resolved successfully." });
+        } catch (error) {
+            console.error("Error resolving driver cash balance:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }
