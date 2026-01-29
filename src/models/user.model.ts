@@ -60,6 +60,9 @@ export class User extends BaseEntity {
   @Column({ type: "boolean", nullable: true })
   hasLoggedInExpress: boolean;
 
+  @Column({type: "float", nullable: true})
+  maxOrderDuration: number;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

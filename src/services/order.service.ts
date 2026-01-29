@@ -48,6 +48,7 @@ import {formatAddress}  from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
+import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -291,7 +292,7 @@ export default class OrderService {
     }
   }
 
-  async getOrdersbyUser(userId: string[], serviceType?: string) {
+  async getOrdersbyUser(userId: string[], serviceType?: string, isLate?: boolean) {
     try {
     console.log("Fetching orders for user ID:", userId);
     const orders = await this.orderRepository.find({
@@ -302,16 +303,38 @@ export default class OrderService {
       relations: [
         "sender", "fromAddress", "serviceSubcategory", 
         "orderStatusHistory", "shipment", 
+        "createdBy",
         "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
         "stops", "stops.receiver", "stops.toAddress",
-        "createdBy"
       ],
       order: {
         createdAt: "DESC",
       },
     })
+
+    let filteredOrders = orders;
+
+    if (isLate !== undefined) {
+      console.log("Filtering orders by lateness:", isLate);
+      filteredOrders = orders.filter(order => {
+        const maxDuration = order.createdBy?.maxOrderDuration;
+
+        // If we cannot compute lateness, treat as NOT late
+        if (!maxDuration || !order.pickUpDate || !order.completedAt) {
+          // console.log("Cannot determine lateness for order ID:", order.id);
+          return isLate === false;
+        }
+      
+        const diffMinutes =
+          (order.completedAt.getTime() - order.pickUpDate.getTime()) / (1000 * 60);
+        const late = diffMinutes >= maxDuration;
+
+      
+        return late === isLate;
+      });
+    }
      return await Promise.all(
-      orders.map(order => toOrderResponseDto(order))
+      filteredOrders.map(order => toOrderResponseDto(order))
     );
   } catch (error) {
     console.error("Error fetching orders for user:", error.message);
@@ -319,7 +342,7 @@ export default class OrderService {
   }
   }
 
-  async getOrders(serviceType: ServiceSubcategoryName) {
+  async getOrders(serviceType: ServiceSubcategoryName, fromStatus?: string, toStatus?: string, thresholdMinutes?: number) {
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
       await AppDataSource.initialize();
@@ -334,7 +357,7 @@ export default class OrderService {
       },
       relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
-          "driver", "driver.vehicle", "shipment", 
+          "driver", "driver.vehicle", "shipment", "createdBy",
           "cancellationRequests", "cancellationRequests.driver",
           "stops", "stops.receiver", "stops.toAddress", 
       ],
@@ -342,8 +365,26 @@ export default class OrderService {
         createdAt: "DESC",
       },
     });
+
+    let filteredOrders = orders;
+
+    if (fromStatus && toStatus && thresholdMinutes !== undefined) {
+      filteredOrders = orders.filter(order => {
+        const fromTime = getStatusTimestamp(order, fromStatus);
+        const toTime = getStatusTimestamp(order, toStatus);
+
+        if (!fromTime || !toTime) return false;
+
+        if (toTime < fromTime) return false;
+
+        const duration = getDurationInMinutes(fromTime, toTime);
+        console.log(`Order ID: ${order.id}, Duration from ${fromStatus} to ${toStatus}: ${duration} minutes`);
+        return duration >= thresholdMinutes;
+      });
+    }
+
      return await Promise.all(
-      orders.map(order => toOrderResponseDto(order))
+      filteredOrders.map(order => toOrderResponseDto(order))
     );
   }
 

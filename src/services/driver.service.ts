@@ -403,6 +403,7 @@ export default class DriverService {
                 });
                 return {
                     id: order.id,
+                    orderNo: order.orderNo,
                     date: order.completedAt.toLocaleString("en-US", {
                         timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
                         day: "numeric",
