@@ -201,6 +201,8 @@ export default class DriverService {
                 .select([
                     "driver.id",
                     "driver.income",
+                    "driver.cashIncome",
+                    "driver.onlineIncome",
                     "driver.cashBalance",
                     "driver.name",
                     "driver.phoneNumber",
@@ -384,15 +386,15 @@ export default class DriverService {
             });
             const driver = await this.findDriverById(driverId, "get-income")
             const orders = allOrders.map(order => {
-                const driverShare = Number(order.totalCost) || 0;
 
-                // Sum totalPrice from stops (if any)
-                const totalStopsPrice = order.stops?.reduce((sum, stop: any) => {
-                  return sum + (Number(stop.totalPrice) || 0);
-                }, 0) || 0;
+                // Sum totalPrice from cash stops (if any)
+                const totalStopsPrice =
+                    order.stops
+                      ?.filter((s: any) => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY)
+                      .reduce((sum, s: any) => sum + (Number(s.totalPrice) || 0), 0) || 0;
             
-                const remainingShare =
-                  totalStopsPrice > 0 ? totalStopsPrice - driverShare : 0;
+                const cashValueOfGoods =
+                  totalStopsPrice > 0 ? totalStopsPrice : 0;
                 
                 const paymentMethods = new Set<string>();
                 if (order.paymentMethod) paymentMethods.add(order.paymentMethod);
@@ -414,13 +416,15 @@ export default class DriverService {
                         timeZone: "Asia/Qatar"
                     }),
                     driverShare: Number(order.totalCost) || 0,
-                    remainingShare,
+                    cashValueOfGoods,
                     paymentMethod: Array.from(paymentMethods)
                 }
             });
 
             return {
                 income: Number(driver.income) || 0,
+                cashIncome: Number(driver.cashIncome) || 0,
+                onlineIncome: Number(driver.onlineIncome) || 0,
                 cashBalance: Number(driver.cashBalance) || 0,
                 orders
             };
@@ -1263,47 +1267,45 @@ export default class DriverService {
             console.log("current cash balance: ", driver.cashBalance)
             if (driver.businessOwner) {
               console.log("order has a business owner")
-              if (!hasAnyTotalPrice) {
-                if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
-                    driver.cashBalance =
-                      Number(driver.cashBalance || 0) + Number(order.totalCost) || 0;
-                  }
-              }
-              else {
+              if (hasAnyTotalPrice) {
+                console.log("order has total price on at least one stop so updating cash balance")
                 driver.cashBalance = 
                     Number(driver.cashBalance) + cashStopsTotal
+                driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
+              }
+              else {
+                console.log("order is via website so no total price on any stop")
+                if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                    driver.cashIncome = Number(driver.cashIncome || 0) + Number(order.totalCost) || 0;
+                }
+                else{
+                  driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
+                }
               }
             }
 
             // 3️⃣ DRIVER DOES NOT HAVE BUSINESS OWNER
             else {
-                const allCash = cashStops.length === stops.length;
-                const allCard = cardStops.length === stops.length;
-                const mixed = cashStops.length > 0 && cardStops.length > 0; 
+                // const allCash = cashStops.length === stops.length;
+                // const allCard = cardStops.length === stops.length;
+                // const mixed = cashStops.length > 0 && cardStops.length > 0; 
                 // 🔹 NO totalPrice ON ANY STOP (means order made via website)
                 // check if order payment method is 
                 if (!hasAnyTotalPrice) {
                   console.log("order is made via website so no total price")
                   //revisit this later if a payment would be made per stop when ordering from site
                   if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
-                    driver.cashBalance =
-                      Number(driver.cashBalance || 0) + Number(order.totalCost) || 0;
+                    driver.cashIncome =
+                      Number(driver.cashIncome || 0) + Number(order.totalCost) || 0;
                   } else {
-                    driver.cashBalance =
-                      Number(driver.cashBalance || 0) - Number(order.totalCost) || 0;
+                    driver.onlineIncome =
+                      Number(driver.onlineIncome || 0) + Number(order.totalCost) || 0;
                   }
                 }
                 else {
                   console.log("order is made by a client")
-                  if (allCash || mixed) {
-                    driver.cashBalance =
-                      Number(driver.cashBalance || 0) +
-                      (cashStopsTotal - Number(order.totalCost) || 0);
-                  } 
-                  else if (allCard) {
-                    driver.cashBalance =
-                      Number(driver.cashBalance || 0) - Number(order.totalCost) || 0;
-                  } 
+                  driver.cashBalance = Number(driver.cashBalance || 0) + cashStopsTotal;
+                  driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
                 }
             }
             console.log("new driver cash balance: ", driver.cashBalance)

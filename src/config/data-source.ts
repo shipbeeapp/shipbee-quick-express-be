@@ -96,6 +96,7 @@ import { ModifyDriverStatusOnDutyToBusy1768296334869 } from "../migrations/17682
 import {AddDefaultDriverStatus1768297449812} from "../migrations/1768297449812-AddDefaultDriverStatus.js"
 import {AddCardOnDeliveryOption1768989836638} from "../migrations/1768989836638-AddCardOnDeliveryOption.js"
 import {AddDriverIncomeAndCashBalance1769467331980} from "../migrations/1769467331980-AddDriverIncomeAndCashBalance.js"
+import { AddDriverCashAndOnlineIncome1769678429853 } from "../migrations/1769678429853-AddDriverCashAndOnlineIncome.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -204,6 +205,7 @@ export const AppDataSource = new DataSource({
     AddDefaultDriverStatus1768297449812,
     AddCardOnDeliveryOption1768989836638,
     AddDriverIncomeAndCashBalance1769467331980,
+    AddDriverCashAndOnlineIncome1769678429853,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
