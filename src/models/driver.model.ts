@@ -149,6 +149,12 @@ export class Driver extends BaseEntity {
     income: number
 
     @Column({type: "bigint", default: 0})
+    cashIncome: number
+
+    @Column({type: "bigint", default: 0})
+    onlineIncome: number
+    
+    @Column({type: "bigint", default: 0})
     cashBalance: number
 }
 
