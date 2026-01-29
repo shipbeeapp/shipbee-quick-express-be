@@ -121,7 +121,24 @@ export class DriverController {
         
         this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
         this.router.put(`/admin${this.path}/:id/switch-type`, authenticationMiddleware, this.switchDriverType.bind(this));
-        this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, this.adminUpdateDriver.bind(this))
+        this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, 
+            upload.fields([
+              { name: "qidFront", maxCount: 1 },
+              { name: "qidBack", maxCount: 1 },
+              { name: "driverLicenseFront", maxCount: 1 },
+              { name: "driverLicenseBack", maxCount: 1 },
+              { name: "vehicleRegistrationFront", maxCount: 1 },
+              { name: "vehicleRegistrationBack", maxCount: 1 },
+              { name: "profilePicture", maxCount: 1 },
+              { name: "vehicleLeft", maxCount: 1 },
+              { name: "vehicleRight", maxCount: 1 },
+              { name: "vehicleFront", maxCount: 1 },
+              { name: "vehicleBack", maxCount: 1 },
+              { name: "crPhoto", maxCount: 1 },
+              { name: "taxId", maxCount: 1 },
+              { name: "companyLogo", maxCount: 1 },
+            ]),
+            this.adminUpdateDriver.bind(this))
         this.router.get(`/admin${this.path}/businesses`, authenticationMiddleware, this.getDriverBusinesses.bind(this))
         this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
     }
@@ -696,7 +713,32 @@ export class DriverController {
             }
 
              const driverId = req.params.id;
-             const driverData: UpdateDriverDto = req.body;
+             const driverData = req.body;
+
+             if (req.files) {
+                const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+                console.log("Files received during driver update via admin:", files);
+                driverData.qidFront = files['qidFront'] ? files['qidFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.qidBack = files['qidBack'] ? files['qidBack'][0].path.split("/upload/")[1] : undefined;
+                
+                driverData.licenseFront = files['driverLicenseFront'] ? files['driverLicenseFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.licenseBack = files['driverLicenseBack'] ? files['driverLicenseBack'][0].path.split("/upload/")[1] : undefined;
+                
+                driverData.registrationFront = files['vehicleRegistrationFront'] ? files['vehicleRegistrationFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.registrationBack = files['vehicleRegistrationBack'] ? files['vehicleRegistrationBack'][0].path.split("/upload/")[1] : undefined;
+                driverData.profilePicture = files['profilePicture'] ? files['profilePicture'][0].path.split("/upload/")[1] : undefined;
+                  // Vehicle photos
+                
+                driverData.leftPhoto = files['vehicleLeft'] ? files['vehicleLeft'][0].path.split("/upload/")[1] : undefined;
+                driverData.rightPhoto = files['vehicleRight'] ? files['vehicleRight'][0].path.split("/upload/")[1] : undefined;
+                driverData.frontPhoto = files['vehicleFront'] ? files['vehicleFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.backPhoto = files['vehicleBack'] ? files['vehicleBack'][0].path.split("/upload/")[1] : undefined;
+
+                driverData.crPhoto = files['crPhoto'] ? files['crPhoto'][0].path.split("/upload/")[1] : undefined;
+                driverData.taxId = files['taxId'] ? files['taxId'][0].path.split("/upload/")[1] : undefined;
+                driverData.companyLogo = files['companyLogo'] ? files['companyLogo'][0].path.split("/upload/")[1] : undefined;
+                console.log("Processed driver data with file paths:", driverData);
+             }
 
             await this.driverService.updateDriver(driverId, driverData)
             res.status(200).json({ success: true, message: "Driver Data updated successfully"});
