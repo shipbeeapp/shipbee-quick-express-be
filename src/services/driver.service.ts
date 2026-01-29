@@ -284,7 +284,7 @@ export default class DriverService {
         }
     }
 
-    async updateDriver(driverId: string, driverData: UpdateDriverDto) {
+    async updateDriver(driverId: string, driverData: any) {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -302,9 +302,19 @@ export default class DriverService {
                 throw new Error(`Driver with ID ${driverId} not found`);
             }
             // Update vehicle if vehicleType is provided and driver has a vehicle
-            if (driverData.vehicleType && driver.vehicle) {
+            if (driver.vehicle) {
                 console.log("Updating vehicle type for driver:", driverId, "with: ", driver.vehicle.type, "to", driverData.vehicleType);
-                driver.vehicle.type = driverData.vehicleType;
+                driver.vehicle.type = driverData.vehicleType ? driverData.vehicleType : driver.vehicle.type;
+                driver.vehicle.number = driverData.vehicleNumber ? driverData.vehicleNumber : driver.vehicle.number;
+                driver.vehicle.model = driverData.vehicleModel ? driverData.vehicleModel : driver.vehicle.model;
+                driver.vehicle.color = driverData.vehicleColor ? driverData.vehicleColor : driver.vehicle.color;
+                driver.vehicle.productionYear = driverData.vehicleProductionYear ? driverData.vehicleProductionYear : driver.vehicle.productionYear;
+                driver.vehicle.registrationFront = driverData.vehicleRegistrationFront ? driverData.vehicleRegistrationFront : driver.vehicle.registrationFront;
+                driver.vehicle.registrationBack = driverData.vehicleRegistrationBack ? driverData.vehicleRegistrationBack : driver.vehicle.registrationBack;
+                driver.vehicle.frontPhoto = driverData.vehicleFront ? driverData.vehicleFront : driver.vehicle.frontPhoto;
+                driver.vehicle.backPhoto = driverData.vehicleBack ? driverData.vehicleBack : driver.vehicle.backPhoto;
+                driver.vehicle.leftPhoto = driverData.vehicleLeft ? driverData.vehicleLeft : driver.vehicle.leftPhoto;
+                driver.vehicle.rightPhoto = driverData.vehicleRight ? driverData.vehicleRight : driver.vehicle.rightPhoto;
                 console.log("Vehicle type before saving:", driver.vehicle);
                 await vehicleRepository.save(driver.vehicle);
                 console.log("Vehicle type updated successfully");
@@ -321,7 +331,18 @@ export default class DriverService {
             }
           
             // Remove vehicleType from driverData to avoid assigning it directly
-            const { vehicleType, ...rest } = driverData;
+            const { vehicleType, 
+                vehicleNumber, 
+                vehicleModel,
+                vehicleColor,
+                vehicleProductionYear,
+                vehicleRegistrationFront,
+                vehicleRegistrationBack,
+                vehicleFront,
+                vehicleBack,
+                vehicleLeft,
+                vehicleRight,
+                ...rest } = driverData;
         
             // Update driver fields
             Object.assign(driver, rest);
