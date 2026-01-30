@@ -801,7 +801,7 @@ export class OrderController {
         return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
       }
       financials = await this.orderService.getOrdersFinancials();
-      res.status(200).json({ success: true, financials: financials });
+      res.status(200).json({ success: true, data: financials });
     } catch (error) {
       console.error("Error in order controller getting orders financials:", error.message);
       res.status(400).json({ success: false, message: error.message });

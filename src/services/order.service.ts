@@ -1474,7 +1474,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       let totalCashDeliveryFees = 0;
       let totalOnlineDeliveryFees = 0;
 
-      const completedOrdersDetails = completedOrders.map(order => {
+      const orders = completedOrders.map(order => {
         const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
         const serviceFee = Number(order.totalCost) * env.SERVICE_FEE_PERCENTAGE / 100;
         totalSales += orderTotalPrice;
@@ -1525,7 +1525,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         totalServiceFees,
         totalCashDeliveryFees,
         totalOnlineDeliveryFees,
-        completedOrdersDetails
+        orders
       };
     } catch (err) {
       console.error(err.message)
