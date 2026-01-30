@@ -186,7 +186,8 @@ export default class OrderService {
         shipment,
         accessToken, // Generate a secure access token for the order
         payer: orderData.payer,
-        type: orderData.type
+        type: orderData.type,
+        serviceFeePercentage: env.SERVICE_FEE_PERCENTAGE
       });
 
     await queryRunner.manager.save(order);
@@ -1449,6 +1450,86 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     } catch (err) {
       console.error(err.message)
       throw new Error(`Error getting current active order: ${err.message}`)
+    }
+  }
+
+  async getOrdersFinancials() {
+    try {
+      // I want some insights for completed orders which include:
+      // - total sale: some of order.order_stops.total_price + order.total_cost for all completed orders
+      // - total delivery fees: sum of order.total_cost for all completed orders
+      // - total service fee: sum of order.totalCost * 10% for all completed orders
+      // - total cash delivery fee: sum of order.totalCost if no order.order_stops.totalprice and order.paymentMethod = CASH
+      // - total online delivery fee: sum of order.totalCost if order.order_stops.totalprice or order.paymentMethod != CASH
+      // - the completed orders details should include orderNo, pickupDate, completedAt, drivername, vehicleType, driver.businessOwner.name if exists (else freelance), order.createdBy.name, order.distance, (sum of order.order_stops.total_price + order.totalCost), order.total_cost, order.totalCost * 10% as service fee, paymentMethod (if there is order_stops.totalPrice then get order.order_stops.paymentMethods), paymentStatus(always Completed)
+      const completedOrders = await this.orderRepository.find({
+        where: {
+          status: OrderStatus.COMPLETED
+        },
+        relations: ["driver", "driver.businessOwner", "createdBy", "stops"]
+      });
+      let totalSales = 0;
+      let totalDeliveryFees = 0;
+      let totalServiceFees = 0;
+      let totalCashDeliveryFees = 0;
+      let totalOnlineDeliveryFees = 0;
+
+      const completedOrdersDetails = completedOrders.map(order => {
+        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        const serviceFee = Number(order.totalCost) * env.SERVICE_FEE_PERCENTAGE / 100;
+        totalSales += orderTotalPrice;
+        totalDeliveryFees += Number(order.totalCost);
+        totalServiceFees += serviceFee;
+        if (order.stops.some(stop => stop.totalPrice) || order.paymentMethod !== PaymentMethod.CASH_ON_DELIVERY) {
+          totalOnlineDeliveryFees += Number(order.totalCost);
+        } else {
+          totalCashDeliveryFees += Number(order.totalCost);
+        }
+        return {
+          orderNo: order.orderNo,
+          pickUpDate: order.pickUpDate.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "numeric"
+                      }),
+          completedAt: order.completedAt.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "numeric"
+                      }),
+          driverName: order.driver?.name || 'N/A',
+          vehicleType: order.vehicleType || 'N/A',
+          logisticsCompany: order.driver?.businessOwner ? order.driver.businessOwner.name : 'Freelance',
+          createdBy: order.createdBy.name,
+          distance: order.distance,
+          totalAmount: orderTotalPrice,
+          deliveryFee: Number(order.totalCost),
+          serviceFee: serviceFee,
+          //if stops have totalPrice, get paymentMethods from all stops (each stop can have different paymentMethod), else use order.paymentMethod
+          paymentMethod: order.stops.some(stop => stop.totalPrice) ?
+            Array.from(new Set(order.stops.map(stop => stop.paymentMethod))) :
+            [order.paymentMethod],
+          paymentStatus: 'Completed'
+        }
+      });
+
+      return {
+        totalSales,
+        totalDeliveryFees,
+        totalServiceFees,
+        totalCashDeliveryFees,
+        totalOnlineDeliveryFees,
+        completedOrdersDetails
+      };
+    } catch (err) {
+      console.error(err.message)
+      throw new Error(`Error getting orders financials: ${err.message}`)
     }
   }
 

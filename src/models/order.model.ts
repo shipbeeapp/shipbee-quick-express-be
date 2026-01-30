@@ -125,6 +125,9 @@ export class Order extends BaseEntity {
   @Column({ type: "text", nullable: true })
   deletedDriverData: string; // JSON string to store deleted driver info
 
+  @Column({ type: "float", nullable: false })
+  serviceFeePercentage: number;
+
   @OneToMany(() => OrderStop, (stop) => stop.order, { cascade: true })
   stops: OrderStop[];
 }
