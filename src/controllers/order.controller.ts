@@ -151,6 +151,7 @@ export class OrderController {
 
     this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
     this.router.get("/orders/dashboard", authenticationMiddleware, this.getOrdersDashboard.bind(this))
+    this.router.get("/orders/financials", authenticationMiddleware, this.getOrdersFinancials.bind(this));
     /**
      * @swagger
      * /api/orders/view-order-status:
@@ -787,6 +788,23 @@ export class OrderController {
     catch (err) {
       console.error(`Error in fetching orders for integrated business: ${err.message}`)
       res.status(400).json({ success: false, message: err.message })
+    }
+  }
+
+  private async getOrdersFinancials(req: AuthenticatedRequest, res: Response) {
+    try {
+      console.log("Authenticated user ID:", req.userId);
+      console.log("Authenticated user email:", req.email);
+      let financials;
+      console.log("admin in email: ", env.ADMIN.EMAIL);
+      if (req.email != env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
+      }
+      financials = await this.orderService.getOrdersFinancials();
+      res.status(200).json({ success: true, data: financials });
+    } catch (error) {
+      console.error("Error in order controller getting orders financials:", error.message);
+      res.status(400).json({ success: false, message: error.message });
     }
   }
 }

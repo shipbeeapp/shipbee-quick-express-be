@@ -74,5 +74,6 @@ export const env = {
   EXTERNAL_TRACKING_SOCKET: {
     URL: process.env.EXTERNAL_TRACKING_SOCKET_URL,
     TOKEN: process.env.EXTERNAL_TRACKING_SOCKET_TOKEN 
-  }
+  },
+  SERVICE_FEE_PERCENTAGE: Number(process.env.SERVICE_FEE_PERCENTAGE) || 10, // Default to 10%
 };
