@@ -432,11 +432,12 @@ export default class OrderService {
         status === OrderStatus.CANCELED ||
         status === OrderStatus.COMPLETED
       ) {
-        await this.driverService.updateDriverStatus(
-          order.driver.id,
-          DriverStatus.ACTIVE,
-          queryRunner
-        );
+        if (order.driver)
+          await this.driverService.updateDriverStatus(
+            order.driver.id,
+            DriverStatus.ACTIVE,
+            queryRunner
+          );
       }
 
       await queryRunner.commitTransaction();
@@ -455,17 +456,21 @@ export default class OrderService {
     broadcastOrderUpdate(order.id, order.status);
 
     if (status === OrderStatus.CANCELED) {
-      emitOrderCancellationUpdate(
-        order.driver.id,
-        order.id,
-        CancelRequestStatus.APPROVED
-      );
-      broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      if (order.driver) {
+        emitOrderCancellationUpdate(
+          order.driver.id,
+          order.id,
+          CancelRequestStatus.APPROVED
+        );
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
     }
 
     if (status === OrderStatus.COMPLETED) {
-      emitOrderCompletionUpdate(order.driver.id, order.id);
-      broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      if (order.driver) {
+        emitOrderCompletionUpdate(order.driver.id, order.id);
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
     }
 
     this.updateAnsarOrderStatus(order.id, status);
