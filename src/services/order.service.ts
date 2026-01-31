@@ -1486,7 +1486,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
   }
 
-  async getOrdersFinancials() {
+  async getOrdersFinancials(serviceType?: ServiceSubcategoryName) {
     try {
       // I want some insights for completed orders which include:
       // - total sale: some of order.order_stops.total_price + order.total_cost for all completed orders
@@ -1497,7 +1497,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       // - the completed orders details should include orderNo, pickupDate, completedAt, drivername, vehicleType, driver.businessOwner.name if exists (else freelance), order.createdBy.name, order.distance, (sum of order.order_stops.total_price + order.totalCost), order.total_cost, order.totalCost * 10% as service fee, paymentMethod (if there is order_stops.totalPrice then get order.order_stops.paymentMethods), paymentStatus(always Completed)
       const completedOrders = await this.orderRepository.find({
         where: {
-          status: OrderStatus.COMPLETED
+          status: OrderStatus.COMPLETED,
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined
         },
         relations: ["driver", "driver.businessOwner", "createdBy", "stops"]
       });
