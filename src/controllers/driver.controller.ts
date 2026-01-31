@@ -43,15 +43,18 @@ export class DriverController {
               },
             });
         const upload = multer({ storage });
-        this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
-        this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
-        this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
-        this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
         this.router.get(`${this.path}/active-order`, authenticationMiddleware, this.getCurrentActiveOrderForDriver.bind(this))
-        this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
-        this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
+        this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/orders`, authenticationMiddleware, this.getDriverOrders.bind(this));
+        this.router.get(`${this.path}/invited-drivers`, authenticationMiddleware, this.getInvitedDriversByBusinessOwner.bind(this));
+        this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
+        this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
+        this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
+        this.router.get(`${this.path}/all-online-drivers`, authenticationMiddleware, this.getAllOnlineDrivers.bind(this));
+        this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
+        this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
+        this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
         this.router.post(`${this.path}/signup`,
             upload.fields([
               { name: "qidFront", maxCount: 1 },
@@ -71,35 +74,29 @@ export class DriverController {
             ]),
             validationMiddleware(DriverDto),
             this.signupDriver.bind(this));
+        
+        this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
+        this.router.get(`${this.path}/:id/income`, authenticationMiddleware, this.getDriverIncomeForBusiness.bind(this));
+        this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
+        this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
+        
         this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
-        this.router.get(`${this.path}/invited-drivers`, authenticationMiddleware, this.getInvitedDriversByBusinessOwner.bind(this));
-        this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
-        this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
-        this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
-        this.router.get(`${this.path}/all-online-drivers`, authenticationMiddleware, this.getAllOnlineDrivers.bind(this));
-        this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
-        this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
-        this.router.put(`/admin${this.path}/:id/approve-qid`, authenticationMiddleware, this.approveQid.bind(this));
-        this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
-        this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
-        this.router.put(`/admin${this.path}/:id/approve-business-docs`, authenticationMiddleware, this.approveBusinessDocs.bind(this));
-        this.router.put(`/admin${this.path}/:id/resolve-cash-balance`, authenticationMiddleware, this.resolveCashBalance.bind(this));
         this.router.put(`${this.path}/:id/edit-qid`, 
             authenticationMiddleware, 
             upload.fields([
-              { name: "qidFront", maxCount: 1 },
-              { name: "qidBack", maxCount: 1 },
+                { name: "qidFront", maxCount: 1 },
+                { name: "qidBack", maxCount: 1 },
             ]),
             this.editQid.bind(this));
-        this.router.put(`${this.path}/:id/edit-license`,
-            authenticationMiddleware,
-            upload.fields([
-              { name: "driverLicenseFront", maxCount: 1 },
-                { name: "driverLicenseBack", maxCount: 1 },
-            ]),
+            this.router.put(`${this.path}/:id/edit-license`,
+                authenticationMiddleware,
+                upload.fields([
+                    { name: "driverLicenseFront", maxCount: 1 },
+                    { name: "driverLicenseBack", maxCount: 1 },
+                ]),
             this.editLicense.bind(this));
-        this.router.put(`${this.path}/:id/edit-vehicle-info`,
+            this.router.put(`${this.path}/:id/edit-vehicle-info`,
             authenticationMiddleware,
             upload.fields([
                 { name: "vehicleRegistrationFront", maxCount: 1 },
@@ -110,16 +107,25 @@ export class DriverController {
                 { name: "vehicleBack", maxCount: 1 },
             ]),
             this.editVehicleInfo.bind(this));
-        
-        this.router.put(`${this.path}/:id/edit-business-docs`, 
-            authenticationMiddleware, 
-            upload.fields([
-                { name: "crPhoto", maxCount: 1 },
-                { name: "taxId", maxCount: 1 },
-            ]),
-            this.editBusinessDocs.bind(this));
-        
+                    
+            this.router.put(`${this.path}/:id/edit-business-docs`, 
+                authenticationMiddleware, 
+                upload.fields([
+                    { name: "crPhoto", maxCount: 1 },
+                    { name: "taxId", maxCount: 1 },
+                ]),
+                this.editBusinessDocs.bind(this));
+                        
         this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
+        this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
+        
+        this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
+
+        this.router.put(`/admin${this.path}/:id/approve-qid`, authenticationMiddleware, this.approveQid.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-business-docs`, authenticationMiddleware, this.approveBusinessDocs.bind(this));
+        this.router.put(`/admin${this.path}/:id/resolve-cash-balance`, authenticationMiddleware, this.resolveCashBalance.bind(this));
         this.router.put(`/admin${this.path}/:id/switch-type`, authenticationMiddleware, this.switchDriverType.bind(this));
         this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, 
             upload.fields([
@@ -140,7 +146,6 @@ export class DriverController {
             ]),
             this.adminUpdateDriver.bind(this))
         this.router.get(`/admin${this.path}/businesses`, authenticationMiddleware, this.getDriverBusinesses.bind(this))
-        this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -806,4 +811,23 @@ export class DriverController {
             res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    private getDriverIncomeForBusiness = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const businessOwnerId = req.driverId;
+            const { id } = req.params;
+            if (!businessOwnerId) {
+                return res.status(400).json({ success: false, message: "Business owner ID is required." });
+            }
+            console.log("Fetching income for driver:", id, "belonging to business owner:", businessOwnerId);
+            const income = await this.driverService.getDriverIncomeForBusiness(id, businessOwnerId);
+            if (!income) {
+                return res.status(404).json({ success: false, message: "No income" });
+            }
+            res.status(200).json({ success: true, data: income });
+        } catch (error) {
+            console.error("Error fetching driver income for business:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }         
 }

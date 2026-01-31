@@ -1354,4 +1354,20 @@ export default class DriverService {
             throw error;
         }
     }
+
+    async getDriverIncomeForBusiness(driverId: string, businessOwnerId: string) {
+        try {
+            const driver = await this.driverRepository.findOne({
+                where: { id: driverId, businessOwner: { id: businessOwnerId } }
+            });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found or not linked to business owner ${businessOwnerId}`);
+            }
+            const income = this.getDriverIncome(driverId);
+            return income;
+        } catch (error) {
+            console.error("Error fetching driver income for business owner:", error);
+            throw error;
+        }
+    }
 }
