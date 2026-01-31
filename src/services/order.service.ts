@@ -404,7 +404,10 @@ export default class OrderService {
       order = await orderRepository.findOne({
         where: { id: orderId },
         relations: ["driver"],
-        lock: { mode: "pessimistic_write" },
+        lock: { 
+          mode: "pessimistic_write",
+          tables: ["orders"]
+        },
       });
 
       if (!order) {
