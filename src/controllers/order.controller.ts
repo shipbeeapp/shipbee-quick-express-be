@@ -800,7 +800,8 @@ export class OrderController {
       if (req.email != env.ADMIN.EMAIL) {
         return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
       }
-      financials = await this.orderService.getOrdersFinancials();
+      const { serviceType } = req.query;
+      financials = await this.orderService.getOrdersFinancials(serviceType as ServiceSubcategoryName);
       res.status(200).json({ success: true, data: financials });
     } catch (error) {
       console.error("Error in order controller getting orders financials:", error.message);
