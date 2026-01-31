@@ -391,82 +391,115 @@ export default class OrderService {
 
   async updateOrderStatus(orderId: string, status: OrderStatus) {
     console.log("Updating order status for order ID:", orderId, "to status:", status);
-    // Create a QueryRunner from the DataSource
+
     const queryRunner = AppDataSource.createQueryRunner();
-
-    // Establish real database connection using our queryRunner
     await queryRunner.connect();
-
-    // Start a new transaction
     await queryRunner.startTransaction();
+
+    let order: Order;
+
     try {
       const orderRepository = queryRunner.manager.getRepository(Order);
-      const order = await orderRepository.findOne({
+
+      order = await orderRepository.findOne({
         where: { id: orderId },
         relations: ["driver"],
+        lock: { 
+          mode: "pessimistic_write",
+          tables: ["orders"]
+        },
       });
 
       if (!order) {
         throw new Error(`Order with ID ${orderId} not found`);
       }
 
-      // Update the order status
       order.status = status;
-      const updatedOrder = await orderRepository.save(order);
 
-      // Add a new entry to the order status history
-      await this.orderStatusHistoryService.createOrderStatusHistory(updatedOrder, null, queryRunner);
-
-      // Commit transaction
-      await queryRunner.commitTransaction();
-      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-      if (status === OrderStatus.CANCELED) {
-        emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
-        if (order.driver.id) await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
-      }
-
-      else if (status === OrderStatus.COMPLETED) {
-        emitOrderCompletionUpdate(order.driver.id, order.id);
-        await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
+      if (status === OrderStatus.COMPLETED) {
         order.completedAt = new Date();
-        await this.saveOrder(order);
       }
-    
-      this.updateAnsarOrderStatus(order.id, status)
-      if (this.isAnsarOrder(order.id)) {
-        const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
-        let latitude: number | null;
-        let longitude: number | null;
-        if (driverCurrentLocation) {
-          const [latStr, lngStr] = driverCurrentLocation?.split(",");
-          latitude = parseFloat(latStr);
-          longitude = parseFloat(lngStr);
-        }
-        externalTrackingSocket.send({
-              route: "shipbeeUpdate",
-              payload: {
-                id: order.orderNo,
-                status: order.status,
-                latitude,
-                longitude
-              }
-            })
+
+      await orderRepository.save(order);
+
+      await this.orderStatusHistoryService.createOrderStatusHistory(
+        order,
+        null,
+        queryRunner
+      );
+
+      if (
+        status === OrderStatus.CANCELED ||
+        status === OrderStatus.COMPLETED
+      ) {
+        if (order.driver)
+          await this.driverService.updateDriverStatus(
+            order.driver.id,
+            DriverStatus.ACTIVE,
+            queryRunner
+          );
       }
-      console.log("Order status updated successfully");
+
+      await queryRunner.commitTransaction();
     } catch (error) {
       console.error("Error updating order status:", error.message);
-      // 🛡 Safe rollback
+
       if (queryRunner.isTransactionActive) {
-        console.error("Rolling back transaction")
         await queryRunner.rollbackTransaction();
       }
-      throw new Error(`${error.message}`);
-    }
-    finally {
-      // Release the queryRunner which is manually created
+
+      throw error;
+    } finally {
       await queryRunner.release();
     }
-  }
+
+    broadcastOrderUpdate(order.id, order.status);
+
+    if (status === OrderStatus.CANCELED) {
+      if (order.driver) {
+        emitOrderCancellationUpdate(
+          order.driver.id,
+          order.id,
+          CancelRequestStatus.APPROVED
+        );
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
+    }
+
+    if (status === OrderStatus.COMPLETED) {
+      if (order.driver) {
+        emitOrderCompletionUpdate(order.driver.id, order.id);
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
+    }
+
+    this.updateAnsarOrderStatus(order.id, status);
+
+    if (this.isAnsarOrder(order.id)) {
+      const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id);
+
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      if (driverCurrentLocation) {
+        const [latStr, lngStr] = driverCurrentLocation.split(",");
+        latitude = parseFloat(latStr);
+        longitude = parseFloat(lngStr);
+      }
+
+      externalTrackingSocket.send({
+        route: "shipbeeUpdate",
+        payload: {
+          id: order.orderNo,
+          status: order.status,
+          latitude,
+          longitude,
+        },
+      });
+    }
+
+    console.log("Order status updated successfully");
+}
 
   async getOrderDetails(orderId: string, accessToken?: string): Promise<any> {
     console.log("Fetching order details for order ID:", orderId);

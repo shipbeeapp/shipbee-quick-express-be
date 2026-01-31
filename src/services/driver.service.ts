@@ -402,7 +402,7 @@ export default class DriverService {
                     driver: { id: driverId },
                     status: OrderStatus.COMPLETED
                 },
-                select: ["id", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
+                select: ["id", "orderNo", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
                 relations: ["stops"],
                 order: { completedAt: "DESC" }
             });
