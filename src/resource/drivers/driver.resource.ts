@@ -7,6 +7,7 @@ export class DriverResource {
         return {
             id: driver.driver_id,
             name: driver.driver_name,
+            hasCardOnDelivery: driver.driver_hasCardOnDelivery,
             phoneNumber: driver.driver_phoneNumber,
             status: driver.driver_status,
             income: Number(driver.driver_income),

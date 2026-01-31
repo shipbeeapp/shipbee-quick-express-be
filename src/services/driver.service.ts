@@ -206,6 +206,7 @@ export default class DriverService {
                     "driver.cashBalance",
                     "driver.name",
                     "driver.phoneNumber",
+                    "driver.hasCardOnDelivery",
                     "driver.status",
                     "driver.updatedAt",
                     "driver.signUpStatus",
