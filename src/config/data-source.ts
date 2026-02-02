@@ -99,6 +99,7 @@ import {AddDriverIncomeAndCashBalance1769467331980} from "../migrations/17694673
 import { AddDriverCashAndOnlineIncome1769678429853 } from "../migrations/1769678429853-AddDriverCashAndOnlineIncome.js";
 import { AddMaxOrderTimePerBusiness1769696374021 } from "../migrations/1769696374021-AddMaxOrderTimePerBusiness.js";
 import { AddShipbeeServiceFeePercentageInOrder1769785724664 } from "../migrations/1769785724664-AddShipbeeServiceFeePercentageInOrder.js";
+import { AddHistoricalIncome1770059204107 } from '../migrations/1770059204107-AddHistoricalIncome.js';
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -210,6 +211,7 @@ export const AppDataSource = new DataSource({
     AddDriverCashAndOnlineIncome1769678429853,
     AddMaxOrderTimePerBusiness1769696374021,
     AddShipbeeServiceFeePercentageInOrder1769785724664,
+    AddHistoricalIncome1770059204107,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
