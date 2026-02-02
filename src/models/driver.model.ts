@@ -146,6 +146,9 @@ export class Driver extends BaseEntity {
     hasCardOnDelivery: boolean
 
     @Column({type: "bigint", default: 0})
+    historicalIncome: number
+
+    @Column({type: "bigint", default: 0})
     income: number
 
     @Column({type: "bigint", default: 0})

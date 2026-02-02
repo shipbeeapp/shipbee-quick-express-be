@@ -354,8 +354,8 @@ export async function emitOrderToDriver(driverId: string, order: Order, fcmToken
   const onlineDrivers = getOnlineDrivers();
   const driver = onlineDrivers.get(driverId);
 
-  if (order.status !== OrderStatus.PENDING) {
-    console.log(`❌ Order ${order.id} is not in PENDING status, current status: ${order.status}`);
+  if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED) {
+    console.log(`❌ Order ${order.id} has current status: ${order.status}`);
     return;
   }
 

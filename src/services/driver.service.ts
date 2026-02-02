@@ -7,7 +7,7 @@ import { Not } from "typeorm";
 import { Between } from "typeorm";
 import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import { calculateActiveHoursToday, getCurrentLocationOfDriver } from "../socket/socket.js";
+import { calculateActiveHoursToday, emitOrderCancellationUpdate, getCurrentLocationOfDriver } from "../socket/socket.js";
 import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
 import { resetNotifiedDrivers, markDriverNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
@@ -24,6 +24,7 @@ import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
 import { BroadcastMessageService } from "./broadcastMessage.service.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -804,11 +805,16 @@ export default class DriverService {
         if (!order) {
             throw new Error(`Order with ID ${orderId} not found`);
         }
-        if (order.driver) {
-            throw new Error(`Order with ID ${orderId} is already assigned to a driver`);
-        }
-        if (order.status !== OrderStatus.PENDING) {
+        if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED) {
             throw new Error(`Order with ID ${orderId} has status ${order.status} and cannot be assigned`);
+        }
+        if (order.driver) {
+            console.log(`Reassigning order ${orderId} from driver ${order.driver.id} to driver ${driverId}`);
+            await emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED)
+            order.status = OrderStatus.PENDING;
+            await this.orderStatusHistoryService.createOrderStatusHistory(order, `ORDER_REASSIGNED`);
+            order.driver = null;
+            await this.orderRepository.save(order);
         }
         await emitOrderToDriver(driverId, order, driver.fcmToken);
     }
@@ -1351,6 +1357,24 @@ export default class DriverService {
         }
         catch (error) {
             console.error("Error resolving driver cash balance:", error);
+            throw error;
+        }
+    }
+
+    async resolveDeliveryFees(driverId: string): Promise<void> {
+        try {
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            driver.income = 0;
+            driver.cashIncome = 0;
+            driver.onlineIncome = 0;
+            console.log(`Driver ${driverId} delivery fees balance resolved to zero.`);
+            await this.driverRepository.save(driver);
+        }
+        catch (error) {
+            console.error("Error resolving driver delivery fees balance:", error);
             throw error;
         }
     }
