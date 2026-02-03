@@ -1567,6 +1567,55 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
   }
 
+  async getOrdersSummary(driverId: string, serviceType?: ServiceSubcategoryName) {
+    try {
+     // i want to get driver cash balance, driver income from driver table
+     //  then get total number of completed orders and their complete order details
+      const completedOrders = await this.orderRepository.find({
+        where: {
+          driver: { id: driverId },
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined,
+          status: OrderStatus.COMPLETED
+        },
+        relations: [
+          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
+          "driver", "driver.vehicle", "shipment", "createdBy",
+          "cancellationRequests", "cancellationRequests.driver",
+          "stops", "stops.receiver", "stops.toAddress", 
+        ],
+        order: {
+          createdAt: "DESC",
+        },
+      });
+      const driver = await this.driverService.findDriverById(driverId, 'order summary');
+      if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+      }
+      let totalPaidAmount = 0;
+      // i just want the totalPaidAmount returned as well
+      completedOrders.forEach(order => {
+        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        totalPaidAmount += orderTotalPrice;
+      });
+
+      console.log(`Total paid amount for driver ${driverId}: ${totalPaidAmount}`);
+      
+      return {
+        cashBalance: Number(driver.cashBalance),
+        income: Number(driver.income),
+        totalPaidAmount,
+        orderCount: completedOrders.length,
+        completedOrders: await Promise.all(
+          completedOrders.map(order => toOrderResponseDto(order))
+        )
+      };
+    }
+    catch (err) {
+      console.error(err.message)
+      throw new Error(`Error getting orders summary: ${err.message}`)
+    }
+  }   
+
   async preloadAnsarOrders() {
 
     const ansarOrdersFromDB = await this.orderRepository.find({
