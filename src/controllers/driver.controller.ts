@@ -17,6 +17,7 @@ import bcrypt from 'bcrypt';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 import { DriverType } from '../utils/enums/driverType.enum.js';
 import { broadcastNewDriver } from './user.controller.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -77,6 +78,7 @@ export class DriverController {
         
         this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
         this.router.get(`${this.path}/:id/income`, authenticationMiddleware, this.getDriverIncomeForBusiness.bind(this));
+        this.router.get(`${this.path}/:id/orders-summary`, authenticationMiddleware, this.getOrdersSummary.bind(this));
         this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
         this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
         
@@ -844,5 +846,20 @@ export class DriverController {
             console.error("Error fetching driver income for business:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
-    }         
+    }   
+    
+    private getOrdersSummary = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            const serviceType = req.query.serviceType as ServiceSubcategoryName
+            const ordersSummary = await this.orderService.getOrdersSummary(driverId, serviceType);
+            res.status(200).json({ success: true, data: ordersSummary });
+        } catch (error) {
+            console.error("Error fetching orders summary:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
 }
