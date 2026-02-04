@@ -1,9 +1,10 @@
-name: Deploy to ECS
+name: Deploy Backend to ECS
 
 on:
   push:
     branches:
       - main
+      - staging
 
 jobs:
   deploy:
@@ -23,49 +24,74 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # 🔹 Decide environment based on branch
+      - name: Set environment variables
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "ENV=production" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "SERVICE_NAME=shipbee-task-def-service-a0b0xli9" >> $GITHUB_ENV
+            echo "TASK_DEF_NAME=shipbee-task-def-4" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=shipbee-container-2" >> $GITHUB_ENV
+          else
+            echo "ENV=staging" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "SERVICE_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+            echo "TASK_DEF_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+          fi
+
+      # 🔹 Build & push image
       - name: Build, tag, and push Docker image
         run: |
-          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:latest
-          docker build -t myapp .
-          docker tag myapp:latest $IMAGE_URI
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:${{ env.IMAGE_TAG }}
+          docker build -t shipbee-backend .
+          docker tag shipbee-backend:latest $IMAGE_URI
           docker push $IMAGE_URI
 
+      # 🔹 Deploy to ECS
       - name: Deploy to ECS
         run: |
-          # Variables
           CLUSTER_NAME=shipbee-cluster
-          SERVICE_NAME=shipbee-task-def-service-a0b0xli9
-          TASK_DEF_NAME=shipbee-task-def-4
-          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:latest
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:${{ env.IMAGE_TAG }}
 
-          # 1️⃣ Get current task definition
           CURRENT_TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition $TASK_DEF_NAME \
+            --task-definition ${{ env.TASK_DEF_NAME }} \
             --query "taskDefinition" \
             --output json)
 
-          # 2️⃣ Remove fields that ECS rejects when registering a new task definition
-          CLEAN_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq 'del(.status, .revision, .taskDefinitionArn, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          CLEAN_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq 'del(
+            .status,
+            .revision,
+            .taskDefinitionArn,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )')
 
-          # 3️⃣ Update container image
-          UPDATED_TASK_DEF=$(echo "$CLEAN_TASK_DEF" | jq --arg IMAGE "$IMAGE_URI" '.containerDefinitions[0].image=$IMAGE')
+          UPDATED_TASK_DEF=$(echo "$CLEAN_TASK_DEF" | jq \
+            --arg IMAGE "$IMAGE_URI" \
+            --arg CONTAINER "${{ env.CONTAINER_NAME }}" '
+            .containerDefinitions |= map(
+              if .name == $CONTAINER
+              then .image = $IMAGE
+              else .
+              end
+            )
+          ')
 
-          # 4️⃣ Write JSON to file to avoid shell parsing issues
           echo "$UPDATED_TASK_DEF" > new-task-def.json
 
-          # 5️⃣ Register new task definition revision
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
             --cli-input-json file://new-task-def.json \
             --query "taskDefinition.taskDefinitionArn" \
             --output text)
 
-          echo "Registered new task definition: $NEW_TASK_DEF_ARN"
-
-          # 6️⃣ Update ECS service to use the new revision
           aws ecs update-service \
             --cluster $CLUSTER_NAME \
-            --service $SERVICE_NAME \
+            --service ${{ env.SERVICE_NAME }} \
             --task-definition $NEW_TASK_DEF_ARN \
             --force-new-deployment
 
-          echo "ECS service updated successfully!"
+          echo "✅ Deployed backend to $ENV successfully"

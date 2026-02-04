@@ -48,6 +48,7 @@ import {formatAddress}  from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
+import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -136,29 +137,34 @@ export default class OrderService {
         
       //🔹 Step 3: Calculate total cost
       let total;
-      const pricingInput = await validateObject(GetPricingDTO, {
-        serviceSubcategory: orderData.serviceSubcategory,
-        vehicleType: orderData.vehicleType,
-        distance: orderData.distance,
-        fromCountry: orderData.fromAddress.country,
-        fromCity: orderData.fromAddress.city,
-        toCountry: orderData.stops[0]?.toAddress?.country,
-        toCity: orderData.stops[0]?.toAddress?.city,
-        weight: orderData.shipment?.weight,
-        length: orderData.shipment?.length,
-        width: orderData.shipment?.width,
-        height: orderData.shipment?.height,
-        plannedShippingDate: orderData.shipment?.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
-        shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
-        lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0),
-        userId
-      });
-      const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
-      console.log("total cost before discount:", costBeforePromo);
-      const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
-      total = totalCost;
-      console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
-      
+       if (orderData.vehicleType == VehicleType.FLAT_BED_TRAILER || orderData.vehicleType == VehicleType.LOW_BED_TRAILER 
+             || orderData.vehicleType == VehicleType.CHILLER_VAN
+              || orderData.vehicleType == VehicleType.FREEZER_VAN || orderData.vehicleType  == VehicleType.CANTER_TRUCK) {
+                total = null;
+      }
+      else {
+        const pricingInput = await validateObject(GetPricingDTO, {
+          serviceSubcategory: orderData.serviceSubcategory,
+          vehicleType: orderData.vehicleType,
+          distance: orderData.distance,
+          fromCountry: orderData.fromAddress.country,
+          fromCity: orderData.fromAddress.city,
+          toCountry: orderData.stops[0]?.toAddress?.country,
+          toCity: orderData.stops[0]?.toAddress?.city,
+          weight: orderData.shipment?.weight,
+          length: orderData.shipment?.length,
+          width: orderData.shipment?.width,
+          height: orderData.shipment?.height,
+          plannedShippingDate: orderData.shipment?.plannedShippingDateAndTime, // extract date in YYYY-MM-DD format
+          shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
+          lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
+        });
+        const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
+        console.log("total cost before discount:", costBeforePromo);
+        const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
+        total = totalCost;
+        console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
+    }
       const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
@@ -180,7 +186,8 @@ export default class OrderService {
         shipment,
         accessToken, // Generate a secure access token for the order
         payer: orderData.payer,
-        type: orderData.type
+        type: orderData.type,
+        serviceFeePercentage: env.SERVICE_FEE_PERCENTAGE
       });
 
     await queryRunner.manager.save(order);
@@ -286,30 +293,49 @@ export default class OrderService {
     }
   }
 
-  async getOrdersbyUser(userId: string, serviceType?: string) {
+  async getOrdersbyUser(userId: string[], serviceType?: string, isLate?: boolean) {
     try {
     console.log("Fetching orders for user ID:", userId);
-    const user = await this.userService.getUserById(userId);
-    if (!user) {
-      throw new Error(`User with ID ${userId} not found`);
-    }
     const orders = await this.orderRepository.find({
       where: {
-        createdBy: { id: userId },
+        createdBy: { id: In(userId) },
         serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined
       },
       relations: [
         "sender", "fromAddress", "serviceSubcategory", 
         "orderStatusHistory", "shipment", 
+        "createdBy",
         "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
-        "stops", "stops.receiver", "stops.toAddress"
+        "stops", "stops.receiver", "stops.toAddress",
       ],
       order: {
         createdAt: "DESC",
       },
     })
+
+    let filteredOrders = orders;
+
+    if (isLate !== undefined) {
+      console.log("Filtering orders by lateness:", isLate);
+      filteredOrders = orders.filter(order => {
+        const maxDuration = order.createdBy?.maxOrderDuration;
+
+        // If we cannot compute lateness, treat as NOT late
+        if (!maxDuration || !order.pickUpDate || !order.completedAt) {
+          // console.log("Cannot determine lateness for order ID:", order.id);
+          return isLate === false;
+        }
+      
+        const diffMinutes =
+          (order.completedAt.getTime() - order.pickUpDate.getTime()) / (1000 * 60);
+        const late = diffMinutes >= maxDuration;
+
+      
+        return late === isLate;
+      });
+    }
      return await Promise.all(
-      orders.map(order => toOrderResponseDto(order))
+      filteredOrders.map(order => toOrderResponseDto(order))
     );
   } catch (error) {
     console.error("Error fetching orders for user:", error.message);
@@ -317,7 +343,7 @@ export default class OrderService {
   }
   }
 
-  async getOrders() {
+  async getOrders(serviceType: ServiceSubcategoryName, fromStatus?: string, toStatus?: string, thresholdMinutes?: number) {
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
       await AppDataSource.initialize();
@@ -325,9 +351,14 @@ export default class OrderService {
     }
     console.log("Fetching all orders for admin");
     const orders = await this.orderRepository.find({
+      where: {
+        serviceSubcategory: {
+          name: serviceType
+        }
+      },
       relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
-          "driver", "driver.vehicle", "shipment", 
+          "driver", "driver.vehicle", "shipment", "createdBy",
           "cancellationRequests", "cancellationRequests.driver",
           "stops", "stops.receiver", "stops.toAddress", 
       ],
@@ -335,89 +366,140 @@ export default class OrderService {
         createdAt: "DESC",
       },
     });
+
+    let filteredOrders = orders;
+
+    if (fromStatus && toStatus && thresholdMinutes !== undefined) {
+      filteredOrders = orders.filter(order => {
+        const fromTime = getStatusTimestamp(order, fromStatus);
+        const toTime = getStatusTimestamp(order, toStatus);
+
+        if (!fromTime || !toTime) return false;
+
+        if (toTime < fromTime) return false;
+
+        const duration = getDurationInMinutes(fromTime, toTime);
+        console.log(`Order ID: ${order.id}, Duration from ${fromStatus} to ${toStatus}: ${duration} minutes`);
+        return duration >= thresholdMinutes;
+      });
+    }
+
      return await Promise.all(
-      orders.map(order => toOrderResponseDto(order))
+      filteredOrders.map(order => toOrderResponseDto(order))
     );
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus) {
     console.log("Updating order status for order ID:", orderId, "to status:", status);
-    // Create a QueryRunner from the DataSource
+
     const queryRunner = AppDataSource.createQueryRunner();
-
-    // Establish real database connection using our queryRunner
     await queryRunner.connect();
-
-    // Start a new transaction
     await queryRunner.startTransaction();
+
+    let order: Order;
+
     try {
       const orderRepository = queryRunner.manager.getRepository(Order);
-      const order = await orderRepository.findOne({
+
+      order = await orderRepository.findOne({
         where: { id: orderId },
         relations: ["driver"],
+        lock: { 
+          mode: "pessimistic_write",
+          tables: ["orders"]
+        },
       });
 
       if (!order) {
         throw new Error(`Order with ID ${orderId} not found`);
       }
 
-      // Update the order status
       order.status = status;
-      const updatedOrder = await orderRepository.save(order);
 
-      // Add a new entry to the order status history
-      await this.orderStatusHistoryService.createOrderStatusHistory(updatedOrder, null, queryRunner);
-
-      // Commit transaction
-      await queryRunner.commitTransaction();
-      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-      if (status === OrderStatus.CANCELED) {
-        emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
-        if (order.driver.id) await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
-      }
-
-      else if (status === OrderStatus.COMPLETED) {
-        emitOrderCompletionUpdate(order.driver.id, order.id);
-        await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE)
+      if (status === OrderStatus.COMPLETED) {
         order.completedAt = new Date();
-        await this.saveOrder(order);
       }
-    
-      this.updateAnsarOrderStatus(order.id, status)
-      if (this.isAnsarOrder(order.id)) {
-        const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
-        let latitude: number | null;
-        let longitude: number | null;
-        if (driverCurrentLocation) {
-          const [latStr, lngStr] = driverCurrentLocation?.split(",");
-          latitude = parseFloat(latStr);
-          longitude = parseFloat(lngStr);
-        }
-        externalTrackingSocket.send({
-              route: "shipbeeUpdate",
-              payload: {
-                id: order.orderNo,
-                status: order.status,
-                latitude,
-                longitude
-              }
-            })
+
+      await orderRepository.save(order);
+
+      await this.orderStatusHistoryService.createOrderStatusHistory(
+        order,
+        null,
+        queryRunner
+      );
+
+      if (
+        status === OrderStatus.CANCELED ||
+        status === OrderStatus.COMPLETED
+      ) {
+        if (order.driver)
+          await this.driverService.updateDriverStatus(
+            order.driver.id,
+            DriverStatus.ACTIVE,
+            queryRunner
+          );
       }
-      console.log("Order status updated successfully");
+
+      await queryRunner.commitTransaction();
     } catch (error) {
       console.error("Error updating order status:", error.message);
-      // 🛡 Safe rollback
+
       if (queryRunner.isTransactionActive) {
-        console.error("Rolling back transaction")
         await queryRunner.rollbackTransaction();
       }
-      throw new Error(`${error.message}`);
-    }
-    finally {
-      // Release the queryRunner which is manually created
+
+      throw error;
+    } finally {
       await queryRunner.release();
     }
-  }
+
+    broadcastOrderUpdate(order.id, order.status);
+
+    if (status === OrderStatus.CANCELED) {
+      if (order.driver) {
+        emitOrderCancellationUpdate(
+          order.driver.id,
+          order.id,
+          CancelRequestStatus.APPROVED
+        );
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
+    }
+
+    if (status === OrderStatus.COMPLETED) {
+      if (order.driver) {
+        emitOrderCompletionUpdate(order.driver.id, order.id);
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE);
+      }
+    }
+
+    this.updateAnsarOrderStatus(order.id, status);
+
+    if (this.isAnsarOrder(order.id)) {
+      const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id);
+
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      if (driverCurrentLocation) {
+        const [latStr, lngStr] = driverCurrentLocation.split(",");
+        latitude = parseFloat(latStr);
+        longitude = parseFloat(lngStr);
+      }
+
+      externalTrackingSocket.send({
+        route: "shipbeeUpdate",
+        payload: {
+          id: order.orderNo,
+          status: order.status,
+          latitude,
+          longitude,
+        },
+      });
+    }
+
+    console.log("Order status updated successfully");
+}
 
   async getOrderDetails(orderId: string, accessToken?: string): Promise<any> {
     console.log("Fetching order details for order ID:", orderId);
@@ -683,6 +765,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
+      await this.driverService.updateDriverIncomeAndCashBalance(driverId, order)
       this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
      if (this.isAnsarOrder(order.id)) {
         const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
@@ -699,8 +782,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               }
             })
         console.log(`Sent location update to ansar upon completion for order #${order.orderNo}`)
+        this.removeAnsarOrder(order.id)
       }
-      this.removeAnsarOrder(order.id)
     }
     else {
       console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
@@ -1402,6 +1485,136 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       throw new Error(`Error getting current active order: ${err.message}`)
     }
   }
+
+  async getOrdersFinancials(serviceType?: ServiceSubcategoryName) {
+    try {
+      // I want some insights for completed orders which include:
+      // - total sale: some of order.order_stops.total_price + order.total_cost for all completed orders
+      // - total delivery fees: sum of order.total_cost for all completed orders
+      // - total service fee: sum of order.totalCost * 10% for all completed orders
+      // - total cash delivery fee: sum of order.totalCost if no order.order_stops.totalprice and order.paymentMethod = CASH
+      // - total online delivery fee: sum of order.totalCost if order.order_stops.totalprice or order.paymentMethod != CASH
+      // - the completed orders details should include orderNo, pickupDate, completedAt, drivername, vehicleType, driver.businessOwner.name if exists (else freelance), order.createdBy.name, order.distance, (sum of order.order_stops.total_price + order.totalCost), order.total_cost, order.totalCost * 10% as service fee, paymentMethod (if there is order_stops.totalPrice then get order.order_stops.paymentMethods), paymentStatus(always Completed)
+      const completedOrders = await this.orderRepository.find({
+        where: {
+          status: OrderStatus.COMPLETED,
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined
+        },
+        relations: ["driver", "driver.businessOwner", "createdBy", "stops"]
+      });
+      let totalSales = 0;
+      let totalDeliveryFees = 0;
+      let totalServiceFees = 0;
+      let totalCashDeliveryFees = 0;
+      let totalOnlineDeliveryFees = 0;
+
+      const orders = completedOrders.map(order => {
+        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        const serviceFee = Number(order.totalCost) * env.SERVICE_FEE_PERCENTAGE / 100;
+        totalSales += orderTotalPrice;
+        totalDeliveryFees += Number(order.totalCost);
+        totalServiceFees += serviceFee;
+        if (order.stops.some(stop => stop.totalPrice) || order.paymentMethod !== PaymentMethod.CASH_ON_DELIVERY) {
+          totalOnlineDeliveryFees += Number(order.totalCost);
+        } else {
+          totalCashDeliveryFees += Number(order.totalCost);
+        }
+        return {
+          orderNo: order.orderNo,
+          pickUpDate: order.pickUpDate.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "numeric"
+                      }),
+          completedAt: order.completedAt.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "numeric"
+                      }),
+          driverName: order.driver?.name || 'N/A',
+          vehicleType: order.vehicleType || 'N/A',
+          logisticsCompany: order.driver?.businessOwner ? order.driver.businessOwner.name : 'Freelance',
+          createdBy: order.createdBy.name,
+          distance: order.distance,
+          totalAmount: orderTotalPrice,
+          deliveryFee: Number(order.totalCost),
+          serviceFee: serviceFee,
+          //if stops have totalPrice, get paymentMethods from all stops (each stop can have different paymentMethod), else use order.paymentMethod
+          paymentMethod: order.stops.some(stop => stop.totalPrice) ?
+            Array.from(new Set(order.stops.map(stop => stop.paymentMethod))) :
+            [order.paymentMethod],
+          paymentStatus: 'Completed'
+        }
+      });
+
+      return {
+        totalSales,
+        totalDeliveryFees,
+        totalServiceFees,
+        totalCashDeliveryFees,
+        totalOnlineDeliveryFees,
+        orders
+      };
+    } catch (err) {
+      console.error(err.message)
+      throw new Error(`Error getting orders financials: ${err.message}`)
+    }
+  }
+
+  async getOrdersSummary(driverId: string, serviceType?: ServiceSubcategoryName) {
+    try {
+     // i want to get driver cash balance, driver income from driver table
+     //  then get total number of completed orders and their complete order details
+      const completedOrders = await this.orderRepository.find({
+        where: {
+          driver: { id: driverId },
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined,
+          status: OrderStatus.COMPLETED
+        },
+        relations: [
+          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
+          "driver", "driver.vehicle", "shipment", "createdBy",
+          "cancellationRequests", "cancellationRequests.driver",
+          "stops", "stops.receiver", "stops.toAddress", 
+        ],
+        order: {
+          createdAt: "DESC",
+        },
+      });
+      const driver = await this.driverService.findDriverById(driverId, 'order summary');
+      if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+      }
+      let totalPaidAmount = 0;
+      // i just want the totalPaidAmount returned as well
+      completedOrders.forEach(order => {
+        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        totalPaidAmount += orderTotalPrice;
+      });
+
+      console.log(`Total paid amount for driver ${driverId}: ${totalPaidAmount}`);
+      
+      return {
+        cashBalance: Number(driver.cashBalance),
+        income: Number(driver.income),
+        totalPaidAmount,
+        orderCount: completedOrders.length,
+        completedOrders: await Promise.all(
+          completedOrders.map(order => toOrderResponseDto(order))
+        )
+      };
+    }
+    catch (err) {
+      console.error(err.message)
+      throw new Error(`Error getting orders summary: ${err.message}`)
+    }
+  }   
 
   async preloadAnsarOrders() {
 
