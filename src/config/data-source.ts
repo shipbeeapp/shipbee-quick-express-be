@@ -102,6 +102,7 @@ import { AddDriverCashAndOnlineIncome1769678429853 } from "../migrations/1769678
 import { AddMaxOrderTimePerBusiness1769696374021 } from "../migrations/1769696374021-AddMaxOrderTimePerBusiness.js";
 import { AddShipbeeServiceFeePercentageInOrder1769785724664 } from "../migrations/1769785724664-AddShipbeeServiceFeePercentageInOrder.js";
 import { AddHistoricalIncome1770059204107 } from '../migrations/1770059204107-AddHistoricalIncome.js';
+import {AddProceedWithoutPaymentInUser1770563510535} from "../migrations/1770563510535-AddProceedWithoutPaymentInUser.js"; // Import the migration for adding proceedWithoutPayment in User
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -216,6 +217,7 @@ export const AppDataSource = new DataSource({
     AddMaxOrderTimePerBusiness1769696374021,
     AddShipbeeServiceFeePercentageInOrder1769785724664,
     AddHistoricalIncome1770059204107,
+    AddProceedWithoutPaymentInUser1770563510535,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
