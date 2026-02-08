@@ -8,14 +8,29 @@ import { env } from "../config/environment.js";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import axios from "axios";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+import { UserPricing } from "../models/userPricing.model.js";
+import { User } from "../models/user.model.js";
 
 @Service()
 export default class PricingService {
     private pricingRepository = AppDataSource.getRepository(Pricing);
+    private userPricingRepository = AppDataSource.getRepository(UserPricing)
 
     async createPricing(pricingData: Partial<Pricing>[], queryRunner?: any) {
         try {
             const manager = queryRunner ? queryRunner.manager.getRepository(Pricing) : this.pricingRepository;
+            const newPricing = manager.create(pricingData);
+            await manager.save(newPricing);
+            return newPricing;
+        } catch (error) {
+            console.error('Error creating pricing:', error);
+            throw new Error('Error creating pricing: ' + error.message);
+        }
+    }
+
+    async createUserPricing(pricingData: Partial<UserPricing>[], queryRunner?: any) {
+        try {
+            const manager = queryRunner ? queryRunner.manager.getRepository(UserPricing) : this.userPricingRepository;
             const newPricing = manager.create(pricingData);
             await manager.save(newPricing);
             return newPricing;
@@ -47,33 +62,52 @@ export default class PricingService {
         }
     }
 
+    getPersonalQuickWhere(getPricingDto: GetPricingDTO) {
+        return [
+          {
+            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+            vehicleType: getPricingDto.vehicleType,
+            minDistance: LessThanOrEqual(getPricingDto.distance),
+            maxDistance: MoreThan(getPricingDto.distance),
+            isCurrent: true,
+          },
+          {
+            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+            vehicleType: getPricingDto.vehicleType,
+            minDistance: LessThanOrEqual(getPricingDto.distance),
+            maxDistance: null,
+            isCurrent: true,
+          },
+        ];
+    }
+
+    async getClientPersonalQuickPricing(getPricingDto: GetPricingDTO) {
+        if (!getPricingDto.userId) return null;
+
+        return this.userPricingRepository.findOne({
+          where: this.getPersonalQuickWhere(getPricingDto).map(where => ({
+            ...where,
+            userId: getPricingDto.userId,
+          })),
+          order: { maxDistance: "DESC" },
+        });
+    }
+
+
     async calculatePricing(getPricingDTO: GetPricingDTO) {
         try {    
             if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.PERSONAL_QUICK) {
-                const currentPricing = await this.pricingRepository.findOne({
-                    where: [
-                    {
-                        serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-                        vehicleType: getPricingDTO.vehicleType,
-                        minDistance: LessThanOrEqual(getPricingDTO.distance),
-                        maxDistance: MoreThan(getPricingDTO.distance),
-                        isCurrent: true
-                    },
-                    {
-                      serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-                      vehicleType: getPricingDTO.vehicleType,
-                      minDistance: LessThanOrEqual(getPricingDTO.distance),
-                      maxDistance: null, // open-ended
-                      isCurrent: true,
-                    },
-                    
-                ],
-                order: { maxDistance: "DESC" } // Prefer exact matches over open-ended
+                const basePricing = await this.pricingRepository.findOne({
+                    where: this.getPersonalQuickWhere(getPricingDTO),
+                    order: { maxDistance: "DESC" } // Prefer exact matches over open-ended
                 });
-                console.log(currentPricing);
-                if (!currentPricing) {
+                console.log(basePricing);
+                if (!basePricing) {
                     throw new Error('No pricing found for the given criteria');
                 }
+                const clientPricing = await this.getClientPersonalQuickPricing(getPricingDTO);
+                console.log("client pricing: ", JSON.stringify(clientPricing, null, 2))
+                const currentPricing = clientPricing ?? basePricing
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
                   return {
                     totalCost: Number(currentPricing.baseCost) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)

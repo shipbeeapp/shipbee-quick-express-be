@@ -144,6 +144,7 @@ export default class OrderService {
       }
       else {
         const pricingInput = await validateObject(GetPricingDTO, {
+          userId: createdByUser.id,
           serviceSubcategory: orderData.serviceSubcategory,
           vehicleType: orderData.vehicleType,
           distance: orderData.distance,

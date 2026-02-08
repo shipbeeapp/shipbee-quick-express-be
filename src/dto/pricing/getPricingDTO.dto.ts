@@ -60,4 +60,8 @@ export class GetPricingDTO {
     @IsNumber()
     @Type(() => Number)
     lifters?: number; // Optional, only for Personal Quick
+
+    @IsOptional()
+    @IsString()
+    userId?: string
 }
