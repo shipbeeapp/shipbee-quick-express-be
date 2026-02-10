@@ -104,6 +104,7 @@ import { AddShipbeeServiceFeePercentageInOrder1769785724664 } from "../migration
 import { AddHistoricalIncome1770059204107 } from '../migrations/1770059204107-AddHistoricalIncome.js';
 import {AddProceedWithoutPaymentInUser1770563510535} from "../migrations/1770563510535-AddProceedWithoutPaymentInUser.js"; // Import the migration for adding proceedWithoutPayment in User
 import {AddDisconnectedDriverStatus1770719913115} from "../migrations/1770719913115-AddDisconnectedDriverStatus.js"; // Import the migration for adding Disconnected status in DriverStatus enum
+import { AddNewEnumInStatus1770726819376 } from "../migrations/1770726819376-AddNewEnumInStatus.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -220,6 +221,7 @@ export const AppDataSource = new DataSource({
     AddHistoricalIncome1770059204107,
     AddProceedWithoutPaymentInUser1770563510535,
     AddDisconnectedDriverStatus1770719913115,
+    AddNewEnumInStatus1770726819376,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
