@@ -1,5 +1,6 @@
 export enum DriverStatus {
     ACTIVE = "Active",
     OFFLINE = "Offline",
-    BUSY = "Busy"
+    BUSY = "Busy",
+    DISCONNECTED = "Disconnected"
 }

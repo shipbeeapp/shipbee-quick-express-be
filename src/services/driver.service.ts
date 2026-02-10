@@ -209,6 +209,8 @@ export default class DriverService {
                     "driver.phoneNumber",
                     "driver.hasCardOnDelivery",
                     "driver.status",
+                    "driver.lastKnownLocation",
+                    "driver.lastOnlineAt",
                     "driver.updatedAt",
                     "driver.signUpStatus",
                     "driver.dateOfBirth",
