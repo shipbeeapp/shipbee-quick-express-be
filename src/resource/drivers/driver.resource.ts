@@ -10,6 +10,8 @@ export class DriverResource {
             hasCardOnDelivery: driver.driver_hasCardOnDelivery,
             phoneNumber: driver.driver_phoneNumber,
             status: driver.driver_status,
+            lastKnownLocation: driver.driver_lastKnownLocation,
+            lastOnlineAt: driver.driver_lastOnlineAt,
             income: Number(driver.driver_income),
             cashIncome: Number(driver.driver_cashIncome),
             onlineIncome: Number(driver.driver_onlineIncome),

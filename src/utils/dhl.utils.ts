@@ -12,6 +12,6 @@ export function getCountryIsoCode(countryName: string): string | null {
   if (!countryName) return null;
 
   const code = countries.getAlpha2Code(countryName, "en");
-
+  console.log(`Mapping country name "${countryName}" to ISO code:`, code);
   return code || null; // return null if not found
 }

@@ -27,6 +27,7 @@ const onlineDrivers = new Map<string, OnlineDriver>(); // driverId -> socketId
 type Session = [Date, Date | null]; // [onlineTime, offlineTime]
 
 const driverSessions = new Map<string, Session[]>();
+const fcmNotificationIntervals = new Map<string, NodeJS.Timeout>(); // orderId -> interval
 
 let io: SocketIOServer;
 
@@ -75,7 +76,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
           { status: DriverStatus.ACTIVE, updatedAt: new Date()}
         );
         console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
-        broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
+        if (driver.status === DriverStatus.OFFLINE) broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about driver going active only if they were previously offline
       }
       else console.log(`Driver ${driverId} is now busy with vehicle type ${vehicleType}`)
 
@@ -197,7 +198,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
               ...info,
               socketId: null
             });
-            // await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.OFFLINE, updatedAt: new Date() });
+            await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.DISCONNECTED, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
             // broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
             const now = new Date();
             const sessions = driverSessions.get(driverId);
@@ -281,22 +282,35 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
     if (driver.fcmToken) {
       console.log(`Driver ${driverId} has FCM token, sending push notification for order ${order.id}`);
       // Here you would integrate with FCM to send a push notification
-      // For example:
-      await sendFcmNotification(driver.fcmToken, {
-        title: "New Order Available",
-        body: `Order ${order.id} is available for pickup.`,
-        data: { 
-          orderId: order.id,
-          distance: String(order.distance),
-          fromAddress: JSON.stringify({
-            country: order.fromAddress.country,
-            city: order.fromAddress.city,
-            coordinates: order.fromAddress.coordinates,
-            landmarks: order.fromAddress.landmarks,
-          }),
-        }
-      
-      });
+      // send notification every env.FCM_INTERVAL_SECONDS seconds until order is no longer pending
+      if (!fcmNotificationIntervals.has(order.id)) {
+        const interval = setInterval(async () => {
+          const latestOrder = await AppDataSource.getRepository(Order).findOneBy({ id: order.id });
+          if (latestOrder?.status === OrderStatus.PENDING) {
+            console.log(`Order ${order.id} is still pending, sending FCM notification to driver ${driverId}`);
+            await sendFcmNotification(driver.fcmToken, {
+              title: "New Order Available",
+              body: `Order ${order.id} is available for pickup.`,
+              data: { 
+                orderId: order.id,
+                distance: String(order.distance),
+                fromAddress: JSON.stringify({
+                  country: order.fromAddress.country,
+                  city: order.fromAddress.city,
+                  coordinates: order.fromAddress.coordinates,
+                  landmarks: order.fromAddress.landmarks,
+                }),
+              }
+          });
+        } else {
+            clearInterval(fcmNotificationIntervals.get(order.id));
+            fcmNotificationIntervals.delete(order.id);
+            console.log(`Order ${order.id} is no longer pending, stopped FCM notifications to driver ${driverId}`);
+            console.log(`fcm notificationIntervals: ${JSON.stringify(Array.from(fcmNotificationIntervals.entries()))}`);
+          }
+        }, env.FCM_INTERVAL_SECONDS * 1000); // every 5 seconds
+        fcmNotificationIntervals.set(order.id, interval);
+  }
     }
   }
 }

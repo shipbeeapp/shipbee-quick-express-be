@@ -76,4 +76,5 @@ export const env = {
     TOKEN: process.env.EXTERNAL_TRACKING_SOCKET_TOKEN 
   },
   SERVICE_FEE_PERCENTAGE: Number(process.env.SERVICE_FEE_PERCENTAGE) || 10, // Default to 10%
+  FCM_INTERVAL_SECONDS: Number(process.env.FCM_INTERVAL_SECONDS) || 5, // Default to 5 seconds
 };
