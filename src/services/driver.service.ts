@@ -364,7 +364,7 @@ export default class DriverService {
             await queryRunner.release();
         }
     }
-    async findAllDrivers(): Promise<any> {
+    async findAllDrivers(status: DriverStatus): Promise<any> {
         try {
             const result = await this.baseDriverQuery()
             .leftJoin("driver.orders", "orders")
@@ -386,6 +386,7 @@ export default class DriverService {
                     '[]'
                 )
             `, "orders")
+            .where(status ? "driver.status = :status" : "1=1", { status })
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
             .addGroupBy("businessOwner.id")
