@@ -18,6 +18,7 @@ import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 import { DriverType } from '../utils/enums/driverType.enum.js';
 import { broadcastNewDriver } from './user.controller.js';
 import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -205,7 +206,8 @@ export class DriverController {
             if (req.email !== env.ADMIN.EMAIL) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-            const drivers = await this.driverService.findAllDrivers();
+            const status = req.query.status as DriverStatus; // Optional query parameter to filter by status
+            const drivers = await this.driverService.findAllDrivers(status);
             res.status(200).json({ success: true, data: DriverResource.toResponseArray(drivers) });
         } catch (error) {
             console.error("Error fetching drivers:", error.message);

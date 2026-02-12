@@ -77,4 +77,9 @@ export const env = {
   },
   SERVICE_FEE_PERCENTAGE: Number(process.env.SERVICE_FEE_PERCENTAGE) || 10, // Default to 10%
   FCM_INTERVAL_SECONDS: Number(process.env.FCM_INTERVAL_SECONDS) || 5, // Default to 5 seconds
+  AWS: {
+    REGION: process.env.AWS_REGION || 'us-east-1',
+    BUCKET_NAME: process.env.AWS_BUCKET_NAME || 'codepipeline-us-east-1-66938916e2a7-415a-aa55-dcba2afa8f96',
+    FILENAME: process.env.AWS_FILENAME || 'appcast.xml'
+  },
 };

@@ -17,7 +17,7 @@ import {sendOrderConfirmation,
         formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import { Between, MoreThan, In, Not } from "typeorm";
+import { Between, MoreThan, In, Not, LessThan } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
@@ -1615,7 +1615,30 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.error(err.message)
       throw new Error(`Error getting orders summary: ${err.message}`)
     }
-  }   
+  } 
+  
+  async getUnassignedOrders(serviceType?: ServiceSubcategoryName, thresholdMinutes?: number) {
+    try {
+      const now = new Date();
+      const unassignedOrders = await this.orderRepository
+        .find({
+          where: {
+            status: OrderStatus.PENDING,
+            serviceSubcategory: serviceType ? { name: serviceType } : undefined,
+            pickUpDate: thresholdMinutes ? LessThan(new Date(now.getTime() - thresholdMinutes * 60000)) : undefined
+          },
+          relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver", "serviceSubcategory"],
+          order: { createdAt: "ASC" }
+        });
+      
+      return await Promise.all(
+        unassignedOrders.map(order => toOrderResponseDto(order))
+      );
+    } catch (err) {
+      console.error(err.message);
+      throw new Error(`Error getting unassigned orders: ${err.message}`);
+    }
+  }
 
   async preloadAnsarOrders() {
 

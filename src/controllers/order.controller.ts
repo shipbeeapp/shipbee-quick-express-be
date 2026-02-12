@@ -152,6 +152,7 @@ export class OrderController {
     this.router.get("/orders/report", apiKeyAuthenticationMiddleware, this.getOrdersReport.bind(this));
     this.router.get("/orders/dashboard", authenticationMiddleware, this.getOrdersDashboard.bind(this))
     this.router.get("/orders/financials", authenticationMiddleware, this.getOrdersFinancials.bind(this));
+    this.router.get("/orders/unassigned", authenticationMiddleware, this.getUnassignedOrders.bind(this));
     /**
      * @swagger
      * /api/orders/view-order-status:
@@ -805,6 +806,24 @@ export class OrderController {
       res.status(200).json({ success: true, data: financials });
     } catch (error) {
       console.error("Error in order controller getting orders financials:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async getUnassignedOrders(req: AuthenticatedRequest, res: Response) {
+    try {
+      console.log("Authenticated user ID:", req.userId);
+      console.log("Authenticated user email:", req.email);
+
+      if (req.email != env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to view unassigned orders." });
+      }
+      const { serviceType, thresholdMinutes } = req.query;
+      const orders = await this.orderService.getUnassignedOrders(serviceType as ServiceSubcategoryName, thresholdMinutes ? Number(thresholdMinutes) : undefined);
+      res.status(200).json({ success: true, data: orders });
+    }
+    catch (error) {
+      console.error("Error in order controller getting unassigned orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
