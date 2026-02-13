@@ -1,10 +1,8 @@
-import { NextFunction, Response, Router, Request } from 'express';
+import { NextFunction, Response, Router } from 'express';
 import {AuthenticatedRequest, authenticationMiddleware} from '../middlewares/authentication.middleware.js';
 import { env } from '../config/environment.js';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import fs from 'fs';
 import multer from 'multer';
-import { console } from 'inspector';
 
 export class UploadController {
   public router: Router = Router();
@@ -32,9 +30,11 @@ export class UploadController {
  
   private async upload(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
+      console.log('Upload request received from user:', req.email);
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
+        console.log('File received:', req.file.originalname, 'size:', req.file.size, 'bytes');
         if (req.email !== env.ADMIN.EMAIL) {
             return res.status(403).json({ message: 'Forbidden' });
         }
