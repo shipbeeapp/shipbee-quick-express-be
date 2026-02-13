@@ -38,7 +38,7 @@ export class UploadController {
         if (req.email !== env.ADMIN.EMAIL) {
             return res.status(403).json({ message: 'Forbidden' });
         }
-    
+        console.log('Received file:', req.file.originalname, 'size:', req.file.size, 'bytes');
         const s3Key = env.AWS.FILENAME; // static key, overwrites existing file
         const putCommand = new PutObjectCommand({
           Bucket: env.AWS.BUCKET_NAME,
@@ -47,12 +47,13 @@ export class UploadController {
           ContentType: req.file.mimetype,
           CacheControl: 'no-store', // ensures mobile app always gets latest
         });
-    
+        console.log('Uploading file to S3 with key:', s3Key);
         await this.s3Client.send(putCommand);
+        console.log('File uploaded successfully to S3');
 
         res.status(200).json({ message: 'File uploaded successfully' });
     } catch (error) {    
-        console.error('Error uploading file:', error);
+        console.error('Error uploading file:', error.message);
         res.status(500).json({ message: 'Internal server error' });        
     }
   }
