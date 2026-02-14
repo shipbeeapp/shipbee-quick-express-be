@@ -197,7 +197,6 @@ export default class DriverService {
     baseDriverQuery() {
         return this.driverRepository.createQueryBuilder("driver")
                 .leftJoin("driver.vehicle", "vehicle")
-                // .leftJoin("driver.orders", "orders")
                 .leftJoin("driver.businessOwner", "businessOwner")
                 .select([
                     "driver.id",
@@ -368,6 +367,8 @@ export default class DriverService {
         try {
             const result = await this.baseDriverQuery()
             .leftJoin("driver.orders", "orders")
+            .leftJoin("driver.driverTags", "driverTags")
+            .leftJoin("driverTags.tag", "tags") 
             .addSelect("COUNT(DISTINCT orders.id)", "orderCount")
             .addSelect("SUM(CASE WHEN orders.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
             .addSelect(`
@@ -386,6 +387,17 @@ export default class DriverService {
                     '[]'
                 )
             `, "orders")
+            .addSelect(`
+                COALESCE(
+                    jsonb_agg(
+                        DISTINCT jsonb_build_object(
+                            'id', tags.id,
+                            'name', tags.name
+                        )
+                    ) FILTER (WHERE tags.id IS NOT NULL),
+                    '[]'
+                )
+            `, "tags") 
             .where(isDisconnected !== undefined ? "driver.isDisconnected = :isDisconnected" : "1=1", { isDisconnected })
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")

@@ -168,9 +168,13 @@ export class Driver extends BaseEntity {
 
     @Column({type: "timestamptz", nullable: true})
     lastOnlineAt: Date;
+
+    @OneToMany(() => DriverTag, (driverTag) => driverTag.driver)
+    driverTags: DriverTag[];
 }
 
 import { Vehicle } from "./vehicle.model.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
+import { DriverTag } from "./driverTag.model.js";
 
