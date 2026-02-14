@@ -364,7 +364,7 @@ export default class DriverService {
             await queryRunner.release();
         }
     }
-    async findAllDrivers(status: DriverStatus): Promise<any> {
+    async findAllDrivers(isDisconnected?: boolean): Promise<any> {
         try {
             const result = await this.baseDriverQuery()
             .leftJoin("driver.orders", "orders")
@@ -386,7 +386,7 @@ export default class DriverService {
                     '[]'
                 )
             `, "orders")
-            .where(status ? "driver.status = :status" : "1=1", { status })
+            .where(isDisconnected !== undefined ? "driver.isDisconnected = :isDisconnected" : "1=1", { isDisconnected })
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
             .addGroupBy("businessOwner.id")
@@ -655,7 +655,7 @@ export default class DriverService {
             await this.orderRepository.update(orderId, { status: OrderStatus.PENDING, driver: null });
             // Add to order status history
             order.status = OrderStatus.PENDING; // update status for history record
-            await this.orderStatusHistoryService.createOrderStatusHistory(order, cancellationReason);
+            await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason });
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
             sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
               console.error("Error sending email to admin:", err);
@@ -815,7 +815,7 @@ export default class DriverService {
             console.log(`Reassigning order ${orderId} from driver ${order.driver.id} to driver ${driverId}`);
             await emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED)
             order.status = OrderStatus.PENDING;
-            await this.orderStatusHistoryService.createOrderStatusHistory(order, `ORDER_REASSIGNED`);
+            await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: `ORDER_REASSIGNED` });
             order.driver = null;
             await this.orderRepository.save(order);
         }

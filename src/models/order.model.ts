@@ -127,6 +127,9 @@ export class Order extends BaseEntity {
 
   @Column({ type: "float", nullable: false })
   serviceFeePercentage: number;
+  
+  @Column({ type: "text", nullable: true })
+  proofOfPickup: string; // URL to the proof of pickup photo uploaded by the driver
 
   @OneToMany(() => OrderStop, (stop) => stop.order, { cascade: true })
   stops: OrderStop[];

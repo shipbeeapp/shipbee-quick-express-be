@@ -209,6 +209,19 @@ export class OrderController {
     this.router.get("/order-details/:orderId", this.viewOrderDetails.bind(this)); // public route to get order details by orderId
     // accept order by driver
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
+    this.router.put("/orders/:orderId/start-return", authenticationMiddleware, this.startReturn.bind(this));
+    this.router.put(
+      "/orders/:orderId/complete-return", 
+      authenticationMiddleware, 
+      upload.single("proofOfReturn"), // Optional proof of return file
+      this.completeReturn.bind(this));
+
+    this.router.post(
+      "/orders/:orderId/upload-proof-of-pickup",
+      authenticationMiddleware, // Only authenticated drivers
+      upload.single("proofOfPickup"),
+      this.uploadProofOfPickup.bind(this)
+    );
 
     this.router.post(
       "/orders/:orderId/start",
@@ -824,6 +837,66 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller getting unassigned orders:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async uploadProofOfPickup(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId; // Get driverId from the authenticated request
+      if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
+      }
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Proof of pickup file is required." });
+      }
+      const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
+      
+      await this.orderService.uploadProofOfPickup(orderId, driverId, proofUrl);
+      res.status(200).json({ success: true, message: "Proof of pickup uploaded successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller uploading proof of pickup:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async startReturn(req: AuthenticatedRequest, res: Response) {
+    try {      
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+
+      if (!orderId || !driverId) {
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+      }
+      const stopId = req.query.stopId as string;
+      await this.orderService.startReturn(orderId, driverId, stopId);
+      res.status(200).json({ success: true, message: "Return started successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller starting return:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async completeReturn(req: AuthenticatedRequest, res: Response) {
+    try {      
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+      if (!orderId || !driverId) {
+        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
+      }
+      const stopId = req.query.stopId as string;
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Proof of return file is required." });
+      }
+      const proofOfReturnUrl = req.file?.path;
+      await this.orderService.completeReturn(orderId, driverId, stopId, proofOfReturnUrl);
+      res.status(200).json({ success: true, message: "Return completed successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller completing return:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

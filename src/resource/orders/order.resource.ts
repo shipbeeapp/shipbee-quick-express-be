@@ -10,6 +10,7 @@ import { generatePhotoLink } from '../../utils/global.utils.js';
 import { getDrivingDistanceInKm } from '../../utils/google-maps/distance-time.js';
 import { getCurrentLocationOfDriver } from '../../socket/socket.js';
 import { PaymentMethod } from '../../utils/enums/paymentMethod.enum.js';
+import { OrderEventType } from '../../utils/enums/orderEventType.enum.js';
 export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
@@ -26,6 +27,7 @@ export class OrderResponseDto {
     orderNo: number;
     vehicleType: VehicleType;
     hasCardOnDelivery: boolean;
+    proofOfPickup?: string | null;
     payer: Payer;
     isViewed: boolean;
     viewedAt: Date | null;
@@ -99,6 +101,8 @@ export class OrderResponseDto {
         images: string[];
       };
       sequence: number;
+      isReturned?: boolean;
+      proofOfReturn?: string | null;
       distance?: number;
       itemType?: itemType;
       status: OrderStatus;
@@ -113,6 +117,23 @@ export class OrderResponseDto {
     statusHistory: {
       status: string;
       timestamp: Date;
+    }[];
+
+    timestamps: {
+      status: string;
+      timestamp: Date;
+      isStop?: boolean;
+      stopNumber?: number;
+      driver: {
+        name: string;
+        phoneNumber: string;
+      } | null;
+      cancellationReason?: string;
+      triggeredByAdmin?: boolean;
+      hasArrived?: boolean;
+      returnedStartedAt?: Date;
+      returnedCompletedAt?: Date;
+      event?: OrderEventType;
     }[];
 
     shipment: {
@@ -222,6 +243,8 @@ export class OrderResponseDto {
         images: itemDesc.images || [],
       },
       sequence: stop.sequence,
+      isReturned: stop.isReturned,
+      proofOfReturn: stop.proofOfReturn ? generatePhotoLink(stop.proofOfReturn) : null,
       distance: stop.distance,
       itemType: stop.itemType,
       status: stop.status,
@@ -271,6 +294,7 @@ export class OrderResponseDto {
       currentStatus: order.status,
       vehicleType: order.vehicleType,
       hasCardOnDelivery,
+      proofOfPickup: order.proofOfPickup ? generatePhotoLink(order.proofOfPickup) : null,
       payer: order.payer,
       isViewed: order.isViewed,
       viewedAt: order.viewedAt,
@@ -323,6 +347,24 @@ export class OrderResponseDto {
         reason: status.cancellationReason,
         timestamp: status.createdAt,
       })),
+      timestamps: (order.orderStatusHistory?.map(status => ({
+        status: status.status,
+        timestamp: status.createdAt,
+        isStop: !!status.orderStop,
+        stopNumber: status.orderStop ? status.orderStop.sequence : undefined,
+        driver: status.driver ? {
+          name: status.driver.name,
+          phoneNumber: status.driver.phoneNumber,
+        } : null,
+        cancellationReason: status.cancellationReason,
+        triggeredByAdmin: status.triggeredByAdmin,
+        hasArrived: status.hasArrived,
+        returnedStartedAt: status.returnedStartedAt,
+        returnedCompletedAt: status.returnedCompletedAt,
+        event: status.event,
+      })
+      )?.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      ) || [],
       shipment: {
         weight: Number(order.shipment?.weight),
         length: Number(order.shipment?.length),

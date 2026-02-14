@@ -1,0 +1,5 @@
+export enum OrderEventType {
+  STOP_STARTED = "STOP_STARTED",
+  STOP_ARRIVED = "STOP_ARRIVED",
+  STOP_COMPLETED = "STOP_COMPLETED",
+}

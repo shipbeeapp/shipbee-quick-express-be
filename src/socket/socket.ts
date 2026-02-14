@@ -198,7 +198,7 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
               ...info,
               socketId: null
             });
-            await AppDataSource.getRepository(Driver).update(driverId, { status: DriverStatus.DISCONNECTED, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
+            await AppDataSource.getRepository(Driver).update(driverId, { isDisconnected: true, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
             // broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
             const now = new Date();
             const sessions = driverSessions.get(driverId);

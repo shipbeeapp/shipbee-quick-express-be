@@ -206,8 +206,8 @@ export class DriverController {
             if (req.email !== env.ADMIN.EMAIL) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-            const status = req.query.status as DriverStatus; // Optional query parameter to filter by status
-            const drivers = await this.driverService.findAllDrivers(status);
+            const isDisconnected = req.query.isDisconnected === 'true'; // Optional query parameter to filter by disconnection status
+            const drivers = await this.driverService.findAllDrivers(isDisconnected);
             res.status(200).json({ success: true, data: DriverResource.toResponseArray(drivers) });
         } catch (error) {
             console.error("Error fetching drivers:", error.message);

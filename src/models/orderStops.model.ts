@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, JoinColumn, Column, Relation } from "typeorm";
+import { Entity, ManyToOne, JoinColumn, Column, Relation, OneToMany } from "typeorm";
 import { Order } from "./order.model.js";
 import { User } from "./user.model.js";
 import { Address } from "./address.model.js";
@@ -6,6 +6,7 @@ import { itemType } from "../utils/enums/itemType.enum.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import BaseEntity from "./baseEntity.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
+import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 
 @Entity("order_stops")
 export class OrderStop extends BaseEntity {
@@ -63,4 +64,13 @@ export class OrderStop extends BaseEntity {
 
   @Column({ type: "timestamptz", nullable: true })
   deliveredAt: Date;
+
+  @Column({ type: "boolean", default: false })
+  isReturned: boolean;
+
+  @Column({ type: "text", nullable: true })
+  proofOfReturn: string; // URL to the proof of return photo uploaded by the driver
+
+  @OneToMany(() => OrderStatusHistory, orderStatusHistory => orderStatusHistory.orderStop)
+  orderStatusHistory: OrderStatusHistory[];
 }
