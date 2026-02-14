@@ -1283,6 +1283,7 @@ export default class DriverService {
             console.log("order totalCost:", order.totalCost)
             console.log("driver current income:" , driver.income)
             driver.income = Number(driver.income || 0) + Number(order.totalCost || 0); 
+            driver.historicalIncome = Number(driver.historicalIncome || 0) + Number(order.totalCost || 0);
             console.log("new driver income: ", driver.income)
             const stops = order.stops || [];
 
