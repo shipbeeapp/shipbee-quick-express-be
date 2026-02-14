@@ -56,6 +56,8 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         console.log(`❌ Driver ${driverId} not found in database`);
         return;
       }
+      if (driver.status === DriverStatus.OFFLINE) broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
+      
       if (driver.signUpStatus !== DriverSignupStatus.APPROVED) {
         console.log(`❌ Driver ${driverId} is not approved, cannot go online`);
         return;
@@ -70,15 +72,13 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
       const sessions = driverSessions.get(driverId) || [];
       sessions.push([now, null]);
       driverSessions.set(driverId, sessions);
-      if (driver.status != DriverStatus.BUSY) {
-        await AppDataSource.getRepository(Driver).update(
-          { id: driverId },
-          { status: DriverStatus.ACTIVE, updatedAt: new Date()}
-        );
-        console.log(`Driver ${driverId} is now online with vehicle type ${vehicleType}`);
-        if (driver.status === DriverStatus.OFFLINE) broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about driver going active only if they were previously offline
-      }
-      else console.log(`Driver ${driverId} is now busy with vehicle type ${vehicleType}`)
+      await AppDataSource.getRepository(Driver)
+        .createQueryBuilder()
+        .update(Driver)
+        .set({ status: DriverStatus.ACTIVE, updatedAt: new Date() })
+        .where("id = :id", { id: driverId })
+        .andWhere("status != :busy", { busy: DriverStatus.BUSY })
+        .execute();
 
       console.log(`⏰ Current time is ${now.toISOString()}`);
       let window: Date;
