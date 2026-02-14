@@ -6,7 +6,7 @@ import { Tag } from "./tag.model.js";
 export class DriverTag extends BaseEntity {
     @ManyToOne(() => Driver, driver => driver.id, { nullable: false })
     @JoinColumn({ name: "driverId" })
-    driver: Driver;
+    driver: any;
     
     @ManyToOne(() => Tag, tag => tag.id, { nullable: false })
     @JoinColumn({ name: "tagId" })
