@@ -31,9 +31,8 @@ const swaggerDefinition = {
         description: "API documentation generated with Swagger",
     },
     servers: [
-        {
-            url: serverUrl,
-        },
+        { url: "https://api.staging.shipbee.io", description: "Staging server" },
+        { url: "https://api.shipbee.io", description: "Production server" }
     ],
 
     /**

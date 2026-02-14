@@ -160,14 +160,21 @@ export class Driver extends BaseEntity {
     @Column({type: "bigint", default: 0})
     cashBalance: number
 
+    @Column({type: "boolean", default: false})
+    isDisconnected: boolean
+
     @Column({type: "text", nullable: true})
     lastKnownLocation: string; // could be an address or "lat,lng"
 
     @Column({type: "timestamptz", nullable: true})
     lastOnlineAt: Date;
+
+    @OneToMany(() => DriverTag, (driverTag) => driverTag.driver)
+    driverTags: DriverTag[];
 }
 
 import { Vehicle } from "./vehicle.model.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
+import { DriverTag } from "./driverTag.model.js";
 

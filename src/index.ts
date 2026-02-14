@@ -19,6 +19,7 @@ import { ShopSettingsController } from "./controllers/shopSettings.controller.js
 import { BroadcastMessageController } from "./controllers/broadcastMessage.controller.js";
 import { externalTrackingSocket } from "./socket/external-tracking-socket.js";
 import { UploadController } from "./controllers/upload.controller.js";
+import { TagController } from "./controllers/tag.controller.js";
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
@@ -44,6 +45,7 @@ const app = new App(
     new ShopSettingsController(), // Add ShopSettingsController
     new BroadcastMessageController(), // Add BroadcastMessageController
     new UploadController(),
+    new TagController(), // Add TagsController
     ],
 );
 

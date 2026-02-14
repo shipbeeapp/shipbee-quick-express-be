@@ -105,6 +105,10 @@ import { AddHistoricalIncome1770059204107 } from '../migrations/1770059204107-Ad
 import {AddProceedWithoutPaymentInUser1770563510535} from "../migrations/1770563510535-AddProceedWithoutPaymentInUser.js"; // Import the migration for adding proceedWithoutPayment in User
 import {AddDisconnectedDriverStatus1770719913115} from "../migrations/1770719913115-AddDisconnectedDriverStatus.js"; // Import the migration for adding Disconnected status in DriverStatus enum
 import { AddNewEnumInStatus1770726819376 } from "../migrations/1770726819376-AddNewEnumInStatus.js";
+import { AddIsDisconnectedColumn1771064017511 } from "../migrations/1771064017511-AddIsDisconnectedColumn.js";
+import { Tag } from "../models/tag.model.js";
+import { DriverTag } from "../models/driverTag.model.js";
+import {AddDriverTags1771078966854} from "../migrations/1771078966854-AddDriverTags.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -136,6 +140,8 @@ export const AppDataSource = new DataSource({
     BroadcastMessage,
     DriverBroadcastMessage,
     UserPricing,
+    Tag,
+    DriverTag,
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -222,6 +228,8 @@ export const AppDataSource = new DataSource({
     AddProceedWithoutPaymentInUser1770563510535,
     AddDisconnectedDriverStatus1770719913115,
     AddNewEnumInStatus1770726819376,
+    AddIsDisconnectedColumn1771064017511,
+    AddDriverTags1771078966854,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

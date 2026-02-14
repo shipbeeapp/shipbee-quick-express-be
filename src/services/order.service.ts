@@ -49,6 +49,7 @@ import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
+import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -252,7 +253,7 @@ export default class OrderService {
 
     await queryRunner.manager.save(stopEntities);
      //Step 5: Add Order Status History
-    await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
+    await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
      orderData.orderNo = order.orderNo;
      let recipientAdminMail;
      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
@@ -304,8 +305,8 @@ export default class OrderService {
       },
       relations: [
         "sender", "fromAddress", "serviceSubcategory", 
-        "orderStatusHistory", "shipment", 
-        "createdBy",
+        "orderStatusHistory", "orderStatusHistory.orderStop", "shipment", 
+        "createdBy", "orderStatusHistory.driver",
         "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
         "stops", "stops.receiver", "stops.toAddress",
       ],
@@ -359,8 +360,8 @@ export default class OrderService {
       },
       relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
-          "driver", "driver.vehicle", "shipment", "createdBy",
-          "cancellationRequests", "cancellationRequests.driver",
+          "orderStatusHistory.orderStop", "orderStatusHistory.driver", "driver", "driver.vehicle", "shipment", 
+          "createdBy", "cancellationRequests", "cancellationRequests.driver",
           "stops", "stops.receiver", "stops.toAddress", 
       ],
       order: {
@@ -424,9 +425,7 @@ export default class OrderService {
       await orderRepository.save(order);
 
       await this.orderStatusHistoryService.createOrderStatusHistory(
-        order,
-        null,
-        queryRunner
+        { order, cancellationReason: null, queryRunner, triggeredByAdmin: true }
       );
 
       if (
@@ -506,7 +505,8 @@ export default class OrderService {
     console.log("Fetching order details for order ID:", orderId);
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ["sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment", 
+      relations: ["sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment",
+            "orderStatusHistory.orderStop", "orderStatusHistory.driver",
             "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle", "createdBy"
       ],
     });
@@ -603,7 +603,7 @@ export default class OrderService {
       { status: DriverStatus.BUSY }
     );
     // Add to order status history
-    await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
+    await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
 
     await queryRunner.commitTransaction();
 
@@ -662,11 +662,11 @@ export default class OrderService {
 
       if (isPickup) {
         if (order.status !== OrderStatus.ASSIGNED) throw new Error(`Order ${orderId} not ready for pickup`);
-
+        console.log("Updating order status to EN_ROUTE_TO_PICKUP");
         await this.orderRepository.update(orderId, { status: OrderStatus.EN_ROUTE_TO_PICKUP, startedAt: new Date().toISOString() });
         // Add to order status history
         order.status = OrderStatus.EN_ROUTE_TO_PICKUP;
-        await this.orderStatusHistoryService.createOrderStatusHistory(order);
+        await this.orderStatusHistoryService.createOrderStatusHistory({ order });
         console.log(`Driver ${driverId} going to pickup address for order ${orderId}`);
         // Reload order with relations
         console.log('sent mail to admin');
@@ -698,7 +698,7 @@ export default class OrderService {
         // Add to order status history
         order.status = OrderStatus.ACTIVE;
         await this.orderRepository.save(order);
-        await this.orderStatusHistoryService.createOrderStatusHistory(order);
+        await this.orderStatusHistoryService.createOrderStatusHistory({order, stopId: currentStop.id});
         stopNumber = currentStop.sequence;
         console.log(`Order ${orderId} by driver ${driverId} is going to stop #${currentStop.sequence}`);
         broadcastOrderUpdate(order.id, order.status, currentStop.sequence); // Notify all connected clients about the order status update
@@ -758,7 +758,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
       order.driver.status = DriverStatus.ACTIVE;
       await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order});
       console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
           console.error("Error sending email to admin:", err);
@@ -788,6 +788,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
     else {
       console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
       broadcastOrderUpdate(order.id, order.status, stop.sequence); // Notify all connected clients about the order status update
     }
 
@@ -898,7 +899,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           await this.driverService.updateDriverStatus(driverId, DriverStatus.ACTIVE)
         
           // 3. Broadcast updates
-          await this.orderStatusHistoryService.createOrderStatusHistory(order, reason);
+          await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: reason });
           resetNotifiedDrivers(order.id);
           await emitOrderToDrivers(order);
           broadcastOrderUpdate(order.id, order.status);
@@ -954,7 +955,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
                 broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
                 order.driver = null;
                 await queryRunner.manager.save(order);
-                await this.orderStatusHistoryService.createOrderStatusHistory(order, null, queryRunner);
+                await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
                 resetNotifiedDrivers(order.id);
                 await emitOrderToDrivers(order, driverCurrentLocation);
                 broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
@@ -996,6 +997,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
         console.log(`Arrival notification sent to sender for order ${orderId}`);
 
+        await this.orderStatusHistoryService.createOrderStatusHistory({ order, hasArrived: true });
         // Notify first receiver (if any)
         const firstStop = order.stops?.[0];
         console.log("First stop for order:", firstStop);
@@ -1037,7 +1039,12 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence, atPickup);
         console.log(`Arrival notification sent to receiver for order ${orderId}`);
 
-        // Notify next receiver in sequence, if any
+        // Only add order status history for the intended receiver (not for recursive calls)
+        if (!atPickup) {
+          await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, hasArrived: true });
+        }
+
+        // Notify next receiver in sequence, if any (but do NOT add status history for them)
         if (!atPickup) {
           const nextStopIndex = order.stops.findIndex((s) => s.id === stopId) + 1;
           const nextStop = order.stops[nextStopIndex];
@@ -1154,7 +1161,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       //cancel directly and notify driver
       order.status = OrderStatus.CANCELED;
       await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory(order, reason || 'Cancellation by client');
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: reason || 'Cancellation by client' });
       broadcastOrderUpdate(order.id, order.status);
       if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
       return;
@@ -1208,7 +1215,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     if (status === CancelRequestStatus.APPROVED) {
       order.status = OrderStatus.CANCELED;
       await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory(order, reason || 'Cancellation approved by admin');
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: reason || 'Cancellation approved by admin' });
       await this.orderCancellationRequestRepository.update(cancellationRequestId, { status: CancelRequestStatus.APPROVED });
       broadcastOrderUpdate(order.id, order.status);
       if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
@@ -1458,7 +1465,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
       order.status = OrderStatus.CANCELED;
       await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory(order, 'Cancellation by client (Ansar)');
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: 'Cancellation by client (Ansar)' });
       broadcastOrderUpdate(order.id, order.status);
       if (order.driver) emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED);
       return;
@@ -1580,6 +1587,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         },
         relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
+          "orderStatusHistory.orderStop", "orderStatusHistory.driver",
           "driver", "driver.vehicle", "shipment", "createdBy",
           "cancellationRequests", "cancellationRequests.driver",
           "stops", "stops.receiver", "stops.toAddress", 
@@ -1637,6 +1645,79 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     } catch (err) {
       console.error(err.message);
       throw new Error(`Error getting unassigned orders: ${err.message}`);
+    }
+  }
+
+  async uploadProofOfPickup(orderId: string, driverId: string, proofOfPickupUrl: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, driver: { id: driverId } },
+        relations: ["stops", "stops.toAddress", "stops.receiver"]
+      });
+
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found for driver ${driverId}`);
+      }
+
+      order.proofOfPickup = proofOfPickupUrl.split("image/upload/")[1];
+      await this.orderRepository.save(order);
+      console.log(`Proof of pickup uploaded for order ${orderId} by driver ${driverId}`);
+    } catch (error) {
+      console.error("Error uploading proof of pickup:", error.message);
+      throw new Error(`Could not upload proof of pickup: ${error.message}`);
+    }
+  }
+
+  async startReturn(orderId: string, driverId: string, stopId: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, driver: { id: driverId } },
+        relations: ["stops", "stops.toAddress", "stops.receiver"]
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found for driver ${driverId}`);
+      }
+      const stop = order.stops.find(s => s.id === stopId);
+      if (!stop) {
+        throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
+      }
+      if (stop.status == OrderStatus.COMPLETED) {
+        throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
+      }
+      
+      await this.orderStatusHistoryService.createOrderStatusHistory({order, stopId, returnedStartedAt: new Date()});
+    } catch (error) {
+      console.error("Error in order service starting return:", error.message);
+      throw new Error(`Error starting return: ${error.message}`);
+    }
+  }
+
+  async completeReturn(orderId: string, driverId: string, stopId: string, proofOfReturnUrl: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, driver: { id: driverId } },
+        relations: ["stops", "stops.toAddress", "stops.receiver"]
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found for driver ${driverId}`);
+      }
+      const stop = order.stops.find(s => s.id === stopId);
+      if (!stop) {
+        throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
+      }
+      if (stop.status == OrderStatus.COMPLETED) {
+        throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
+      }
+      
+      stop.status = OrderStatus.COMPLETED;
+      stop.proofOfReturn = proofOfReturnUrl.split("image/upload/")[1];
+      stop.isReturned = true;
+      await this.orderStopRepository.save(stop);
+
+      await this.orderStatusHistoryService.updateOrderStatusHistory({order, stopId, returnedCompletedAt: new Date()});
+    } catch (error) {
+      console.error("Error in order service completing return:", error.message);
+      throw new Error(`Error completing return: ${error.message}`);
     }
   }
 
