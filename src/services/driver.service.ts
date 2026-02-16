@@ -363,7 +363,7 @@ export default class DriverService {
             await queryRunner.release();
         }
     }
-    async findAllDrivers(isDisconnected?: boolean): Promise<any> {
+    async findAllDrivers(isDisconnected?: boolean | null): Promise<any> {
         try {
             const result = await this.baseDriverQuery()
             .leftJoin("driver.orders", "orders")
