@@ -49,9 +49,11 @@ export class DriverOrderResource {
     timeToPickup: number;
     payer: Payer;
     stops: DriverOrderStopResource[];
+    hasReturn?: boolean;
+    returnOrderStopId?: string;
 }
 
-export function createDriverOrderResource(order: any, distanceToPickup: number, timeToPickup: number): DriverOrderResource {
+export function createDriverOrderResource(order: any, distanceToPickup: number, timeToPickup: number, hasReturn: boolean = false, returnOrderStopId: string | null = null): DriverOrderResource {
     const resource = new DriverOrderResource();
     resource.orderId = order.id;
     const orderNo = order.stops[0]?.clientStopId
@@ -82,6 +84,8 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
     resource.payer = order.payer;
+    resource.hasReturn = hasReturn;
+    resource.returnOrderStopId = returnOrderStopId;
     // Map each stop
     resource.stops = order.stops?.map((stop: any) => {
         const stopDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : null;

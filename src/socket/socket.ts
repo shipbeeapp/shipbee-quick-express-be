@@ -79,6 +79,8 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         .where("id = :id", { id: driverId })
         .andWhere("status != :busy", { busy: DriverStatus.BUSY })
         .execute();
+      
+      await AppDataSource.getRepository(Driver).update(driverId, { isDisconnected: false });
 
       console.log(`⏰ Current time is ${now.toISOString()}`);
       let window: Date;

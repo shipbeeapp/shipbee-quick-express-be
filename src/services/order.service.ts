@@ -1483,9 +1483,16 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           driver: { id: driverId },
           status: In([OrderStatus.ASSIGNED, OrderStatus.ACTIVE, OrderStatus.EN_ROUTE_TO_PICKUP])
         },
-        relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"]
+        relations: [
+          "fromAddress", "sender", "stops", 
+          "stops.toAddress", "stops.receiver",
+          "orderStatusHistory", "orderStatusHistory.orderStop"
+        ]
       }) 
       console.log(`cuurent active order: ${JSON.stringify(activeOrder, null, 2)}`)
+      // check if the order has an order status history with returnedStartedAt and no returnedCompletedAt, if so add hasReturn and include orderStopId of that history record in the resource
+      const returnStatusHistory = activeOrder?.orderStatusHistory.find(history => history.returnedStartedAt && !history.returnedCompletedAt);
+      if (returnStatusHistory) return createDriverOrderResource(activeOrder, null, null, true, returnStatusHistory.orderStop.id);
       return createDriverOrderResource(activeOrder, null, null)
 
     } catch (err) {
