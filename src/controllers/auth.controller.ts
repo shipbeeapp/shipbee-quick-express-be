@@ -114,7 +114,8 @@ export class AuthController {
                 phoneNumber: user.phoneNumber,
                 isNewUser: user.isNewUser,
                 userType: user.type, // Assuming userType is a field in your User model
-                proceedWithoutPayment: user.proceedWithoutPayment, // Assuming proceedWithoutPayment is a field in your User model
+                proceedWithoutPayment: user.proceedWithoutPayment,
+                monthlyBillingEnabled: user.monthlyBillingEnabled
             }
             const myToken = jwt.sign(
                 userData,

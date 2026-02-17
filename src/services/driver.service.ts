@@ -202,6 +202,7 @@ export default class DriverService {
                     "driver.id",
                     "driver.income",
                     "driver.cashIncome",
+                    "driver.driverNo",
                     "driver.onlineIncome",
                     "driver.cashBalance",
                     "driver.name",

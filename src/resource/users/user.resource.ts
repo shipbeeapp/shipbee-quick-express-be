@@ -12,6 +12,7 @@ export class UserResponseDto {
     type: userType;
     hasLoggedInQuick?: boolean;
     hasLoggedInExpress?: boolean;
+    monthlyBillingEnabled?: boolean;
 }
 
 export function toUserResponseDto(user: User): UserResponseDto {
@@ -26,5 +27,6 @@ export function toUserResponseDto(user: User): UserResponseDto {
     userResponseDto.type = user.type;
     userResponseDto.hasLoggedInQuick = user.hasLoggedInQuick;
     userResponseDto.hasLoggedInExpress = user.hasLoggedInExpress;
+    userResponseDto.monthlyBillingEnabled = user.monthlyBillingEnabled;
     return userResponseDto;
 }

@@ -12,6 +12,7 @@ export class DriverResource {
             status: driver.driver_status,
             lastKnownLocation: driver.driver_lastKnownLocation,
             lastOnlineAt: driver.driver_lastOnlineAt,
+            driverNo: driver.driver_driverNo,
             income: Number(driver.driver_income),
             cashIncome: Number(driver.driver_cashIncome),
             onlineIncome: Number(driver.driver_onlineIncome),
