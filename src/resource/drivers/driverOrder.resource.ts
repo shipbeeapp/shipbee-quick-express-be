@@ -63,12 +63,19 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.status = order.status;
     resource.itemType = order.itemType;
     resource.paymentMethod = order.paymentMethod;
-    resource.totalCost = order.stops[0]?.clientStopId
-        ? order.stops.reduce(
-            (sum, stop) => sum + (stop.totalPrice ?? 0),
-            0
-          )
-        : order.totalCost;
+    const allStopsHaveNoPrice = order.stops?.every(
+      stop => !stop.totalPrice
+    );
+
+    resource.totalCost = allStopsHaveNoPrice
+      ? order.totalCost
+      : order.stops.reduce(
+          (sum, stop) =>
+            sum +
+            (stop.totalPrice ?? 0) +
+            (stop.deliveryFee ?? 0),
+          0
+        );
     resource.distance = order.distance;
     resource.type = order.type;
     resource.fromAddress = order.fromAddress?.city ? order.fromAddress?.city: order.fromAddress?.landmarks;
@@ -108,7 +115,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             status: stop.status,
             lifters: stop.lifters,
             items: stop.items,
-            totalPrice: stop.totalPrice,
+            totalPrice: stop.totalPrice + (stop.deliveryFee || 0),
             paymentMethod: stop.paymentMethod,
             comments: stop.comments,
             deliveryFee: stop.deliveryFee

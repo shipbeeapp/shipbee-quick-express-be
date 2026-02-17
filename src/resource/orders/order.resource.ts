@@ -20,6 +20,7 @@ export class OrderResponseDto {
     lifters: number;
     distance: number;
     totalCost: number;
+    paymentMethod: PaymentMethod;
     clientCost: number | null;
     currentStatus: string;
     createdAt: Date;
@@ -290,6 +291,7 @@ export class OrderResponseDto {
       lifters: order.lifters,
       distance: order.distance,
       totalCost: order.totalCost ? Number(order.totalCost) : null,
+      paymentMethod: order.paymentMethod,
       clientCost,
       currentStatus: order.status,
       vehicleType: order.vehicleType,

@@ -15,6 +15,35 @@ import { User } from "../models/user.model.js";
 export default class PricingService {
     private pricingRepository = AppDataSource.getRepository(Pricing);
     private userPricingRepository = AppDataSource.getRepository(UserPricing)
+    private userRepository = AppDataSource.getRepository(User);
+
+    async getUserPricing(id: string) {
+        try {
+            const userPricing = await this.userPricingRepository.findOne({
+                where: { id }
+            });
+            return userPricing;
+        } catch (error) {
+            console.error('Error fetching user pricing:', error);
+            throw new Error('Error fetching user pricing: ' + error.message);
+        }
+    }
+
+    async getUserPricings(userId: string) {
+        try {
+            const user = await this.userRepository.findOneBy({ id: userId });
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return this.userPricingRepository.find({
+                where: { user: { id: userId }, isCurrent: true },
+                order: { createdAt: "DESC" }
+            });
+        } catch (error) {
+            console.error('Error fetching user pricings:', error);
+            throw new Error('Error fetching user pricings: ' + error.message);
+        }
+    }
 
     async createPricing(pricingData: Partial<Pricing>[], queryRunner?: any) {
         try {
@@ -59,6 +88,34 @@ export default class PricingService {
         } catch (error) {
             console.error('Error updating pricing:', error);
             throw new Error('Error updating pricing: ' + error.message);
+        }
+    }
+
+    async updateUserPricing(id: string, pricingData: Partial<UserPricing>) {
+        try {
+            const existingPricing = await this.userPricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('User pricing not found');
+            }
+
+            existingPricing.isCurrent = false;
+            await this.userPricingRepository.save(existingPricing);
+
+            // Create new pricing row with new data and isCurrent true
+            //remove id from existing pricing if it exists to avoid conflicts with the new row
+            delete existingPricing.id;
+            const newPricing = this.userPricingRepository.create({
+                ...existingPricing,
+                ...pricingData,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isCurrent: true
+            });
+            console.log("new pricing to be saved: ", JSON.stringify(newPricing, null, 2))
+            return await this.userPricingRepository.save(newPricing);
+        } catch (error) {
+            console.error('Error updating user pricing:', error);
+            throw new Error('Error updating user pricing: ' + error.message);
         }
     }
 

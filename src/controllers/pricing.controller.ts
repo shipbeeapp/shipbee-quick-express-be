@@ -100,8 +100,48 @@ export class PricingController {
      */
 
     this.router.get(`${this.path}/quick`, this.getQuickPricing.bind(this))
+    this.router.get(`/user-pricing`, authenticationMiddleware, this.getUserPricings.bind(this))
     this.router.post(`/user-pricing`, authenticationMiddleware, this.createUserPricing.bind(this))
+    this.router.put(`/user-pricing/:id`, authenticationMiddleware, this.updateUserPricing.bind(this))
+    this.router.get(`/user-pricing/:id`, authenticationMiddleware, this.getUserPricing.bind(this))
   }
+
+    private async getUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+            const userPricing = await this.pricingService.getUserPricing(id);
+            if (!userPricing) {
+                return res.status(404).json({ error: 'User pricing not found' });
+            }
+            res.status(200).json(userPricing);
+        }
+        catch (error) {
+            console.error('Error fetching user pricing:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
+    private async getUserPricings(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const {userId} = req.query
+            if (!userId) {
+                return res.status(400).json({ error: 'userId query parameter is required' });
+            }
+            const userPricings = await this.pricingService.getUserPricings(userId as string);
+            res.status(200).json(userPricings);
+        }  catch (error) {
+            console.error('Error fetching user pricings:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
 
     private async createPricing(req: AuthenticatedRequest, res: Response) {
         if (req.email != env.ADMIN.EMAIL) {
@@ -175,6 +215,23 @@ export class PricingController {
         catch (err) {
             console.error(err.message)
             throw new Error(`Error fetching quick pricing: ${err.message}`)
+        }
+    }
+
+    private async updateUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+            const pricingData: CreatePricingDTO = req.body;
+
+            const updatedPricing = await this.pricingService.updateUserPricing(id, pricingData);
+            res.status(200).json(updatedPricing);
+        } catch (error) {
+            console.error('Error updating user pricing:', error);
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 }

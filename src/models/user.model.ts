@@ -66,6 +66,9 @@ export class User extends BaseEntity {
   @Column({ type: "boolean", nullable: true, default: false })
   proceedWithoutPayment: boolean;
 
+  @Column({ type: "boolean", nullable: true, default: false })
+  monthlyBillingEnabled: boolean;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

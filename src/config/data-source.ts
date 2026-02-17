@@ -109,6 +109,7 @@ import { AddIsDisconnectedColumn1771064017511 } from "../migrations/177106401751
 import { Tag } from "../models/tag.model.js";
 import { DriverTag } from "../models/driverTag.model.js";
 import {AddDriverTags1771078966854} from "../migrations/1771078966854-AddDriverTags.js";
+import { AddMonthlyBill1771365542054 } from "../migrations/1771365542054-AddMonthlyBill.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -230,6 +231,7 @@ export const AppDataSource = new DataSource({
     AddNewEnumInStatus1770726819376,
     AddIsDisconnectedColumn1771064017511,
     AddDriverTags1771078966854,
+    AddMonthlyBill1771365542054,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
