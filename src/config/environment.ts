@@ -82,4 +82,5 @@ export const env = {
     BUCKET_NAME: process.env.AWS_BUCKET_NAME || 'codepipeline-us-east-1-66938916e2a7-415a-aa55-dcba2afa8f96',
     FILENAME: process.env.AWS_FILENAME || 'appcast.xml'
   },
+  ORDER_EMIT_BUFFER_MINUTES: Number(process.env.ORDER_EMIT_BUFFER_MINUTES) || 15, // Default to 15 minutes
 };
