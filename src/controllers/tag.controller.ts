@@ -45,9 +45,9 @@ export class TagController {
         );
 
         this.router.delete(
-            `${this.path}/:id`, 
+            `${this.path}/attach-drivers`, 
             authenticationMiddleware, 
-            this.deleteTag.bind(this)
+            this.detachTagsFromDrivers.bind(this)
         );
     }
 
@@ -141,20 +141,22 @@ export class TagController {
         }
     }
 
-    private async deleteTag(req: AuthenticatedRequest, res: Response) {
+    private async detachTagsFromDrivers(req: AuthenticatedRequest, res: Response) {
         try {
             if (req.email !== env.ADMIN.EMAIL)
                 return res.status(403).json({ success: false, message: 'Forbidden' });
-            const tagId = req.params.id;
-            const { driverId } = req.query;
-            console.log('Deleting tag with ID:', tagId, 'from driver ID:', driverId, 'by user:', req.email);
-            await this.tagService.deleteTag(tagId, driverId as string);
-            console.log('Tag deleted from drivers successfully');
-            res.status(200).json({ success: true, message: 'Tag deleted from drivers successfully' });
+            const { driverIds, tagIds } = req.body;
+            if (!Array.isArray(driverIds) || !Array.isArray(tagIds)) {
+                return res.status(400).json({ success: false, message: 'driverIds and tagIds must be arrays' });
+            }
+            console.log('Detaching tags from drivers. Driver IDs:', driverIds, 'Tag IDs:', tagIds, 'by user:', req.email);
+            await this.tagService.detachTagsFromDrivers(driverIds, tagIds);
+            console.log('Tags detached from drivers successfully');
+            res.status(200).json({ success: true, message: 'Tags detached from drivers successfully' });
         }
         catch (error) {
-            console.error('Error deleting tag from drivers:', error);
-            res.status(500).json({ success: false, message: 'Internal server error' });
+            console.error('Error detaching tags from drivers:', error);
+            res.status(500).json({ success: false, message: error.message || 'Internal server error' });
         }
     }
 }
