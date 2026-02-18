@@ -43,6 +43,12 @@ export class TagController {
             authenticationMiddleware, 
             this.attachTagsToDrivers.bind(this)
         );
+
+        this.router.delete(
+            `${this.path}/:id`, 
+            authenticationMiddleware, 
+            this.deleteTag.bind(this)
+        );
     }
 
     private async getAllTags(req: AuthenticatedRequest, res: Response) {
@@ -131,6 +137,23 @@ export class TagController {
         }
         catch (error) {
             console.error('Error attaching tags to drivers:', error);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    }
+
+    private async deleteTag(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email !== env.ADMIN.EMAIL)
+                return res.status(403).json({ success: false, message: 'Forbidden' });
+            const tagId = req.params.id;
+            const { driverId } = req.query;
+            console.log('Deleting tag with ID:', tagId, 'from driver ID:', driverId, 'by user:', req.email);
+            await this.tagService.deleteTag(tagId, driverId as string);
+            console.log('Tag deleted from drivers successfully');
+            res.status(200).json({ success: true, message: 'Tag deleted from drivers successfully' });
+        }
+        catch (error) {
+            console.error('Error deleting tag from drivers:', error);
             res.status(500).json({ success: false, message: 'Internal server error' });
         }
     }

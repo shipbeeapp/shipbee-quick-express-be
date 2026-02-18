@@ -83,4 +83,13 @@ export const env = {
     FILENAME: process.env.AWS_FILENAME || 'appcast.xml'
   },
   ORDER_EMIT_BUFFER_MINUTES: Number(process.env.ORDER_EMIT_BUFFER_MINUTES) || 2, // Default to 2 minutes
+  ARAMEX: {
+    API_URL: process.env.ARAMEX_API_URL,
+    USERNAME: process.env.ARAMEX_USERNAME,
+    PASSWORD: process.env.ARAMEX_PASSWORD,
+    ACCOUNT_NUMBER: process.env.ARAMEX_ACCOUNT_NUMBER,
+    ACCOUNT_PIN: process.env.ARAMEX_ACCOUNT_PIN,
+    COUNTRY_CODE: process.env.ARAMEX_COUNTRY_CODE || 'QA',
+    ENTITY: process.env.ARAMEX_ENTITY || 'DOH',
+  }
 };

@@ -68,4 +68,27 @@ export default class TagService {
         }
         return driverTags;
     }
+
+    async deleteTag(tagId: string, driverId?: string) {
+        if (driverId) {
+            // Remove driverTag for the specific driver
+            const driverTag = await this.driverTagRepository.findOne({
+                where: { driver: { id: driverId }, tag: { id: tagId } }
+            });
+            if (!driverTag) {
+                throw new Error(`Tag with ID ${tagId} is not attached to driver with ID ${driverId}`);
+            }
+            await this.driverTagRepository.remove(driverTag);
+        } else {
+            // Remove all driverTags for the tag
+            const driverTags = await this.driverTagRepository.find({
+                where: { tag: { id: tagId } }
+            });
+            if (driverTags.length > 0) {
+                await this.driverTagRepository.remove(driverTags);
+            }
+            // Remove the tag itself
+            await this.tagRepository.delete(tagId);
+        }
+    }
 }

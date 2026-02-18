@@ -10,6 +10,7 @@ import axios from "axios";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { UserPricing } from "../models/userPricing.model.js";
 import { User } from "../models/user.model.js";
+import * as soap from 'soap';
 
 @Service()
 export default class PricingService {
@@ -293,10 +294,101 @@ export default class PricingService {
                     estimatedDeliveryDays: currentPricing.transitTime
                 });
             }
+
+            //aramex
+            // const wsdlUrl = env.ARAMEX.API_URL;
+
+            // const client = await soap.createClientAsync(wsdlUrl);
+
+            // // 🔥 Override endpoint
+            // client.setEndpoint(
+            //   'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc'
+            // );
+
+            // const request = {
+            //   ClientInfo: {
+            //     UserName: env.ARAMEX.USERNAME,
+            //     Password: env.ARAMEX.PASSWORD,
+            //     Version: 'v1.0',
+            //     AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+            //     AccountPin: env.ARAMEX.ACCOUNT_PIN,
+            //     AccountEntity: env.ARAMEX.ENTITY,
+            //     AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
+            //   },
+            //   OriginAddress: {
+            //     Line1: 'Some street or area',
+            //     Line2: '',        // if not used, empty string
+            //     Line3: '',        // if not used, empty string
+            //     City: 'Doha',
+            //     StateOrProvinceCode: '', // optional
+            //     PostCode: '',           // optional
+            //     CountryCode: 'QA',
+            //   },
+            //   DestinationAddress: {
+            //     Line1: 'Some street or area',
+            //     Line2: '',        // if not used, empty string
+            //     Line3: '',        // if not used, empty string
+            //     City: 'Doha',
+            //     StateOrProvinceCode: '', // optional
+            //     PostCode: '',           // optional
+            //     CountryCode: 'QA',
+            //   },
+            //   ShipmentDetails: {
+            //     Dimensions: {
+            //       Length: 10,
+            //       Width: 10,
+            //       Height: 10,
+            //       Unit: 'CM',
+            //     },
+            //     ActualWeight: {
+            //       Unit: 'KG',
+            //       Value: 2,
+            //     },
+            //     ChargeableWeight: {
+            //       Unit: 'KG',
+            //       Value: 2,
+            //     },
+            //     DescriptionOfGoods: 'Documents',
+            //     GoodsOriginCountry: 'QA',
+            //     NumberOfPieces: 1,
+            //     ProductGroup: 'EXP',
+            //     ProductType: 'PPX',
+            //     PaymentType: 'P',
+            //     PaymentOptions: '',
+            //     // Optional fields can be included if needed
+            //     CustomsValueAmount: { CurrencyCode: 'QAR', Value: 100 },
+            //     CashOnDeliveryAmount: { CurrencyCode: 'QAR', Value: 0 },
+            //     InsuranceAmount: { CurrencyCode: 'QAR', Value: 0 },
+            //     CashAdditionalAmount: { CurrencyCode: 'QAR', Value: 0 },
+            //     CollectAmount: { CurrencyCode: 'QAR', Value: 0 },
+            //     Services: '',
+            //     Items: {
+            //       ShipmentItem: [
+            //         {
+            //           PackageType: 'Box',
+            //           Quantity: 1,
+            //           Weight: { Unit: 'KG', Value: 2 },
+            //           Comments: 'Handle with care',
+            //           Reference: 'Ref001',
+            //         },
+            //       ],
+            //     },
+            //   },
+            // };
+        
+            // const [result] = await client.CalculateRateAsync(request);
+        
+            // console.log('Rate response:', result);
+            // console.log('Notification:', JSON.stringify(result.Notifications, null, 2));
+            // pricingList.push({
+            //     carrier: 'Aramex',
+            //     totalCost: Number(result.TotalAmount),
+            //     estimatedDeliveryDays: result.DeliveryTime
+            // });
             return pricingList;
         } catch (error) {
-            console.error('Error fetching DHL pricing:', error);
-            throw new Error(`Error fetching DHL pricing: ${error.message}`);
+            console.error('Error fetching Express pricing:', error);
+            throw new Error(`Error fetching Express pricing: ${error.message}`);
         } 
     }
 
