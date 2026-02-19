@@ -193,9 +193,6 @@ export default class OrderService {
       });
 
     await queryRunner.manager.save(order);
-    if (madeByClient) {
-      this.addAnsarOrder(order.id, order.orderNo, order.status)
-    }
 
     // 🔹 Step 4: Create multiple stops
     if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK && (!orderData.stops || orderData.stops.length === 0)) {
@@ -275,6 +272,7 @@ export default class OrderService {
      // await this.paymentService.createPayment(order, totalCost, queryRunner);
      // Commit transaction
      await queryRunner.commitTransaction();
+     await this.addAnsarOrder(order.id, order.orderNo, order.status)
     //  if (env.SEND_SMS) {
     //    sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
     //  }
@@ -1035,7 +1033,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         }
       
         if (!stop.receiver.phoneNumber) {
-          throw new Error(`Receiver for stop ${stopId} does not have a phone number`);
+          console.warn(`Receiver for stop ${stopId} does not have a phone number`);
         }
         await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence, atPickup);
         console.log(`Arrival notification sent to receiver for order ${orderId}`);
@@ -1747,9 +1745,19 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     console.log(`Number of Ansar orders: ${this.ansarOrders.size}`)
   }
 
-  addAnsarOrder(orderId: string, orderNo: number, status: OrderStatus) {
-    console.log(`added ansar order with order id: ${orderId} orderNo: ${orderNo} status: ${status}`)
-    this.ansarOrders.set(orderId, { orderNo, status });
+  async addAnsarOrder(orderId: string, orderNo: number, status: OrderStatus) {
+    const order = await this.orderRepository.find({
+      where: {
+        createdBy: { name: "Ansar" },
+      },
+    });
+    if (order) {
+      console.log(`added ansar order with order id: ${orderId} orderNo: ${orderNo} status: ${status}`)
+      this.ansarOrders.set(orderId, { orderNo, status });
+    }
+    else {
+      console.warn(`Order is not for Ansar`)
+    }
   }
 
   /** Remove order (completed or reassigned) */

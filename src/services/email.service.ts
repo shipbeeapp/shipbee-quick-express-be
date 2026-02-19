@@ -323,7 +323,7 @@ export async function sendArrivalNotification(phoneNumber: string, email: string
       });
       console.log(`Arrival notification email to ${email}`);
     } 
-    else {
+    else if (phoneNumber) {
       await twilioClient.messages.create({
         body: content,
         from: 'ShipBee',
