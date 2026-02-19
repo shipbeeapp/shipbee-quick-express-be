@@ -1271,9 +1271,12 @@ export default class DriverService {
         }
     }
 
-    async updateDriverIncomeAndCashBalance(driverId: string, order: Order) {
+    async updateDriverIncomeAndCashBalance(driverId: string, order: Order, queryRunner?: any) {
         try {
-            const driver = await this.driverRepository.findOne({
+            const driverRepository = queryRunner
+                ? queryRunner.manager.getRepository(Driver)
+                : this.driverRepository;
+            const driver = await driverRepository.findOne({
                 where: { id: driverId }, 
                 relations: ["businessOwner"]
             })
@@ -1290,17 +1293,12 @@ export default class DriverService {
 
             const cashStops = stops.filter(
               s => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY);
-        
-            const cardStops = stops.filter(
-              s =>
-                s.paymentMethod === PaymentMethod.CREDIT_DEBIT ||
-                s.paymentMethod === PaymentMethod.CARD_ON_DELIVERY ||
-                s.paymentMethod === PaymentMethod.WALLET
-            );
 
             const hasAnyTotalPrice = stops.some(
               s => s.totalPrice !== null && s.totalPrice !== undefined
             );
+
+            console.log("has any total price:", hasAnyTotalPrice)
         
             const cashStopsTotal = cashStops.reduce(
               (sum, s) => sum + (Number(s.totalPrice) || 0),
@@ -1355,7 +1353,7 @@ export default class DriverService {
                 }
             }
             console.log("new driver cash balance: ", driver.cashBalance)
-            await this.driverRepository.save(driver);
+            await driverRepository.save(driver);
         } catch (err) {
             console.error(`Error getting updating driver income: ${err.message}`)
             throw new Error(`Error getting updating driver income: ${err.message}`)

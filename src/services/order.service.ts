@@ -405,7 +405,7 @@ export default class OrderService {
 
       order = await orderRepository.findOne({
         where: { id: orderId },
-        relations: ["driver"],
+        relations: ["driver", "stops"],
         lock: { 
           mode: "pessimistic_write",
           tables: ["orders"]
@@ -420,6 +420,7 @@ export default class OrderService {
 
       if (status === OrderStatus.COMPLETED) {
         order.completedAt = new Date();
+        await this.driverService.updateDriverIncomeAndCashBalance(order.driver?.id, order, queryRunner);
       }
 
       await orderRepository.save(order);
