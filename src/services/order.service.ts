@@ -50,6 +50,7 @@ import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
 import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
+import {calculateDistanceForClientOrder} from "../utils/google-maps/distance-time.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -144,6 +145,13 @@ export default class OrderService {
                 total = null;
       }
       else {
+        if (madeByClient) {
+          // we calculate the distance using orderData.fromAddress.coordinates and order stops to Address coordinates using google maps distance matrix API 
+          // and set it in orderData.distance, 
+          console.log("distance given by client:" , orderData.distance);
+          orderData.distance = await calculateDistanceForClientOrder(orderData.fromAddress.coordinates, orderData.stops);
+          console.log("distance calculated using google maps:", orderData.distance);
+        }
         const pricingInput = await validateObject(GetPricingDTO, {
           userId: createdByUser.id,
           serviceSubcategory: orderData.serviceSubcategory,
@@ -1746,8 +1754,9 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
   }
 
   async addAnsarOrder(orderId: string, orderNo: number, status: OrderStatus) {
-    const order = await this.orderRepository.find({
+    const order = await this.orderRepository.findOne({
       where: {
+        id: orderId,
         createdBy: { name: "Ansar" },
       },
     });
