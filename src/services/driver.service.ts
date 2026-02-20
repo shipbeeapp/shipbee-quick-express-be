@@ -1292,7 +1292,9 @@ export default class DriverService {
             const stops = order.stops || [];
 
             const cashStops = stops.filter(
-              s => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY);
+              s => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY 
+              && !s.isReturned
+            );
 
             const hasAnyTotalPrice = stops.some(
               s => s.totalPrice !== null && s.totalPrice !== undefined
@@ -1301,7 +1303,7 @@ export default class DriverService {
             console.log("has any total price:", hasAnyTotalPrice)
         
             const cashStopsTotal = cashStops.reduce(
-              (sum, s) => sum + (Number(s.totalPrice) || 0),
+              (sum, s) => sum + (Number(s.totalPrice) || 0) + (Number(s.deliveryFee) || 0),
               0
             );
 

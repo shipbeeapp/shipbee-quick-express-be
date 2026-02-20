@@ -758,7 +758,15 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     stop.proofOfOrder = proofUrl.split("image/upload/")[1];
     await this.orderStopRepository.save(stop);
 
-    // Check if all stops are completed
+    // Check if all stops are completed and finalize order if so
+    await this.finalizeOrderCompletion(order, driverId, stop);
+  } catch (error) {
+    console.error("Error completing order:", error.message);
+    throw new Error(`Could not complete order: ${error.message}`);
+  }
+}
+
+  async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop) {
     const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED);
     if (allCompleted) {
       order.status = OrderStatus.COMPLETED;
@@ -766,7 +774,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       order.driver.status = DriverStatus.ACTIVE;
       await this.orderRepository.save(order);
       await this.orderStatusHistoryService.createOrderStatusHistory({ order});
-      console.log(`Order ${orderId} completed successfully by driver ${driverId}`);
+      console.log(`Order ${order.id} completed successfully by driver ${driverId}`);
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
           console.error("Error sending email to admin:", err);
         });
@@ -794,18 +802,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }
     }
     else {
-      console.log(`🟢 Stop ${stopId} completed, but order ${orderId} still has pending stops.`);
+      console.log(`🟢 Stop ${stop.id} completed, but order ${order.id} still has pending stops.`);
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
       broadcastOrderUpdate(order.id, order.status, stop.sequence); // Notify all connected clients about the order status update
     }
-
-    // order.proofOfOrder = proofUrl.split("image/upload/")[1];
-    // order.completionOtp = null; // Clear OTP after completion
-  } catch (error) {
-    console.error("Error completing order:", error.message);
-    throw new Error(`Could not complete order: ${error.message}`);
   }
-}
 
   async updateCompletionOtp(orderId: string, otp: string) {
     try {
@@ -1729,6 +1730,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       await this.orderStopRepository.save(stop);
 
       await this.orderStatusHistoryService.updateOrderStatusHistory({order, stopId, returnedCompletedAt: new Date()});
+      await this.finalizeOrderCompletion(order, driverId, stop);
     } catch (error) {
       console.error("Error in order service completing return:", error.message);
       throw new Error(`Error completing return: ${error.message}`);
