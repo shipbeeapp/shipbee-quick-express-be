@@ -110,6 +110,7 @@ import { Tag } from "../models/tag.model.js";
 import { DriverTag } from "../models/driverTag.model.js";
 import {AddDriverTags1771078966854} from "../migrations/1771078966854-AddDriverTags.js";
 import { AddMonthlyBill1771365542054 } from "../migrations/1771365542054-AddMonthlyBill.js";
+import { AddAnotherOrderStatus1771685981514 } from "../migrations/1771685981514-AddAnotherOrderStatus.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -232,6 +233,7 @@ export const AppDataSource = new DataSource({
     AddIsDisconnectedColumn1771064017511,
     AddDriverTags1771078966854,
     AddMonthlyBill1771365542054,
+    AddAnotherOrderStatus1771685981514,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

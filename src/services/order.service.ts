@@ -1702,6 +1702,9 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       if (stop.status == OrderStatus.COMPLETED) {
         throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
       }
+
+      stop.status = OrderStatus.RETURNING;
+      await this.orderStopRepository.save(stop);
       
       await this.orderStatusHistoryService.createOrderStatusHistory({order, stopId, returnedStartedAt: new Date()});
     } catch (error) {
