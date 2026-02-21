@@ -1499,7 +1499,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }) 
       console.log(`current active order: ${JSON.stringify(activeOrder, null, 2)}`)
       if (!activeOrder) {
-        return {};
+        return null;
       }
       // check if the order has an order status history with returnedStartedAt and no returnedCompletedAt, if so add hasReturn and include orderStopId of that history record in the resource
       const returnStatusHistory = activeOrder?.orderStatusHistory.find(history => history.returnedStartedAt && !history.returnedCompletedAt);
