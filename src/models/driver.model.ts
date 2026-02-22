@@ -145,19 +145,19 @@ export class Driver extends BaseEntity {
     @Column({type: "boolean", default: false})
     hasCardOnDelivery: boolean
 
-    @Column({type: "bigint", default: 0})
+    @Column({type: "decimal", default: 0})
     historicalIncome: number
 
-    @Column({type: "bigint", default: 0})
+    @Column({type: "decimal", default: 0})
     income: number
 
-    @Column({type: "bigint", default: 0})
+    @Column({type: "decimal", default: 0})
     cashIncome: number
 
-    @Column({type: "bigint", default: 0})
+    @Column({type: "decimal", default: 0})
     onlineIncome: number
     
-    @Column({type: "bigint", default: 0})
+    @Column({type: "decimal", default: 0})
     cashBalance: number
 
     @Column({type: "boolean", default: false})
