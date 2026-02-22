@@ -781,6 +781,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
       order.driver.status = DriverStatus.ACTIVE;
       await queryRunner.manager.save(Order, order);
+      await queryRunner.manager.save(Driver, order.driver);
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner});
       console.log(`Order ${order.id} completed successfully by driver ${driverId}`);
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
