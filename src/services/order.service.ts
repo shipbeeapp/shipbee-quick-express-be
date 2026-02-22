@@ -17,7 +17,7 @@ import {sendOrderConfirmation,
         formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import { Between, MoreThan, In, Not, LessThan } from "typeorm";
+import { Between, MoreThan, In, Not, LessThan, QueryRunner } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
@@ -721,59 +721,67 @@ export default class OrderService {
 } 
 
 async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl: string) {
-  try {
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-      relations: ["driver", "sender", "fromAddress", "serviceSubcategory",
-        "stops", "stops.toAddress", "stops.receiver"
-      ],
-    });
-    if (!order) {
-      throw new Error(`Order with ID ${orderId} not found`);
-    }
-    if (order.driver?.id !== driverId) {
-      throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
-    }
+    const queryRunner = this.orderRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    
+    try {
+      const order = await queryRunner.manager.findOne(Order,{
+        where: { id: orderId },
+        relations: ["driver", "sender", "fromAddress", "serviceSubcategory",
+          "stops", "stops.toAddress", "stops.receiver"
+        ],
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      if (order.driver?.id !== driverId) {
+        throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+      }
 
-    if (order.status === OrderStatus.COMPLETED) {
-      throw new Error(`Order with ID ${orderId} has already been completed`);
-    }
+      if (order.status === OrderStatus.COMPLETED) {
+        throw new Error(`Order with ID ${orderId} has already been completed`);
+      }
 
-    if (order.status !== OrderStatus.ACTIVE) {
-      throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
-    }
-    // if (order.completionOtp !== otp) {
-    //   throw new Error(`Invalid OTP for order ${orderId}`);
-    // }
+      if (order.status !== OrderStatus.ACTIVE) {
+        throw new Error(`Order with ID ${orderId} is not in ACTIVE status`);
+      }
+      // if (order.completionOtp !== otp) {
+      //   throw new Error(`Invalid OTP for order ${orderId}`);
+      // }
 
-    // Find the stop being completed
-    const stop = order.stops.find((s) => s.id === stopId);
-    if (!stop) throw new Error(`Stop ${stopId} not found in order ${orderId}`);
-    if (stop.status === OrderStatus.COMPLETED)
-      throw new Error(`Stop ${stopId} is already completed`);
+      // Find the stop being completed
+      const stop = order.stops.find((s) => s.id === stopId);
+      if (!stop) throw new Error(`Stop ${stopId} not found in order ${orderId}`);
+      if (stop.status === OrderStatus.COMPLETED)
+        throw new Error(`Stop ${stopId} is already completed`);
 
-    stop.status = OrderStatus.COMPLETED;
-    stop.deliveredAt = new Date();
-    stop.proofOfOrder = proofUrl.split("image/upload/")[1];
-    await this.orderStopRepository.save(stop);
+      stop.status = OrderStatus.COMPLETED;
+      stop.deliveredAt = new Date();
+      stop.proofOfOrder = proofUrl.split("image/upload/")[1];
+      await queryRunner.manager.save(OrderStop, stop);
 
-    // Check if all stops are completed and finalize order if so
-    await this.finalizeOrderCompletion(order, driverId, stop);
+      // Check if all stops are completed and finalize order if so
+      await this.finalizeOrderCompletion(order, driverId, stop, queryRunner);
+      await queryRunner.commitTransaction();
   } catch (error) {
     console.error("Error completing order:", error.message);
+    await queryRunner.rollbackTransaction();
     throw new Error(`Could not complete order: ${error.message}`);
+  } finally {
+    await queryRunner.release();
   }
 }
 
-  async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop) {
+  async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop, queryRunner?: QueryRunner) {
     const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED);
     if (allCompleted) {
       order.status = OrderStatus.COMPLETED;
       order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
       order.driver.status = DriverStatus.ACTIVE;
-      await this.orderRepository.save(order);
-      await this.orderStatusHistoryService.createOrderStatusHistory({ order});
+      await queryRunner.manager.save(Order, order);
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner});
       console.log(`Order ${order.id} completed successfully by driver ${driverId}`);
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
           console.error("Error sending email to admin:", err);
@@ -781,7 +789,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
-      await this.driverService.updateDriverIncomeAndCashBalance(driverId, order)
+      await this.driverService.updateDriverIncomeAndCashBalance(driverId, order, queryRunner);
       this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
      if (this.isAnsarOrder(order.id)) {
         const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
@@ -803,7 +811,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
     else {
       console.log(`🟢 Stop ${stop.id} completed, but order ${order.id} still has pending stops.`);
-      await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
       broadcastOrderUpdate(order.id, order.status, stop.sequence); // Notify all connected clients about the order status update
     }
   }
