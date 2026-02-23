@@ -21,31 +21,31 @@ class AddressDto {
 
     @IsString()
     @IsOptional()
-    district: string;
+    district?: string;
 
     @IsString()
     @IsOptional()
-    street: string;
+    street?: string;
 
     @IsString()
     @IsOptional()
-    buildingNumber: string;
+    buildingNumber?: string;
 
     @IsOptional()
     @Transform(({ value }) => (value ? Number(value) : null))
-    floor: number;
+    floor?: number;
 
     @IsString()
     @IsOptional()
-    apartmentNumber: string;
+    apartmentNumber?: string;
 
     @IsString()
     @IsOptional()
-    zone: string;
+    zone?: string;
 
     @IsString()
     @IsOptional()
-    landmarks: string;
+    landmarks?: string;
 
     @IsString()
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
