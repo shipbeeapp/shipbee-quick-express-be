@@ -21,6 +21,14 @@ class AddressDto {
 
     @IsString()
     @IsOptional()
+    district: string;
+
+    @IsString()
+    @IsOptional()
+    street: string;
+
+    @IsString()
+    @IsOptional()
     buildingNumber: string;
 
     @IsOptional()
