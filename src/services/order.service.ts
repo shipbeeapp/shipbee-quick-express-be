@@ -774,7 +774,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
   }
 }
 
-  async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop, queryRunner?: QueryRunner) {
+  async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop, queryRunner?: QueryRunner, isReturned: boolean = false) {
     const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED);
     if (allCompleted) {
       order.status = OrderStatus.COMPLETED;
@@ -812,7 +812,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
     else {
       console.log(`🟢 Stop ${stop.id} completed, but order ${order.id} still has pending stops.`);
-      await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
+      if (!isReturned) await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
       broadcastOrderUpdate(order.id, order.status, stop.sequence); // Notify all connected clients about the order status update
     }
   }
@@ -1723,13 +1723,20 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
   }
 
   async completeReturn(orderId: string, driverId: string, stopId: string, proofOfReturnUrl: string) {
+    console.log(`Completing return for orderId: ${orderId}, driverId: ${driverId}, stopId: ${stopId}`);
+    const queryRunner = this.orderRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      const order = await this.orderRepository.findOne({
+      const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId, driver: { id: driverId } },
         relations: ["stops", "stops.toAddress", "stops.receiver", "driver"]
       });
       if (!order) {
         throw new Error(`Order with ID ${orderId} not found for driver ${driverId}`);
+      }
+      if (order.status === OrderStatus.COMPLETED) {
+        throw new Error(`Order with ID ${orderId} is already completed`);
       }
       const stop = order.stops.find(s => s.id === stopId);
       if (!stop) {
@@ -1742,13 +1749,17 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       stop.status = OrderStatus.COMPLETED;
       stop.proofOfReturn = proofOfReturnUrl.split("image/upload/")[1];
       stop.isReturned = true;
-      await this.orderStopRepository.save(stop);
-
-      await this.orderStatusHistoryService.updateOrderStatusHistory({order, stopId, returnedCompletedAt: new Date()});
-      await this.finalizeOrderCompletion(order, driverId, stop);
+      await queryRunner.manager.save(OrderStop, stop);
+      console.log(`Return completed for stop ${stopId} in order ${orderId} by driver ${driverId}`);
+      await this.orderStatusHistoryService.updateOrderStatusHistory({order, stopId, queryRunner, returnedCompletedAt: new Date()});
+      await this.finalizeOrderCompletion(order, driverId, stop, queryRunner, true);
+      await queryRunner.commitTransaction();
     } catch (error) {
-      console.error("Error in order service completing return:", error.message);
+      console.error("Error in completing return:", error.message);
+      await queryRunner.rollbackTransaction();
       throw new Error(`Error completing return: ${error.message}`);
+    } finally {
+      await queryRunner.release();
     }
   }
 
