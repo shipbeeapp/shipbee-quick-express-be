@@ -392,6 +392,21 @@ export default class PricingService {
         } 
     }
 
+    async getCurrentShipbeePricings(serviceType: ServiceSubcategoryName = ServiceSubcategoryName.PERSONAL_QUICK) {
+        try {
+            const pricings = await this.pricingRepository.find({
+                where: {
+                    serviceSubcategory: serviceType,
+                    isCurrent: true
+                }
+            });
+            return pricings;
+        } catch (error) {
+            console.error('Error fetching current Shipbee pricings:', error);
+            throw new Error('Error fetching current Shipbee pricings: ' + error.message);
+        }
+    }
+
     async getAllQuickPricings(distance: number, lifters: number) {
         const vehicleNames = Object.values(VehicleType).filter(type => type != VehicleType.GARBAGE_REMOVAL_TRUCK);
         console.log("vehicle names")

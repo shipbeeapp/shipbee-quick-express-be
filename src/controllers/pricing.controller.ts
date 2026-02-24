@@ -6,6 +6,7 @@ import { GetPricingDTO } from '../dto/pricing/getPricingDTO.dto.js';
 import PricingService from '../services/pricing.service.js';
 import { Container } from 'typedi';
 import validateDto from '../middlewares/validation.middleware.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
 
 export class PricingController {
     public path = '/pricing';
@@ -20,6 +21,7 @@ export class PricingController {
   private initializeRoutes() {
     // this.router.get(this.path, this.getTermsAndConditions.bind(this));
     this.router.post(this.path, authenticationMiddleware, this.createPricing.bind(this));
+    this.router.get(this.path, authenticationMiddleware, this.getShipbeePricings.bind(this));
     //update pricing
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updatePricing.bind(this));
     //get current pricing
@@ -105,6 +107,21 @@ export class PricingController {
     this.router.put(`/user-pricing/:id`, authenticationMiddleware, this.updateUserPricing.bind(this))
     this.router.get(`/user-pricing/:id`, authenticationMiddleware, this.getUserPricing.bind(this))
   }
+
+    private async getShipbeePricings(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const {serviceType} = req.query;
+            const shipbeePricings = await this.pricingService.getCurrentShipbeePricings(serviceType as ServiceSubcategoryName);
+            res.status(200).json(shipbeePricings);
+        } catch (error) {
+            console.error('Error fetching Shipbee pricing:', error);
+            res.status(500).json({ error: error.message });
+        }
+    }
 
     private async getUserPricing(req: AuthenticatedRequest, res: Response) {
         try {
