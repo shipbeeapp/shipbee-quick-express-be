@@ -1137,7 +1137,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           }
           return {
             orderId,
-            status: order.status,
+            status: clientStop.isReturned ? "Returned" : order.status,
             amount: clientStop.totalPrice,
             deliveryFee: clientStop.deliveryFee,
             driver: order.driver ? { 
