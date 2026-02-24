@@ -168,7 +168,7 @@ export default class PricingService {
                 const currentPricing = clientPricing ?? basePricing
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
                   return {
-                    totalCost: Number(currentPricing.baseCost) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    totalCost: Number(currentPricing.baseCost) + Number(getPricingDTO.distance) * Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                   } 
                 }
             
