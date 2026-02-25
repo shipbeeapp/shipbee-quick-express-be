@@ -56,12 +56,12 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
         console.log(`❌ Driver ${driverId} not found in database`);
         return;
       }
-      if (driver.status === DriverStatus.OFFLINE) broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
       
       if (driver.signUpStatus !== DriverSignupStatus.APPROVED) {
         console.log(`❌ Driver ${driverId} is not approved, cannot go online`);
         return;
       }
+      if (driver.status === DriverStatus.OFFLINE) broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE); // Notify all connected clients about the driver status update
       onlineDrivers.set(driverId, {
         socketId: socket.id,
         vehicleType: vehicleType,
