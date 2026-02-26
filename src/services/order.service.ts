@@ -145,13 +145,9 @@ export default class OrderService {
                 total = null;
       }
       else {
-        if (madeByClient) {
-          // we calculate the distance using orderData.fromAddress.coordinates and order stops to Address coordinates using google maps distance matrix API 
-          // and set it in orderData.distance, 
-          console.log("distance given by client:" , orderData.distance);
-          orderData.distance = await calculateDistanceForClientOrder(orderData.fromAddress.coordinates, orderData.stops);
-          console.log("distance calculated using google maps:", orderData.distance);
-        }
+        console.log("distance given by client:" , orderData.distance);
+        orderData.distance = await calculateDistanceForClientOrder(orderData.fromAddress.coordinates, orderData.stops);
+        console.log("distance calculated using google maps:", orderData.distance);
         const pricingInput = await validateObject(GetPricingDTO, {
           userId: createdByUser.id,
           serviceSubcategory: orderData.serviceSubcategory,
