@@ -580,8 +580,7 @@ export default class OrderService {
   try {
     // Lock the order row to prevent race condition
     const order = await queryRunner.manager
-      .getRepository(Order)
-      .createQueryBuilder("order")
+      .createQueryBuilder(Order, "order")
       .setLock("pessimistic_write")
       .where("order.id = :orderId", { orderId })
       .getOne();
