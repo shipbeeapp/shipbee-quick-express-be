@@ -176,7 +176,8 @@ export default class PricingService {
                     totalCost: (
                   Number(currentPricing.baseCost) +
                   (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
-                    Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    Number(currentPricing.additionalPerKm) + 
+                    (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
                 )};
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
                 if (getPricingDTO.shippingCompany === 'DHL') {

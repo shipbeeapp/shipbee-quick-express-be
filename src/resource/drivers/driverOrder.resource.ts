@@ -83,11 +83,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
     resource.additionalFromAddressInfo = order.fromAddress.landmarks;
     resource.senderName = order.sender.name;
     const senderPhone =  order.sender.phoneNumber ?? null;
-    resource.senderPhoneNumber = senderPhone ? 
-        senderPhone.startsWith(env.PHONE_EXTENSION)
-        ? senderPhone
-        : `${env.PHONE_EXTENSION}${senderPhone}`
-        : null;
+    resource.senderPhoneNumber = senderPhone ? senderPhone : null;
     resource.distanceToPickup = distanceToPickup;
     resource.timeToPickup = timeToPickup;
     resource.payer = order.payer;
@@ -107,11 +103,7 @@ export function createDriverOrderResource(order: any, distanceToPickup: number, 
             toCoordinates: stop.toAddress?.coordinates,
             additionalToAddressInfo: stop.toAddress?.landmarks,
             receiverName: stop.receiver?.name,
-            receiverPhoneNumber: receiverPhone ? 
-                receiverPhone.startsWith(env.PHONE_EXTENSION)
-                ? receiverPhone
-                : `${env.PHONE_EXTENSION}${receiverPhone}`
-                : null,
+            receiverPhoneNumber: receiverPhone ? receiverPhone : null,
             status: stop.status,
             lifters: stop.lifters,
             items: stop.items,

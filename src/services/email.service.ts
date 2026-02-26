@@ -302,7 +302,9 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
 
 export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string, stopSequence?: number, atPickup: boolean = false) {
   try {
-    let content = `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) `;
+    let content = '';
+    if (email) content += `<p>`
+    content += `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) `;
     if (stopSequence) {
       if (atPickup) {
         content += `is on his way to stop #${stopSequence} for dropoff with order #${orderNo}.`;
@@ -327,7 +329,7 @@ export async function sendArrivalNotification(phoneNumber: string, email: string
       await twilioClient.messages.create({
         body: content,
         from: 'ShipBee',
-        to: `+974${phoneNumber}`,
+        to: `${phoneNumber}`,
       });
       console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
     }
