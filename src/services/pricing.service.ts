@@ -443,4 +443,30 @@ export default class PricingService {
         ).filter(Boolean);
      return pricings;
     }
+
+    async deletePricing(id: string) {
+        try {
+            const existingPricing = await this.pricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('Pricing not found');
+            }
+            await this.pricingRepository.delete({ id });
+        } catch (error) {
+            console.error('Error deleting pricing:', error);
+            throw new Error('Error deleting pricing: ' + error.message);
+        }
+    }
+
+    async deleteUserPricing(id: string) {
+        try {
+            const existingPricing = await this.userPricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('User pricing not found');
+            }
+            await this.userPricingRepository.delete({ id });
+        } catch (error) {
+            console.error('Error deleting user pricing:', error);
+            throw new Error('Error deleting user pricing: ' + error.message);
+        }
+    }
 }

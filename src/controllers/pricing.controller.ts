@@ -24,6 +24,7 @@ export class PricingController {
     this.router.get(this.path, authenticationMiddleware, this.getShipbeePricings.bind(this));
     //update pricing
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updatePricing.bind(this));
+    this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deletePricing.bind(this));
     //get current pricing
     this.router.get(`${this.path}/calculate`, validateDto(GetPricingDTO), this.calculatePricing.bind(this));
     /**
@@ -106,6 +107,7 @@ export class PricingController {
     this.router.post(`/user-pricing`, authenticationMiddleware, this.createUserPricing.bind(this))
     this.router.put(`/user-pricing/:id`, authenticationMiddleware, this.updateUserPricing.bind(this))
     this.router.get(`/user-pricing/:id`, authenticationMiddleware, this.getUserPricing.bind(this))
+    this.router.delete(`/user-pricing/:id`, authenticationMiddleware, this.deleteUserPricing.bind(this))
   }
 
     private async getShipbeePricings(req: AuthenticatedRequest, res: Response) {
@@ -245,10 +247,42 @@ export class PricingController {
             const pricingData: CreatePricingDTO = req.body;
 
             const updatedPricing = await this.pricingService.updateUserPricing(id, pricingData);
-            res.status(200).json(updatedPricing);
+            res.status(200).json({ success: true, data: updatedPricing });
         } catch (error) {
             console.error('Error updating user pricing:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    private async deletePricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+
+            await this.pricingService.deletePricing(id);
+            res.status(200).json({ success: true, message: 'Pricing deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting pricing:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    private async deleteUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+
+            await this.pricingService.deleteUserPricing(id);
+            res.status(200).json({ success: true, message: 'User pricing deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting user pricing:', error);
+            res.status(500).json({ success: false, error: error.message });
         }
     }
 }
