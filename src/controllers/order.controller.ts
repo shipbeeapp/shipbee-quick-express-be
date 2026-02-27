@@ -249,6 +249,12 @@ export class OrderController {
     );
 
     this.router.post(
+      "/orders/:orderId/cancel-return-order",
+      authenticationMiddleware,
+      this.cancelOrReturnStop.bind(this)
+    );
+
+    this.router.post(
       "/orders/process-cancellation/:cancelRequestId",
       authenticationMiddleware,
       this.processOrderCancellation.bind(this)
@@ -897,6 +903,25 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller completing return:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  private async cancelOrReturnStop(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (req.email !== env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to cancel or return orders." });
+      }
+      const { orderId } = req.params;
+      const { stopId, action, reason } = req.query; // action can be "CANCEL_STOP" or "RETURN_STOP"
+      if (!orderId || !stopId || !action) {
+        return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
+      }
+      await this.orderService.cancelOrReturnStop(orderId, stopId as string, action as string, reason as string);
+      res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "canceled" : "returned"} successfully.` });
+    }
+    catch (error) {
+      console.error("Error in order controller canceling or returning stop:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

@@ -437,3 +437,19 @@ export function emitOrderAccepted(orderId: string, acceptedByDriverId: string): 
     }
   }
 }
+
+export function emitOrderStopUpdate(orderId: string, driverId: string, stopId: string, status: OrderStatus): void {
+  const io = getSocketInstance();
+  const onlineDrivers = getOnlineDrivers();
+  const driver = onlineDrivers.get(driverId);
+
+  if (driver) {
+    if (driver.socketId) {
+      io.to(driver.socketId).emit("order-stop-update", { orderId, stopId, status });
+      console.log(`Emitted order stop update for order ${orderId} stop ${stopId} with status ${status} to driver ${driverId}`);
+    }
+  } else {
+    console.log(`Driver ${driverId} is not online, cannot emit order stop update for order ${orderId} stop ${stopId}`);
+    return null;
+  }
+}

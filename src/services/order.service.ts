@@ -36,7 +36,7 @@ import { generatePhotoLink, generateToken } from "../utils/global.utils.js";
 import DriverService from "./driver.service.js";
 import { OrderCancellationRequest } from "../models/orderCancellationRequest.model.js";
 import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
-import { emitOrderAccepted, emitOrderCancellationUpdate, emitOrderCompletionUpdate, emitOrderToDrivers, getCurrentLocationOfDriver } from "../socket/socket.js";
+import { emitOrderAccepted, emitOrderCancellationUpdate, emitOrderCompletionUpdate, emitOrderToDrivers, getCurrentLocationOfDriver, emitOrderStopUpdate } from "../socket/socket.js";
 import { broadcastDriverStatusUpdate, broadcastOrderUpdate } from "../controllers/user.controller.js";
 import PromoCodeService from "./promoCode.service.js";
 import { User } from "../models/user.model.js";
@@ -770,7 +770,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 }
 
   async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop, queryRunner?: QueryRunner, isReturned: boolean = false) {
-    const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED);
+    const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED || s.status === OrderStatus.CANCELED);
     if (allCompleted) {
       order.status = OrderStatus.COMPLETED;
       order.completedAt = new Date(); // Set the completedAt timestamp as a Date object
@@ -1755,6 +1755,38 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       throw new Error(`Error completing return: ${error.message}`);
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  async cancelOrReturnStop(orderId: string, stopId: string, action: string, reason: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["stops", "stops.toAddress", "stops.receiver", "driver"]
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      const stop = order.stops.find(s => s.id === stopId);
+      if (!stop) {
+        throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
+      }
+      let returnedStartedAt: Date | undefined;
+      let wasActive = stop.status === OrderStatus.ACTIVE;
+      if (action === "CANCEL_STOP") {
+        stop.status = OrderStatus.CANCELED;
+      } else if (action === "RETURN_STOP") {
+        stop.status = OrderStatus.RETURNING;
+        returnedStartedAt = new Date();
+      } else {
+        throw new Error(`Invalid action: ${action}`);
+      }
+      emitOrderStopUpdate(orderId, order.driver.id, stopId, stop.status);
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId, cancellationReason: reason, triggeredByAdmin: true, returnedStartedAt });
+      await this.orderStopRepository.save(stop);
+    } catch (error) {
+      console.error("Error in order service canceling or returning stop:", error.message);
+      throw new Error(`Error canceling or returning stop: ${error.message}`);
     }
   }
 
