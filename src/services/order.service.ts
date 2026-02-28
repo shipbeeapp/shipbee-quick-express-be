@@ -1582,8 +1582,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           serviceFee: serviceFee,
           //if stops have totalPrice, get paymentMethods from all stops (each stop can have different paymentMethod), else use order.paymentMethod
           paymentMethod: order.stops.some(stop => stop.totalPrice) ?
-            Array.from(new Set(order.stops.map(stop => stop.paymentMethod))) :
-            [order.paymentMethod],
+            //check if at least one stop has paymentMethod then get unique payment methods from all stops, else use order.paymentMethod
+            (order.stops.some(stop => stop.paymentMethod) ?
+              Array.from(new Set(order.stops.map(stop => stop.paymentMethod).filter(method => method !== null))) 
+              : [order.paymentMethod])
+            : [order.paymentMethod],
           paymentStatus: 'Completed'
         }
       });
