@@ -1530,6 +1530,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           status: OrderStatus.COMPLETED,
           serviceSubcategory: serviceType ? { name: serviceType } : undefined
         },
+        order: { createdAt: "DESC" },
         relations: ["driver", "driver.businessOwner", "createdBy", "stops"]
       });
       let totalSales = 0;
