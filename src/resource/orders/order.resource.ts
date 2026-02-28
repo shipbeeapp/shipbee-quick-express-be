@@ -267,8 +267,9 @@ export class OrderResponseDto {
     const clientCost = (() => {
       if (!order.stops || order.stops.length === 0) return null;
 
-      // Filter only stops that have a valid totalPrice
+      // Only include stops that are not canceled and not returned
       const prices = order.stops
+        .filter(stop => stop.status !== OrderStatus.CANCELED && !stop.isReturned)
         .map(stop => stop.totalPrice)
         .filter((price): price is number => typeof price === 'number');
 

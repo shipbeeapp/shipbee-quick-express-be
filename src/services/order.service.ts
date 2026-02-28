@@ -1539,7 +1539,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       let totalOnlineDeliveryFees = 0;
 
       const orders = completedOrders.map(order => {
-        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        // Only include stops that are not canceled and not returned
+        const validStops = order.stops.filter(stop => stop.status !== OrderStatus.CANCELED && !stop.isReturned);
+        const orderTotalPrice = validStops.length === 0
+          ? Number(order.totalCost)
+          : validStops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0) + (Number(stop.deliveryFee) || 0), 0) + Number(order.totalCost);
         const serviceFee = Number(order.totalCost) * env.SERVICE_FEE_PERCENTAGE / 100;
         totalSales += orderTotalPrice;
         totalDeliveryFees += Number(order.totalCost);
@@ -1625,7 +1629,10 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       let totalPaidAmount = 0;
       // i just want the totalPaidAmount returned as well
       completedOrders.forEach(order => {
-        const orderTotalPrice = order.stops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0), 0) + Number(order.totalCost);
+        const validStops = order.stops.filter(stop => stop.status !== OrderStatus.CANCELED && !stop.isReturned);
+        const orderTotalPrice = validStops.length === 0
+          ? Number(order.totalCost)
+          : validStops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0) + (Number(stop.deliveryFee) || 0), 0) + Number(order.totalCost);
         totalPaidAmount += orderTotalPrice;
       });
 
