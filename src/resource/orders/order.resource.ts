@@ -71,7 +71,7 @@ export class OrderResponseDto {
       district?: string;
       street?: string;
       buildingNumber: string;
-      floor: number;
+      floor: string;
       apartmentNumber: string;
       zone?: string;
       landmarks?: string;
@@ -91,7 +91,7 @@ export class OrderResponseDto {
         district?: string;
         street?: string;
         buildingNumber: string;
-        floor: number;
+        floor: string;
         apartmentNumber: string;
         zone?: string;
         landmarks?: string;

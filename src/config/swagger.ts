@@ -54,7 +54,7 @@ const swaggerDefinition = {
                     city: { type: "string" },
                     street: { type: "string" },
                     buildingNumber: { type: "string"},
-                    floor: { type: "number" },
+                    floor: { type: "string" },
                     apartmentNumber: {type: "string"},
                     landmarks: { type: "string" },
                     zone: { type: "string" },

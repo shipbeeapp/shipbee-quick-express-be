@@ -31,9 +31,9 @@ class AddressDto {
     @IsOptional()
     buildingNumber?: string;
 
+    @IsString()
     @IsOptional()
-    @Transform(({ value }) => (value ? Number(value) : null))
-    floor?: number;
+    floor?: string;
 
     @IsString()
     @IsOptional()

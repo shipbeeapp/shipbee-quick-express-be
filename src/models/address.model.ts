@@ -22,7 +22,7 @@ export class Address extends BaseEntity {
   buildingNumber: string;
 
   @Column({type: "text", nullable: true})
-  floor: number;
+  floor: string;
 
   @Column({type: "text", nullable: true})
   apartmentNumber: string;
