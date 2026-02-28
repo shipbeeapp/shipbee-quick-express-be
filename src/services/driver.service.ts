@@ -744,6 +744,7 @@ export default class DriverService {
         try {
           const filterOptions: any = {
             status: DriverStatus.ACTIVE,
+            signUpStatus: DriverSignupStatus.APPROVED
           };
           
           if (hasCardOnDelivery) {
