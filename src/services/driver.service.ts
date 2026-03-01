@@ -429,9 +429,11 @@ export default class DriverService {
                 // Sum totalPrice from cash stops (if any)
                 const totalStopsPrice =
                     order.stops
-                        ?.filter((s: any) => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY && 
-                        s.status !== OrderStatus.CANCELED && 
-                        !s.isReturned)
+                        ?.filter((s: any) =>
+                            (s.paymentMethod ?? order.paymentMethod) === PaymentMethod.CASH_ON_DELIVERY &&
+                            s.status !== OrderStatus.CANCELED &&
+                            !s.isReturned
+                        )
                         .reduce((sum, s: any) => sum + (Number(s.totalPrice) || 0) + (Number(s.deliveryFee) || 0), 0) || 0;
             
                 const cashValueOfGoods =
