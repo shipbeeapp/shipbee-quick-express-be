@@ -221,7 +221,6 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       paymentMethod: "CASH", // Assuming default payment method is CASH
       shipment: order.shipment
     };
-    console.log("order stops in replacements:", replacements.stops);
     return template(replacements);
   }
 

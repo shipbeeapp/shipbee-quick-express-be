@@ -574,37 +574,33 @@ export default class OrderService {
   await queryRunner.startTransaction();
 
   try {
-    // Lock the order row to prevent race condition
-    const order = await queryRunner.manager
+    console.log(`Driver ${driverId} attempting to accept order ${orderId}`);
+    const result = await queryRunner.manager
       .createQueryBuilder(Order, "order")
-      .setLock("pessimistic_write")
-      .where("order.id = :orderId", { orderId })
-      .getOne();
+      .update(Order)
+      .set({
+        driver: { id: driverId } as any,
+        status: OrderStatus.ASSIGNED
+      })
+      .where("id = :orderId", { orderId })
+      .andWhere("status = :pending", { pending: OrderStatus.PENDING })
+      .returning("*") // get the updated row
+      .execute();
 
-    if (!order) {
-      throw new Error("Order not found");
+    if (result.affected === 0 || !result.raw[0]) {
+      console.error(`Order ${orderId} is not available for acceptance by driver ${driverId}`);
+      throw new Error("Order already assigned or not available");
     }
-
-    if (order.status  == OrderStatus.ASSIGNED) {
-      throw new Error("Order already assigned to a driver");
-    }
-    if (order.status == OrderStatus.ACTIVE) {
-      throw new Error("Order is already active");
-    }
-    if (order.status == OrderStatus.COMPLETED) {
-      throw new Error("Order is already completed");
-    }
-    // Update order to assign driver and change status
-    order.driver = { id: driverId } as any;
-    order.status = OrderStatus.ASSIGNED;
-
-    await queryRunner.manager.save(order);
+    console.log(`Order ${orderId} accepted by driver ${driverId}`);
+    const order = result.raw[0] as Order;
+    console.log(`Order details: ${JSON.stringify(order, null, 2)}`);
     // Update driver status to ON_DUTY
     await queryRunner.manager.getRepository(Driver).update(
       { id: driverId },
       { status: DriverStatus.BUSY }
     );
     // Add to order status history
+    order.driver = { id: driverId } as any; // set driver relation for history record
     await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
 
     await queryRunner.commitTransaction();
