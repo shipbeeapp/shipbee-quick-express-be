@@ -1297,9 +1297,9 @@ export default class DriverService {
             const stops = order.stops || [];
 
             const cashStops = stops.filter(
-              s => s.paymentMethod === PaymentMethod.CASH_ON_DELIVERY 
-              && s.status !== OrderStatus.CANCELED
-              && !s.isReturned
+                s => (s.paymentMethod ?? order.paymentMethod) === PaymentMethod.CASH_ON_DELIVERY
+                    && s.status !== OrderStatus.CANCELED
+                    && !s.isReturned
             );
 
             const hasAnyTotalPrice = stops.some(
