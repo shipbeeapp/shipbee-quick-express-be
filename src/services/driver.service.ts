@@ -1368,14 +1368,21 @@ export default class DriverService {
         }
     }
 
-    async resolveCashBalance(driverId: string): Promise<void> {
+    async resolveCashBalance(driverId: string, amount: number): Promise<void> {
         try {
             const driver = await this.driverRepository.findOneBy({ id: driverId });
             if (!driver) {
                 throw new Error(`Driver with ID ${driverId} not found`);
             }
-            driver.cashBalance = 0;
-            console.log(`Driver ${driverId} cash balance resolved to zero.`);
+            console.log("Resolving cash balance for driver", driverId, "with amount", amount)
+            if (amount < 0) {
+                throw new Error(`Amount to resolve cannot be negative`);
+            }
+            if (amount > driver.cashBalance) {
+                throw new Error(`Amount to resolve cannot be greater than current cash balance`);
+            }
+            driver.cashBalance = driver.cashBalance - amount;
+            console.log(`Driver ${driverId} cash balance resolved by ${amount}.`);
             await this.driverRepository.save(driver);
         }
         catch (error) {
@@ -1384,7 +1391,7 @@ export default class DriverService {
         }
     }
 
-    async resolveDeliveryFees(driverId: string): Promise<void> {
+    async resolveDeliveryFees(driverId: string, amount: number): Promise<void> {
         try {
             const driver = await this.driverRepository.findOneBy({ id: driverId });
             if (!driver) {

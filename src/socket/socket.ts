@@ -201,7 +201,14 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
               socketId: null
             });
             await AppDataSource.getRepository(Driver).update(driverId, { isDisconnected: true, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
-            // broadcastDriverStatusUpdate(driverId, DriverStatus.OFFLINE); // Notify all connected clients about the driver status update
+            const driver = await AppDataSource.getRepository(Driver).findOneBy({ id: driverId });
+            if (driver && driver.fcmToken) {
+              console.log(`Driver ${driverId} has FCM token, sending push notification about disconnection`);
+              await sendFcmNotification(driver.fcmToken, {
+                title: "You are disconnected",
+                body: `Please reopen the app`,
+              });
+            }
             const now = new Date();
             const sessions = driverSessions.get(driverId);
             if (sessions && sessions.length > 0) {

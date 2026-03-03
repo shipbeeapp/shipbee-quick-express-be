@@ -913,7 +913,7 @@ export class OrderController {
         return res.status(403).json({ success: false, message: "You are not authorized to cancel or return orders." });
       }
       const { orderId } = req.params;
-      const { stopId, action, reason } = req.query; // action can be "CANCEL_STOP" or "RETURN_STOP"
+      const { stopId, action, reason } = req.body; // action can be "CANCEL_STOP" or "RETURN_STOP"
       if (!orderId || !stopId || !action) {
         return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
       }

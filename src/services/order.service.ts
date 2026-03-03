@@ -1627,6 +1627,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         throw new Error(`Driver with ID ${driverId} not found`);
       }
       let totalPaidAmount = 0;
+      let cardOnDeliveryPayments = 0;
       // i just want the totalPaidAmount returned as well
       completedOrders.forEach(order => {
         const validStops = order.stops.filter(stop => stop.status !== OrderStatus.CANCELED && !stop.isReturned);
@@ -1634,6 +1635,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           ? Number(order.totalCost)
           : validStops.reduce((sum, stop) => sum + (Number(stop.totalPrice) || 0) + (Number(stop.deliveryFee) || 0), 0) + Number(order.totalCost);
         totalPaidAmount += orderTotalPrice;
+        cardOnDeliveryPayments += validStops.reduce((sum, stop) => sum + (stop.paymentMethod === PaymentMethod.CARD_ON_DELIVERY ? (Number(stop.totalPrice) || 0) + (Number(stop.deliveryFee) || 0) : 0), 0);
       });
 
       console.log(`Total paid amount for driver ${driverId}: ${totalPaidAmount}`);
@@ -1642,6 +1644,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         cashBalance: Number(driver.cashBalance),
         income: Number(driver.income),
         totalPaidAmount,
+        cardOnDeliveryPayments,
         orderCount: completedOrders.length,
         completedOrders: await Promise.all(
           completedOrders.map(order => toOrderResponseDto(order))
@@ -1779,7 +1782,6 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
       }
       let returnedStartedAt: Date | undefined;
-      let wasActive = stop.status === OrderStatus.ACTIVE;
       if (action === "CANCEL_STOP") {
         stop.status = OrderStatus.CANCELED;
       } else if (action === "RETURN_STOP") {
@@ -1789,7 +1791,13 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         throw new Error(`Invalid action: ${action}`);
       }
       emitOrderStopUpdate(orderId, order.driver.id, stopId, stop.status);
-      await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId, cancellationReason: reason, triggeredByAdmin: true, returnedStartedAt });
+      await this.orderStatusHistoryService.createOrderStatusHistory(
+        { 
+          order, stopId, cancellationReason: reason, 
+          triggeredByAdmin: true, returnedStartedAt, 
+          event: action === "CANCEL_STOP" ? OrderEventType.STOP_CANCELED : OrderEventType.STOP_RETURNED 
+        }
+      );
       await this.orderStopRepository.save(stop);
     } catch (error) {
       console.error("Error in order service canceling or returning stop:", error.message);

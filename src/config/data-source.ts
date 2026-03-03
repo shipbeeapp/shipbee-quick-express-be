@@ -114,6 +114,7 @@ import { AddAnotherOrderStatus1771685981514 } from "../migrations/1771685981514-
 import {MakeIncomesDecimal1771754729406} from "../migrations/1771754729406-MakeIncomesDecimal.js";
 import { AddExtensionsToPhoneNumbers1772095940609 } from "../migrations/1772095940609-AddExtensionsToPhoneNumbers.js";
 import {MakeFloorStringInAddress1772284155567} from "../migrations/1772284155567-MakeFloorStringInAddress.js"; // Import the migration for making floor a string in Address
+import {AddEventTypeInOrderStatusHistory1772564281435} from "../migrations/1772564281435-AddEventTypeInOrderStatusHistory.js"; // Import the migration for adding event type in OrderStatusHistory
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -240,6 +241,7 @@ export const AppDataSource = new DataSource({
     MakeIncomesDecimal1771754729406,
     AddExtensionsToPhoneNumbers1772095940609,
     MakeFloorStringInAddress1772284155567,
+    AddEventTypeInOrderStatusHistory1772564281435,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

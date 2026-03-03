@@ -809,7 +809,8 @@ export class DriverController {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
             const driverId = req.params.id;
-            await this.driverService.resolveCashBalance(driverId);
+            const {amount} = req.body;
+            await this.driverService.resolveCashBalance(driverId, amount ?? 0);
             res.status(200).json({ success: true, message: "Driver cash balance resolved successfully." });
         } catch (error) {
             console.error("Error resolving driver cash balance:", error.message);
@@ -823,7 +824,8 @@ export class DriverController {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
             const driverId = req.params.id;
-            await this.driverService.resolveDeliveryFees(driverId);
+            const {amount} = req.body;
+            await this.driverService.resolveDeliveryFees(driverId, amount);
             res.status(200).json({ success: true, message: "Driver delivery fees resolved successfully." });
         } catch (error) {
             console.error("Error resolving driver delivery fees:", error.message);
