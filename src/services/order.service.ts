@@ -1781,6 +1781,15 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       if (!stop) {
         throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
       }
+      if (stop.status === OrderStatus.COMPLETED) {
+        throw new Error(`Stop with ID ${stopId} is completed and cannot be canceled or returned`);
+      }
+      if (action === "RETURN_STOP" && stop.status === OrderStatus.RETURNING) {
+        throw new Error(`Stop with ID ${stopId} is currently being returned and cannot be canceled`);
+      }
+      if (action === "CANCEL_STOP" && stop.status === OrderStatus.CANCELED) {
+        throw new Error(`Stop with ID ${stopId} is already canceled`);
+      }
       let returnedStartedAt: Date | undefined;
       if (action === "CANCEL_STOP") {
         stop.status = OrderStatus.CANCELED;
@@ -1790,7 +1799,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       } else {
         throw new Error(`Invalid action: ${action}`);
       }
-      emitOrderStopUpdate(orderId, order.driver.id, stopId, stop.status);
+      emitOrderStopUpdate(orderId, order.driver?.id, stopId, stop.status);
       await this.orderStatusHistoryService.createOrderStatusHistory(
         { 
           order, stopId, cancellationReason: reason, 
