@@ -1391,16 +1391,34 @@ export default class DriverService {
         }
     }
 
-    async resolveDeliveryFees(driverId: string, amount: number): Promise<void> {
+    async resolveDeliveryFees(driverId: string, amount: number, type: string): Promise<void> {
         try {
+            // ✅ Validate amount first
+            if (!Number.isFinite(Number(amount))) {
+                throw new Error('Amount must be a valid number');
+            }
             const driver = await this.driverRepository.findOneBy({ id: driverId });
             if (!driver) {
                 throw new Error(`Driver with ID ${driverId} not found`);
             }
-            driver.income = 0;
-            driver.cashIncome = 0;
-            driver.onlineIncome = 0;
-            console.log(`Driver ${driverId} delivery fees balance resolved to zero.`);
+            console.log(`Resolving delivery fees for driver ${driverId} with amount ${amount} and type ${type}`)
+            if (Number(amount) < 0) {
+                throw new Error(`Amount to resolve cannot be negative`);
+            }
+            if (type === "ONLINE") {
+                if (Number(amount) > Number(driver.onlineIncome)) {
+                    console.error(`Amount to resolve cannot be greater than current online income for driver ${driverId}`);
+                    throw new Error(`Amount to resolve cannot be greater than current online income`);
+                }
+                driver.onlineIncome = Number(driver.onlineIncome) - Number(amount);
+            } else {
+                if (Number(amount) > Number(driver.cashIncome)) {
+                    console.error(`Amount to resolve cannot be greater than current cash income for driver ${driverId}`);
+                    throw new Error(`Amount to resolve cannot be greater than current cash income`);
+                }
+                driver.cashIncome = Number(driver.cashIncome) - Number(amount);
+            }
+            driver.income = Number(driver.income) - Number(amount);
             await this.driverRepository.save(driver);
         }
         catch (error) {

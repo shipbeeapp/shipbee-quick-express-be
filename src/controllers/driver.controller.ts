@@ -824,8 +824,8 @@ export class DriverController {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
             const driverId = req.params.id;
-            const {amount} = req.body;
-            await this.driverService.resolveDeliveryFees(driverId, amount);
+            const {amount, type} = req.body;
+            await this.driverService.resolveDeliveryFees(driverId, amount ?? 0, type);
             res.status(200).json({ success: true, message: "Driver delivery fees resolved successfully." });
         } catch (error) {
             console.error("Error resolving driver delivery fees:", error.message);

@@ -79,6 +79,7 @@ export class OrderResponseDto {
     };
   
     stops: {
+      id: string;
       receiver: {
         id: string;
         name: string;
@@ -221,6 +222,7 @@ export class OrderResponseDto {
     }
 
     return {
+      id: stop.id,
       receiver: {
         id: stop.receiver?.id,
         name: stop.receiver?.name,
