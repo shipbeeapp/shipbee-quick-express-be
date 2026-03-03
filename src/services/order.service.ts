@@ -1785,7 +1785,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         throw new Error(`Stop with ID ${stopId} is completed and cannot be canceled or returned`);
       }
       if (action === "RETURN_STOP" && stop.status === OrderStatus.RETURNING) {
-        throw new Error(`Stop with ID ${stopId} is currently being returned and cannot be canceled`);
+        throw new Error(`Stop with ID ${stopId} is currently being returned and cannot be returned again`);
       }
       if (action === "CANCEL_STOP" && stop.status === OrderStatus.CANCELED) {
         throw new Error(`Stop with ID ${stopId} is already canceled`);
