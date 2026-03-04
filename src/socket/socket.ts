@@ -200,15 +200,16 @@ export function initializeSocket(server: HTTPServer): SocketIOServer {
               ...info,
               socketId: null
             });
-            await AppDataSource.getRepository(Driver).update(driverId, { isDisconnected: true, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
             const driver = await AppDataSource.getRepository(Driver).findOneBy({ id: driverId });
-            if (driver && driver.fcmToken) {
-              console.log(`Driver ${driverId} has FCM token, sending push notification about disconnection`);
+            //add condition to send notification if 15 minutes passed since lastOnlineAt and driver is marked as disconnected
+            if (driver && driver.fcmToken && driver.lastOnlineAt && new Date().getTime() - driver.lastOnlineAt.getTime() > env.DISCONNECTION_NOTIFICATION_MINUTES * 60 * 1000) {
+              console.log(`Driver ${driverId} has FCM token, sending push notification about disconnection after ${env.DISCONNECTION_NOTIFICATION_MINUTES} minutes of being offline`);
               await sendFcmNotification(driver.fcmToken, {
                 title: "You are disconnected",
                 body: `Please reopen the app`,
               });
             }
+            await AppDataSource.getRepository(Driver).update(driverId, { isDisconnected: true, lastKnownLocation: info.currentLocation, lastOnlineAt: new Date(), updatedAt: new Date() });
             const now = new Date();
             const sessions = driverSessions.get(driverId);
             if (sessions && sessions.length > 0) {

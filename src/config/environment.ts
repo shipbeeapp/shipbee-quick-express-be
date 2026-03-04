@@ -91,5 +91,6 @@ export const env = {
     ACCOUNT_PIN: process.env.ARAMEX_ACCOUNT_PIN,
     COUNTRY_CODE: process.env.ARAMEX_COUNTRY_CODE || 'QA',
     ENTITY: process.env.ARAMEX_ENTITY || 'DOH',
-  }
+  },
+  DISCONNECTION_NOTIFICATION_MINUTES: Number(process.env.DISCONNECTION_NOTIFICATION_MINUTES) || 15, // Default to 15 minutes
 };
