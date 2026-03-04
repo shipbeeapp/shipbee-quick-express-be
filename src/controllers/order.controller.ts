@@ -211,8 +211,8 @@ export class OrderController {
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
     this.router.put("/orders/:orderId/start-return", authenticationMiddleware, this.startReturn.bind(this));
     this.router.put(
-      "/orders/:orderId/complete-return", 
-      authenticationMiddleware, 
+      "/orders/:orderId/complete-return",
+      authenticationMiddleware,
       upload.single("proofOfReturn"), // Optional proof of return file
       this.completeReturn.bind(this));
 
@@ -357,572 +357,592 @@ export class OrderController {
       authenticationMiddleware,
       this.adminApproveClientCancellation.bind(this)
     )
+    this.router.post(
+    "/orders/analytics",
+    authenticationMiddleware,
+    this.getCompletedOrdersByDateRange.bind(this)
+  )
   }
+
 
   private async createOrder(req: Request, res: Response) {
-    try {
-      let userId: string | undefined;
-      let isSandbox: boolean | undefined;
-      let madeByClient = false; // Flag to indicate if order is made by a client using API integration
-      const authHeader = req.headers.authorization;
-      const apiKey = req.headers["x-api-key"] as string | undefined;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.split(" ")[1];
-        try {
-          const decoded: any = jwt.verify(token, env.JWT_SECRET); // adjust secret as needed
-          userId = decoded.userId;
-        } catch (err) {
-          // Invalid token, ignore and proceed as guest
-          console.error("Invalid token:", err.message);
-          return res.status(401).json({ success: false, message: "Invalid token" });
-        }
+  try {
+    let userId: string | undefined;
+    let isSandbox: boolean | undefined;
+    let madeByClient = false; // Flag to indicate if order is made by a client using API integration
+    const authHeader = req.headers.authorization;
+    const apiKey = req.headers["x-api-key"] as string | undefined;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        const decoded: any = jwt.verify(token, env.JWT_SECRET); // adjust secret as needed
+        userId = decoded.userId;
+      } catch (err) {
+        // Invalid token, ignore and proceed as guest
+        console.error("Invalid token:", err.message);
+        return res.status(401).json({ success: false, message: "Invalid token" });
       }
-      else if (apiKey) {
-        // Validate API key and get associated user ID
-        const result = await this.userService.getUserIdByApiKey(apiKey);
-        if (!result?.userId) {
-          return res.status(401).json({ success: false, message: "Invalid API key" });
-        }
-        userId = result.userId;
-        isSandbox = result.isSandbox;
-        madeByClient = true;
-      }
-      console.log("req.body in create order", req.body);
-      const orderData = req.body;
-      console.log("req.files", req.files);
-      // Map uploaded files to the correct stop
-      const files = req.files as Express.Multer.File[];
-      // Map uploaded files to the correct stop
-      files.forEach(file => {
-        // Match field like "stops[0][images]"
-        const match = file.fieldname.match(/stops\[(\d+)\]\[images\]/);
-        console.log("file match:", match);
-        if (match) {
-          const index = parseInt(match[1]);
-          if (!orderData.stops[index].images) {
-            orderData.stops[index].images = [];
-          }
-          orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
-        }
-      });
-      if (orderData.ServiceSubcategoryName === ServiceSubcategoryName.PERSONAL_QUICK && !orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
-      // Ensure itemDescription is a JSON string with { text, images }
-      if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK) {
-        orderData.stops = orderData.stops.map(stop => ({
-          ...stop,
-          itemDescription: JSON.stringify({
-            text: stop.itemDescription || "",
-            images: stop.images || []
-          })
-        }));
-      }
-
-      // orderData.stops = stops;
-      const order = await this.orderService.createOrder(orderData, userId, madeByClient, isSandbox);
-      res.status(201).json({ success: true, data: order });
-    } catch (error) {
-      console.error("Error in order controller creating order:", error.message);
-      res.status(400).json({ status: 400, success: false, message: error.message });
     }
+    else if (apiKey) {
+      // Validate API key and get associated user ID
+      const result = await this.userService.getUserIdByApiKey(apiKey);
+      if (!result?.userId) {
+        return res.status(401).json({ success: false, message: "Invalid API key" });
+      }
+      userId = result.userId;
+      isSandbox = result.isSandbox;
+      madeByClient = true;
+    }
+    console.log("req.body in create order", req.body);
+    const orderData = req.body;
+    console.log("req.files", req.files);
+    // Map uploaded files to the correct stop
+    const files = req.files as Express.Multer.File[];
+    // Map uploaded files to the correct stop
+    files.forEach(file => {
+      // Match field like "stops[0][images]"
+      const match = file.fieldname.match(/stops\[(\d+)\]\[images\]/);
+      console.log("file match:", match);
+      if (match) {
+        const index = parseInt(match[1]);
+        if (!orderData.stops[index].images) {
+          orderData.stops[index].images = [];
+        }
+        orderData.stops[index].images.push(file.path.split('/upload/')[1]); // use URL from Cloudinary
+      }
+    });
+    if (orderData.ServiceSubcategoryName === ServiceSubcategoryName.PERSONAL_QUICK && !orderData.stops) return res.status(400).json({ status: '400', success: false, message: "At least one stop is required." });
+    // Ensure itemDescription is a JSON string with { text, images }
+    if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK) {
+      orderData.stops = orderData.stops.map(stop => ({
+        ...stop,
+        itemDescription: JSON.stringify({
+          text: stop.itemDescription || "",
+          images: stop.images || []
+        })
+      }));
+    }
+
+    // orderData.stops = stops;
+    const order = await this.orderService.createOrder(orderData, userId, madeByClient, isSandbox);
+    res.status(201).json({ success: true, data: order });
+  } catch (error) {
+    console.error("Error in order controller creating order:", error.message);
+    res.status(400).json({ status: 400, success: false, message: error.message });
   }
+}
 
   private async getOrders(req: AuthenticatedRequest, res: Response) {
-    try {
-      console.log("Authenticated user ID:", req.userId);
-      console.log("Authenticated user email:", req.email);
-      let orders;
-      console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType, fromStatus, toStatus, thresholdMinutes } = req.query;
-      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
-        serviceType as ServiceSubcategoryName, 
-        fromStatus as string,
-        toStatus as string,
-        thresholdMinutes ? Number(thresholdMinutes) : undefined
-      );
-      else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
-      res.status(200).json({ success: true, total: orders.length, orders: orders });
-    } catch (error) {
-      console.error("Error in order controller getting orders:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+  try {
+    console.log("Authenticated user ID:", req.userId);
+    console.log("Authenticated user email:", req.email);
+    let orders;
+    console.log("admin in email: ", env.ADMIN.EMAIL);
+    const { serviceType, fromStatus, toStatus, thresholdMinutes } = req.query;
+    if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
+      serviceType as ServiceSubcategoryName,
+      fromStatus as string,
+      toStatus as string,
+      thresholdMinutes ? Number(thresholdMinutes) : undefined
+    );
+    else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
+    res.status(200).json({ success: true, total: orders.length, orders: orders });
+  } catch (error) {
+    console.error("Error in order controller getting orders:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async updateOrderStatus(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const { status } = req.body;
-      if (req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to update order status." });
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    if (req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to update order status." });
 
-      }
-      if (!orderId || !status) {
-        return res.status(400).json({ success: false, message: "Order ID and status are required." });
-      }
-
-      await this.orderService.updateOrderStatus(orderId, status);
-      res.status(200).json({ success: true, message: "Order Status Updated Successfully" });
-    } catch (error) {
-      console.error("Error in order controller updating order status:", error.message);
-      res.status(400).json({ success: false, message: error.message });
     }
+    if (!orderId || !status) {
+      return res.status(400).json({ success: false, message: "Order ID and status are required." });
+    }
+
+    await this.orderService.updateOrderStatus(orderId, status);
+    res.status(200).json({ success: true, message: "Order Status Updated Successfully" });
+  } catch (error) {
+    console.error("Error in order controller updating order status:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async getOrderDetails(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      const order = await this.orderService.getOrderDetails(orderId);
-      // Check if the authenticated user is the sender or an admin
-      if (req.userId !== order.createdBy.id && req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to view this order." });
-      }
-      if (!order) {
-        return res.status(404).json({ success: false, message: "Order not found." });
-      }
-      res.status(200).json({ success: true, data: order });
-    } catch (error) {
-      console.error("Error in order controller getting order details:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+    const order = await this.orderService.getOrderDetails(orderId);
+    // Check if the authenticated user is the sender or an admin
+    if (req.userId !== order.createdBy.id && req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to view this order." });
+    }
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    console.error("Error in order controller getting order details:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async acceptOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId; // Get driverId from the authenticated request
-      if (!orderId || !driverId) {
-        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
-      }
-      const order = await this.orderService.acceptOrder(orderId, driverId);
-      res.status(200).json({ success: true, message: "Order accepted successfully." });
-    } catch (error) {
-      console.error("Error in order controller accepting order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId; // Get driverId from the authenticated request
+    if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
     }
+    const order = await this.orderService.acceptOrder(orderId, driverId);
+    res.status(200).json({ success: true, message: "Order accepted successfully." });
+  } catch (error) {
+    console.error("Error in order controller accepting order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async uploadProofOfOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId; // Get driverId from the authenticated request
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      if (!req.file) {
-        return res.status(400).json({ success: false, message: "Proof of order file is required." });
-      }
-      const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      // Optionally: check if this driver is assigned to this order
-      const driver = await this.orderService.getOrderDriver(orderId);
-      if (!driver || driver.id !== driverId) {
-        return res.status(403).json({ success: false, message: "Not authorized for this order" });
-      }
-      await this.orderService.updateProofOfOrder(orderId, proofUrl);
-      res.status(200).json({ success: true, message: "Proof of order uploaded successfully." });
-    } catch (error) {
-      console.error("Error in order controller uploading proof of order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId; // Get driverId from the authenticated request
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Proof of order file is required." });
+    }
+    const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
+    // Optionally: check if this driver is assigned to this order
+    const driver = await this.orderService.getOrderDriver(orderId);
+    if (!driver || driver.id !== driverId) {
+      return res.status(403).json({ success: false, message: "Not authorized for this order" });
+    }
+    await this.orderService.updateProofOfOrder(orderId, proofUrl);
+    res.status(200).json({ success: true, message: "Proof of order uploaded successfully." });
+  } catch (error) {
+    console.error("Error in order controller uploading proof of order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async startOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const { stopId, isPickup } = req.query as { stopId?: string, isPickup?: string };
-      const driverId = req.driverId; // Get driverId from the authenticated request
-      if (!orderId || !driverId) {
-        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
-      }
-      if (!stopId && !isPickup) {
-        return res.status(400).json({ success: false, message: "Either stopId or isPickup parameter is required." });
-      }
-      // Convert isPickup from string to boolean
-      const pickupFlag = isPickup === "true";
-      await this.orderService.startOrder(orderId, driverId, stopId, pickupFlag);
-      // const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      // console.log(`Generated OTP for order ${orderId}: ${otp}`);
-      // await this.orderService.sendOtpToReceiver(orderId, otp);
-      // await this.orderService.updateCompletionOtp(orderId, otp);
-      res.status(200).json({ success: true, message: "Order started successfully." });
-    } catch (error) {
-      console.error("Error in order controller starting order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const { stopId, isPickup } = req.query as { stopId?: string, isPickup?: string };
+    const driverId = req.driverId; // Get driverId from the authenticated request
+    if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
     }
+    if (!stopId && !isPickup) {
+      return res.status(400).json({ success: false, message: "Either stopId or isPickup parameter is required." });
+    }
+    // Convert isPickup from string to boolean
+    const pickupFlag = isPickup === "true";
+    await this.orderService.startOrder(orderId, driverId, stopId, pickupFlag);
+    // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // console.log(`Generated OTP for order ${orderId}: ${otp}`);
+    // await this.orderService.sendOtpToReceiver(orderId, otp);
+    // await this.orderService.updateCompletionOtp(orderId, otp);
+    res.status(200).json({ success: true, message: "Order started successfully." });
+  } catch (error) {
+    console.error("Error in order controller starting order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async completeOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const { stopId } = req.query as { stopId: string };
-      const driverId = req.driverId; // Get driverId from the authenticated request
-      // const { otp } = req.body; // Get OTP from request body
-      if (!orderId || !driverId) {
-        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
-      }
-      if (!req.file) {
-        return res.status(400).json({ success: false, message: "Proof of order file is required." });
-      }
-      const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      await this.orderService.completeOrder(orderId, driverId, stopId, proofUrl);
-      res.status(200).json({ success: true, message: "Order completed successfully." });
-    } catch (error) {
-      console.error("Error in order controller completing order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const { stopId } = req.query as { stopId: string };
+    const driverId = req.driverId; // Get driverId from the authenticated request
+    // const { otp } = req.body; // Get OTP from request body
+    if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
     }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Proof of order file is required." });
+    }
+    const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
+    await this.orderService.completeOrder(orderId, driverId, stopId, proofUrl);
+    res.status(200).json({ success: true, message: "Order completed successfully." });
+  } catch (error) {
+    console.error("Error in order controller completing order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async viewOrderDetails(req: Request, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const accessToken = req.query.token as string;
-      if (!orderId || !accessToken) {
-        return res.status(400).json({ success: false, message: "Order ID and access token are required." });
-      }
-      const orderDetails = await this.orderService.getOrderDetails(orderId, accessToken);
-      if (orderDetails.error) {
-        return res.status(orderDetails.status).json({ success: false, message: orderDetails.error });
-      }
-      res.status(200).json({ success: true, data: orderDetails });
-    } catch (error) {
-      console.error("Error in order controller viewing order details:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const accessToken = req.query.token as string;
+    if (!orderId || !accessToken) {
+      return res.status(400).json({ success: false, message: "Order ID and access token are required." });
     }
+    const orderDetails = await this.orderService.getOrderDetails(orderId, accessToken);
+    if (orderDetails.error) {
+      return res.status(orderDetails.status).json({ success: false, message: orderDetails.error });
+    }
+    res.status(200).json({ success: true, data: orderDetails });
+  } catch (error) {
+    console.error("Error in order controller viewing order details:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async requestOrderCancellation(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId;
-      const { reason } = req.body;
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId;
+    const { reason } = req.body;
 
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      const cancellationRequestId = await this.orderService.requestOrderCancellation(driverId, orderId, reason);
-      res.status(200).json({ success: true, message: "Order cancellation requested successfully.", cancellationRequestId });
-    } catch (error) {
-      console.error("Error in order controller requesting order cancellation:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+    const cancellationRequestId = await this.orderService.requestOrderCancellation(driverId, orderId, reason);
+    res.status(200).json({ success: true, message: "Order cancellation requested successfully.", cancellationRequestId });
+  } catch (error) {
+    console.error("Error in order controller requesting order cancellation:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async processOrderCancellation(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { cancelRequestId } = req.params;
-      const { action } = req.body; // 'APPROVE' or 'DECLINE'
-      if (req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to process order cancellations." });
-      }
-      await this.orderService.processOrderCancellation(cancelRequestId, action);
-      res.status(200).json({ success: true, message: "Order cancellation processed successfully." });
-    } catch (error) {
-      console.error("Error in order controller processing order cancellation:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { cancelRequestId } = req.params;
+    const { action } = req.body; // 'APPROVE' or 'DECLINE'
+    if (req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to process order cancellations." });
     }
+    await this.orderService.processOrderCancellation(cancelRequestId, action);
+    res.status(200).json({ success: true, message: "Order cancellation processed successfully." });
+  } catch (error) {
+    console.error("Error in order controller processing order cancellation:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async notifySender(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId;
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-
-      await this.orderService.notifySender(orderId, driverId);
-      res.status(200).json({ success: true, message: "Sender notified successfully." });
-    } catch (error) {
-      console.error("Error in order controller notifying sender:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+
+    await this.orderService.notifySender(orderId, driverId);
+    res.status(200).json({ success: true, message: "Sender notified successfully." });
+  } catch (error) {
+    console.error("Error in order controller notifying sender:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async notifyReceiver(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId;
-      const stopId = req.query.stopId as string;
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-
-      await this.orderService.notifyReceiver(orderId, driverId, stopId);
-      res.status(200).json({ success: true, message: "Receiver notified successfully." });
-    } catch (error) {
-      console.error("Error in order controller notifying sender:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId;
+    const stopId = req.query.stopId as string;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+
+    await this.orderService.notifyReceiver(orderId, driverId, stopId);
+    res.status(200).json({ success: true, message: "Receiver notified successfully." });
+  } catch (error) {
+    console.error("Error in order controller notifying sender:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async updateOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to update orders." });
-      }
-      const { orderId } = req.params;
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
+  try {
+    if (req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to update orders." });
+    }
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
+    }
 
-      await this.orderService.updateOrder(orderId);
-      res.status(200).json({ success: true, message: "Order updated successfully." });
-    }
-    catch (error) {
-      console.error("Error in order controller updating order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    await this.orderService.updateOrder(orderId);
+    res.status(200).json({ success: true, message: "Order updated successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller updating order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async viewOrderStatus(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.query as { orderId: string };
-      const userId = req.userId;
+  try {
+    const { orderId } = req.query as { orderId: string };
+    const userId = req.userId;
 
-      const orderStatus = await this.orderService.getOrderStatus(userId, orderId);
-      res.status(200).json({ success: true, data: orderStatus });
-    }
-    catch (error) {
-      console.error("Error in order controller viewing order status:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    const orderStatus = await this.orderService.getOrderStatus(userId, orderId);
+    res.status(200).json({ success: true, data: orderStatus });
   }
+  catch (error) {
+    console.error("Error in order controller viewing order status:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async clientCancelOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      console.log("Inside clientCancelOrder controller");
-      const { orderId } = req.params;
-      const userId = req.userId;
+  try {
+    console.log("Inside clientCancelOrder controller");
+    const { orderId } = req.params;
+    const userId = req.userId;
 
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      const { reason } = req.body;
-      await this.orderService.clientCancelOrder(userId, orderId, reason);
-      res.status(200).json({ success: true, message: "Order cancelled successfully." });
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
-    catch (error) {
-      console.error("Error in order controller cancelling order:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    const { reason } = req.body;
+    await this.orderService.clientCancelOrder(userId, orderId, reason);
+    res.status(200).json({ success: true, message: "Order cancelled successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller cancelling order:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async adminApproveClientCancellation(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const cancellationRequestId = req.query.cancellationRequestId as string;
-      const { status, reason } = req.body;
-      if (req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to approve order cancellations." });
-      }
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      await this.orderService.adminApproveClientCancellation(orderId, cancellationRequestId, status, reason);
-      res.status(200).json({ success: true, message: "Order cancellation approved successfully." });
+  try {
+    const { orderId } = req.params;
+    const cancellationRequestId = req.query.cancellationRequestId as string;
+    const { status, reason } = req.body;
+    if (req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to approve order cancellations." });
     }
-    catch (error) {
-      console.error("Error in order controller approving order cancellation:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
+    await this.orderService.adminApproveClientCancellation(orderId, cancellationRequestId, status, reason);
+    res.status(200).json({ success: true, message: "Order cancellation approved successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller approving order cancellation:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async getOrdersReport(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { startDate, endDate } = req.query as { startDate?: Date, endDate?: Date };
-      if (!startDate || !endDate) {
-        return res.status(400).json({ success: false, message: "Start date and end date are required." });
-      }
-      const reports = await this.orderService.getOrdersReport(req.userId, startDate, endDate);
-      res.status(200).json({ success: true, data: reports });
+  try {
+    const { startDate, endDate } = req.query as { startDate?: Date, endDate?: Date };
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Start date and end date are required." });
     }
-    catch (error) {
-      console.error("Error in order controller getting orders report:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    const reports = await this.orderService.getOrdersReport(req.userId, startDate, endDate);
+    res.status(200).json({ success: true, data: reports });
   }
+  catch (error) {
+    console.error("Error in order controller getting orders report:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async getOrdersDashboard(req: AuthenticatedRequest, res: Response) {
-    try {
-      console.log("Authenticated user ID:", req.userId);
-      console.log("Authenticated user email:", req.email);
-      let dashboard;
-      console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType } = req.query;
-      if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard("admin");
-      else dashboard = await this.orderService.getOrdersDashboard(req.userId, serviceType as string);
-      res.status(200).json({ success: true, dashboard: dashboard });
-    } catch (error) {
-      console.error("Error in order controller getting orders:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+  try {
+    console.log("Authenticated user ID:", req.userId);
+    console.log("Authenticated user email:", req.email);
+    let dashboard;
+    console.log("admin in email: ", env.ADMIN.EMAIL);
+    const { serviceType } = req.query;
+    if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard("admin");
+    else dashboard = await this.orderService.getOrdersDashboard(req.userId, serviceType as string);
+    res.status(200).json({ success: true, dashboard: dashboard });
+  } catch (error) {
+    console.error("Error in order controller getting orders:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   //canceling order by a client using our API integration
   private async cancelOrder(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderNo } = req.query
-      if (!orderNo) {
-        return res.status(400).json({ success: false, message: "Order Id is required" })
-      }
-      console.log("orderNo: ", orderNo)
-      console.log("client with id: ", req.userId, " requested to cancel order")
-      await this.orderService.cancelOrder(Number(orderNo), req.userId)
-      res.status(200).json({ success: true, message: "Order canceled successfully" })
+  try {
+    const { orderNo } = req.query
+    if (!orderNo) {
+      return res.status(400).json({ success: false, message: "Order Id is required" })
     }
-    catch (err) {
-      console.error(`Error in canceling order: ${err.message}`)
-      res.status(400).json({ success: false, message: err.message })
-    }
+    console.log("orderNo: ", orderNo)
+    console.log("client with id: ", req.userId, " requested to cancel order")
+    await this.orderService.cancelOrder(Number(orderNo), req.userId)
+    res.status(200).json({ success: true, message: "Order canceled successfully" })
   }
+  catch (err) {
+    console.error(`Error in canceling order: ${err.message}`)
+    res.status(400).json({ success: false, message: err.message })
+  }
+}
 
   private async getOrdersPerIntegratedBusiness(req: AuthenticatedRequest, res: Response) {
-    try {
+  try {
       const { userId, isLate } = req.query as {userId: string, isLate?: string}
-      console.log("fetching orders for integrated business with id: ", userId)
-      const parsedIsLate =
-        isLate === undefined ? undefined : isLate === "true";
-      let userIds: string[];
+    console.log("fetching orders for integrated business with id: ", userId)
+    const parsedIsLate =
+      isLate === undefined ? undefined : isLate === "true";
+    let userIds: string[];
 
-      if (userId) {
+    if (userId) {
       // userId may come as JSON string
-        try {
-          userIds = Array.isArray(userId)
-            ? userId
-            : JSON.parse(userId);
-        } catch {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid userId format",
-          });
-        }
+      try {
+        userIds = Array.isArray(userId)
+          ? userId
+          : JSON.parse(userId);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid userId format",
+        });
       }
-      else {
-        const integratedBusinesses = await this.userService.getIntegratedBusiness()
-        userIds = integratedBusinesses.map(u => u.id)
-      } 
-      const orders = await this.orderService.getOrdersbyUser(userIds, undefined, parsedIsLate)
+    }
+    else {
+      const integratedBusinesses = await this.userService.getIntegratedBusiness()
+      userIds = integratedBusinesses.map(u => u.id)
+    }
+    const orders = await this.orderService.getOrdersbyUser(userIds, undefined, parsedIsLate)
       return res.status(200).json({ success: true, data: orders})
-    }
-    catch (err) {
-      console.error(`Error in fetching orders for integrated business: ${err.message}`)
-      res.status(400).json({ success: false, message: err.message })
-    }
   }
+  catch (err) {
+    console.error(`Error in fetching orders for integrated business: ${err.message}`)
+    res.status(400).json({ success: false, message: err.message })
+  }
+}
 
   private async getOrdersFinancials(req: AuthenticatedRequest, res: Response) {
-    try {
-      console.log("Authenticated user ID:", req.userId);
-      console.log("Authenticated user email:", req.email);
-      let financials;
-      console.log("admin in email: ", env.ADMIN.EMAIL);
-      if (req.email != env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
-      }
-      const { serviceType } = req.query;
-      financials = await this.orderService.getOrdersFinancials(serviceType as ServiceSubcategoryName);
-      res.status(200).json({ success: true, data: financials });
-    } catch (error) {
-      console.error("Error in order controller getting orders financials:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    console.log("Authenticated user ID:", req.userId);
+    console.log("Authenticated user email:", req.email);
+    let financials;
+    console.log("admin in email: ", env.ADMIN.EMAIL);
+    if (req.email != env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
     }
+    const { serviceType } = req.query;
+    financials = await this.orderService.getOrdersFinancials(serviceType as ServiceSubcategoryName);
+    res.status(200).json({ success: true, data: financials });
+  } catch (error) {
+    console.error("Error in order controller getting orders financials:", error.message);
+    res.status(400).json({ success: false, message: error.message });
   }
+}
 
   private async getUnassignedOrders(req: AuthenticatedRequest, res: Response) {
-    try {
-      console.log("Authenticated user ID:", req.userId);
-      console.log("Authenticated user email:", req.email);
+  try {
+    console.log("Authenticated user ID:", req.userId);
+    console.log("Authenticated user email:", req.email);
 
-      if (req.email != env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to view unassigned orders." });
-      }
-      const { serviceType, thresholdMinutes } = req.query;
-      const orders = await this.orderService.getUnassignedOrders(serviceType as ServiceSubcategoryName, thresholdMinutes ? Number(thresholdMinutes) : undefined);
-      res.status(200).json({ success: true, data: orders });
+    if (req.email != env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to view unassigned orders." });
     }
-    catch (error) {
-      console.error("Error in order controller getting unassigned orders:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    const { serviceType, thresholdMinutes } = req.query;
+    const orders = await this.orderService.getUnassignedOrders(serviceType as ServiceSubcategoryName, thresholdMinutes ? Number(thresholdMinutes) : undefined);
+    res.status(200).json({ success: true, data: orders });
   }
+  catch (error) {
+    console.error("Error in order controller getting unassigned orders:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async uploadProofOfPickup(req: AuthenticatedRequest, res: Response) {
-    try {
-      const { orderId } = req.params;
-      const driverId = req.driverId; // Get driverId from the authenticated request
-      if (!orderId) {
-        return res.status(400).json({ success: false, message: "Order ID is required." });
-      }
-      if (!req.file) {
-        return res.status(400).json({ success: false, message: "Proof of pickup file is required." });
-      }
-      const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      
-      await this.orderService.uploadProofOfPickup(orderId, driverId, proofUrl);
-      res.status(200).json({ success: true, message: "Proof of pickup uploaded successfully." });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId; // Get driverId from the authenticated request
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required." });
     }
-    catch (error) {
-      console.error("Error in order controller uploading proof of pickup:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Proof of pickup file is required." });
     }
+    const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
+
+    await this.orderService.uploadProofOfPickup(orderId, driverId, proofUrl);
+    res.status(200).json({ success: true, message: "Proof of pickup uploaded successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller uploading proof of pickup:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async startReturn(req: AuthenticatedRequest, res: Response) {
-    try {      
-      const { orderId } = req.params;
-      const driverId = req.driverId;
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId;
 
-      if (!orderId || !driverId) {
-        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
-      }
-      const stopId = req.query.stopId as string;
-      await this.orderService.startReturn(orderId, driverId, stopId);
-      res.status(200).json({ success: true, message: "Return started successfully." });
+    if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
     }
-    catch (error) {
-      console.error("Error in order controller starting return:", error.message);
-      res.status(400).json({ success: false, message: error.message });
-    }
+    const stopId = req.query.stopId as string;
+    await this.orderService.startReturn(orderId, driverId, stopId);
+    res.status(200).json({ success: true, message: "Return started successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller starting return:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async completeReturn(req: AuthenticatedRequest, res: Response) {
-    try {      
-      const { orderId } = req.params;
-      const driverId = req.driverId;
-      if (!orderId || !driverId) {
-        return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
-      }
-      const stopId = req.query.stopId as string;
-      if (!req.file) {
-        return res.status(400).json({ success: false, message: "Proof of return file is required." });
-      }
-      const proofOfReturnUrl = req.file?.path;
-      await this.orderService.completeReturn(orderId, driverId, stopId, proofOfReturnUrl);
-      res.status(200).json({ success: true, message: "Return completed successfully." });
+  try {
+    const { orderId } = req.params;
+    const driverId = req.driverId;
+    if (!orderId || !driverId) {
+      return res.status(400).json({ success: false, message: "Order ID and Driver ID are required." });
     }
-    catch (error) {
-      console.error("Error in order controller completing return:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+    const stopId = req.query.stopId as string;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Proof of return file is required." });
     }
+    const proofOfReturnUrl = req.file?.path;
+    await this.orderService.completeReturn(orderId, driverId, stopId, proofOfReturnUrl);
+    res.status(200).json({ success: true, message: "Return completed successfully." });
   }
+  catch (error) {
+    console.error("Error in order controller completing return:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 
   private async cancelOrReturnStop(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (req.email !== env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to cancel or return orders." });
-      }
-      const { orderId } = req.params;
-      const { stopId, action, reason } = req.query; // action can be "CANCEL_STOP" or "RETURN_STOP"
-      if (!orderId || !stopId || !action) {
-        return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
-      }
-      await this.orderService.cancelOrReturnStop(orderId, stopId as string, action as string, reason as string);
-      res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "canceled" : "returned"} successfully.` });
+  try {
+    if (req.email !== env.ADMIN.EMAIL) {
+      return res.status(403).json({ success: false, message: "You are not authorized to cancel or return orders." });
     }
-    catch (error) {
-      console.error("Error in order controller canceling or returning stop:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+    const { orderId } = req.params;
+    const { stopId, action, reason } = req.query; // action can be "CANCEL_STOP" or "RETURN_STOP"
+    if (!orderId || !stopId || !action) {
+      return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
     }
+    await this.orderService.cancelOrReturnStop(orderId, stopId as string, action as string, reason as string);
+    res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "canceled" : "returned"} successfully.` });
   }
+  catch (error) {
+    console.error("Error in order controller canceling or returning stop:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
+ 
+public async getCompletedOrdersByDateRange(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { startDate, endDate, businessIds, driverIds } = req.body as { startDate?: Date, endDate?: Date, businessIds?: string[], driverIds?: string[] };
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Start date and end date are required." });
+    }
+    const orders = await this.orderService.getCompletedOrdersByDateRange(startDate, endDate, businessIds, driverIds);
+    res.status(200).json({ success: true, data: orders });
+  } catch (error) {
+    console.error("Error in order controller getting completed orders by date range:", error.message);
+    res.status(400).json({ success: false, message: error.message });
+  }
+}
 }
