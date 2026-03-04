@@ -211,8 +211,8 @@ export class OrderController {
     this.router.post("/orders/:orderId/accept", authenticationMiddleware, this.acceptOrder.bind(this));
     this.router.put("/orders/:orderId/start-return", authenticationMiddleware, this.startReturn.bind(this));
     this.router.put(
-      "/orders/:orderId/complete-return", 
-      authenticationMiddleware, 
+      "/orders/:orderId/complete-return",
+      authenticationMiddleware,
       upload.single("proofOfReturn"), // Optional proof of return file
       this.completeReturn.bind(this));
 
@@ -357,6 +357,11 @@ export class OrderController {
       authenticationMiddleware,
       this.adminApproveClientCancellation.bind(this)
     )
+    this.router.post(
+      "/orders/analytics",
+      authenticationMiddleware,
+      this.getCompletedOrdersByDateRange.bind(this)
+    )
   }
 
   private async createOrder(req: Request, res: Response) {
@@ -434,7 +439,7 @@ export class OrderController {
       console.log("admin in email: ", env.ADMIN.EMAIL);
       const { serviceType, fromStatus, toStatus, thresholdMinutes } = req.query;
       if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
-        serviceType as ServiceSubcategoryName, 
+        serviceType as ServiceSubcategoryName,
         fromStatus as string,
         toStatus as string,
         thresholdMinutes ? Number(thresholdMinutes) : undefined
@@ -779,14 +784,14 @@ export class OrderController {
 
   private async getOrdersPerIntegratedBusiness(req: AuthenticatedRequest, res: Response) {
     try {
-      const { userId, isLate } = req.query as {userId: string, isLate?: string}
+      const { userId, isLate } = req.query as { userId: string, isLate?: string }
       console.log("fetching orders for integrated business with id: ", userId)
       const parsedIsLate =
         isLate === undefined ? undefined : isLate === "true";
       let userIds: string[];
 
       if (userId) {
-      // userId may come as JSON string
+        // userId may come as JSON string
         try {
           userIds = Array.isArray(userId)
             ? userId
@@ -801,9 +806,9 @@ export class OrderController {
       else {
         const integratedBusinesses = await this.userService.getIntegratedBusiness()
         userIds = integratedBusinesses.map(u => u.id)
-      } 
+      }
       const orders = await this.orderService.getOrdersbyUser(userIds, undefined, parsedIsLate)
-      return res.status(200).json({ success: true, data: orders})
+      return res.status(200).json({ success: true, data: orders })
     }
     catch (err) {
       console.error(`Error in fetching orders for integrated business: ${err.message}`)
@@ -858,7 +863,7 @@ export class OrderController {
         return res.status(400).json({ success: false, message: "Proof of pickup file is required." });
       }
       const proofUrl = req.file.path; // Assuming the file path is stored in req.file.path
-      
+
       await this.orderService.uploadProofOfPickup(orderId, driverId, proofUrl);
       res.status(200).json({ success: true, message: "Proof of pickup uploaded successfully." });
     }
@@ -869,7 +874,7 @@ export class OrderController {
   }
 
   private async startReturn(req: AuthenticatedRequest, res: Response) {
-    try {      
+    try {
       const { orderId } = req.params;
       const driverId = req.driverId;
 
@@ -887,7 +892,7 @@ export class OrderController {
   }
 
   private async completeReturn(req: AuthenticatedRequest, res: Response) {
-    try {      
+    try {
       const { orderId } = req.params;
       const driverId = req.driverId;
       if (!orderId || !driverId) {
@@ -922,6 +927,19 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller canceling or returning stop:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+  public async getCompletedOrdersByDateRange(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { startDate, endDate, businessIds, driverIds } = req.body as { startDate?: Date, endDate?: Date, businessIds?: string[], driverIds?: string[] };
+      if (!startDate || !endDate) {
+        return res.status(400).json({ success: false, message: "Start date and end date are required." });
+      }
+      const orders = await this.orderService.getCompletedOrdersByDateRange(startDate, endDate, businessIds, driverIds);
+      res.status(200).json({ success: true, data: orders });
+    } catch (error) {
+      console.error("Error in order controller getting completed orders by date range:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

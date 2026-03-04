@@ -8,7 +8,7 @@ import { Order } from "../models/order.model.js";
 import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import { toOrderResponseDto } from "../resource/orders/order.resource.js";
+import { OrderResponseDto, toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {sendOrderConfirmation, 
         sendOrderCancellationEmail, 
@@ -1872,5 +1872,40 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       this.ansarOrders.set(orderId, orderInfo);
     }
   }
+  async getCompletedOrdersByDateRange(
+  startDate: Date,
+  endDate: Date,
+  businessIds?: string[],
+  driverIds?: string[]
+) : Promise<OrderResponseDto[]> {
+  try {
+    const whereClause: any = {
+      status: OrderStatus.COMPLETED,
+      completedAt: Between(startDate, endDate)
+    };
+    if (driverIds && driverIds.length > 0) {
+      whereClause.driver = { id: In(driverIds) };
+    }
+    if (businessIds && businessIds.length > 0) {
+      whereClause.createdBy = { id: In(businessIds) };
+    }
+    const completedOrders = await this.orderRepository.find({
+      where: whereClause,
+      relations: [
+        "createdBy", // business/user who created the order
+        "driver",    // driver assigned to the order
+        "driver.businessOwner"
+      ],
+      order: {
+        completedAt: "DESC"
+      }
+    });
+     return await Promise.all(
+      completedOrders.map(order => toOrderResponseDto(order))
+    );  } catch (error) {
+    console.error("Error fetching completed orders by date range:", error.message);
+    throw new Error(`Could not fetch completed orders: ${error.message}`);
+  }
+}
 
 }
