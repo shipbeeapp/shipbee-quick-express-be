@@ -42,6 +42,11 @@ export class OrderController {
       },
     });
     const upload = multer({ storage });
+    this.router.get(
+      "/orders/analytics",
+      // authenticationMiddleware,
+      this.getCompletedOrdersByDateRange.bind(this)
+    )
     /**
      * @swagger
      * /api/orders:
@@ -82,11 +87,13 @@ export class OrderController {
      *                 success: { type: boolean, default: false }
      *                 message: { type: string }
      */
+
     this.router.post(
       "/orders",
       upload.any(),
       validateDto(CreateOrderDto),
       this.createOrder.bind(this)
+
     );
     /**
      * @swagger
@@ -356,11 +363,6 @@ export class OrderController {
       "/orders/:orderId/admin-cancel",
       authenticationMiddleware,
       this.adminApproveClientCancellation.bind(this)
-    )
-    this.router.post(
-      "/orders/analytics",
-      authenticationMiddleware,
-      this.getCompletedOrdersByDateRange.bind(this)
     )
   }
 
@@ -932,12 +934,11 @@ export class OrderController {
   }
   public async getCompletedOrdersByDateRange(req: AuthenticatedRequest, res: Response) {
     try {
-      const { startDate, endDate, businessIds, driverIds } = req.body as { startDate?: Date, endDate?: Date, businessIds?: string[], driverIds?: string[] };
-      if (!startDate || !endDate) {
-        return res.status(400).json({ success: false, message: "Start date and end date are required." });
-      }
-      const orders = await this.orderService.getCompletedOrdersByDateRange(startDate, endDate, businessIds, driverIds);
-      res.status(200).json({ success: true, data: orders });
+      const { startDate, endDate, businessIds, driverIds, isLate, fromStatus, toStatus, thresholdMinutes } = req.body as { startDate?: Date, endDate?: Date, businessIds?: string[], driverIds?: string[], isLate?: boolean, fromStatus?: string, toStatus?: string, thresholdMinutes?: number};
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const orders = await this.orderService.getCompletedOrdersByDateRange(startDate, endDate, businessIds, driverIds, isLate, fromStatus, toStatus, thresholdMinutes, page, limit);
+      res.status(200).json({ success: true, ...orders });
     } catch (error) {
       console.error("Error in order controller getting completed orders by date range:", error.message);
       res.status(400).json({ success: false, message: error.message });

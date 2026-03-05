@@ -1,5 +1,5 @@
-import  { Service, Container } from "typedi";
-import UserService  from "./user.service.js";
+import { Service, Container } from "typedi";
+import UserService from "./user.service.js";
 import { AddressService } from "./address.service.js";
 // import { PaymentService } from "./payment.service.js";
 import { CreateOrderDto } from "../dto/order/createOrder.dto.js";
@@ -10,11 +10,12 @@ import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { OrderResponseDto, toOrderResponseDto } from "../resource/orders/order.resource.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
-import {sendOrderConfirmation, 
-        sendOrderCancellationEmail, 
-        sendOrderDetailsViaSms,
-        sendArrivalNotification,
-        formatAddressSingleLine
+import {
+  sendOrderConfirmation,
+  sendOrderCancellationEmail,
+  sendOrderDetailsViaSms,
+  sendArrivalNotification,
+  formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
 import { Between, MoreThan, In, Not, LessThan, QueryRunner } from "typeorm";
@@ -44,13 +45,14 @@ import { OrderStop } from "../models/orderStops.model.js";
 import { OrderType } from "../utils/enums/orderType.enum.js";
 import axios from "axios";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
-import {formatAddress}  from "../services/email.service.js";
+import { formatAddress } from "../services/email.service.js";
 import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
 import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
-import {calculateDistanceForClientOrder} from "../utils/google-maps/distance-time.js";
+import { calculateDistanceForClientOrder } from "../utils/google-maps/distance-time.js";
+import { setIslatestOrderStatus, intraStatusDuration } from "../utils/global.utils.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -73,8 +75,8 @@ export default class OrderService {
   private ansarOrders: Map<string, AnsarOrderInfo> = new Map();
   // private mailService = Container.get(MailService);  
 
-  constructor() {}
-  
+  constructor() { }
+
   async createOrder(orderData: CreateOrderDto, userId?: string, madeByClient: boolean = false, isSandbox: boolean = false): Promise<any> {
     console.log("Creating order with data:", orderData);
     if (!AppDataSource.isInitialized) {
@@ -85,7 +87,7 @@ export default class OrderService {
     const queryRunner = AppDataSource.createQueryRunner();
     console.log("QueryRunner created:");
     await queryRunner.connect();
-    console.log("QueryRunner connected:");  
+    console.log("QueryRunner connected:");
     await queryRunner.startTransaction();
     console.log("Transaction started:");
 
@@ -103,30 +105,30 @@ export default class OrderService {
         if (!createdByUser) {
           throw new Error(`No signed in user with ID ${userId} not found`);
         }
-        sender = await this.userService.findOrCreateUser(senderData, queryRunner); 
+        sender = await this.userService.findOrCreateUser(senderData, queryRunner);
       }
       else {
         sender = await this.userService.findOrCreateUser(senderData, queryRunner);
         createdByUser = sender;
-    }
+      }
       // const receiverData = {
       //   email: orderData.receiverEmail,
       //   name: orderData.receiverName,
       //   phoneNumber: orderData.receiverPhoneNumber
       // };
-      
+
       // // Create or find both users
       // const receiver = await this.userService.findOrCreateUser(receiverData, queryRunner);
 
       // 🔹 Step 2: Create Addresses
-      const fromAddress  = await this.addressService.createAddress(orderData.fromAddress, queryRunner);
+      const fromAddress = await this.addressService.createAddress(orderData.fromAddress, queryRunner);
 
-      
+
       // Add serviceSubcategory
       const serviceSubcategory = await this.serviceSubcategoryService.findServiceSubcategoryByName(orderData.serviceSubcategory, null, queryRunner);
       if (!serviceSubcategory) {
-          throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
-        }
+        throw new Error(`Service subcategory ${orderData.serviceSubcategory} not found`);
+      }
 
       // create shipment if shipment data is provided
       let shipment = null;
@@ -136,16 +138,16 @@ export default class OrderService {
         console.log("Shipment created:", shipment);
       }
       console.log("orderData.shipment:", orderData.shipment);
-        
+
       //🔹 Step 3: Calculate total cost
       let total;
-       if (orderData.vehicleType == VehicleType.FLAT_BED_TRAILER || orderData.vehicleType == VehicleType.LOW_BED_TRAILER 
-             || orderData.vehicleType == VehicleType.CHILLER_VAN
-              || orderData.vehicleType == VehicleType.FREEZER_VAN || orderData.vehicleType  == VehicleType.CANTER_TRUCK) {
-                total = null;
+      if (orderData.vehicleType == VehicleType.FLAT_BED_TRAILER || orderData.vehicleType == VehicleType.LOW_BED_TRAILER
+        || orderData.vehicleType == VehicleType.CHILLER_VAN
+        || orderData.vehicleType == VehicleType.FREEZER_VAN || orderData.vehicleType == VehicleType.CANTER_TRUCK) {
+        total = null;
       }
       else {
-        console.log("distance given by client:" , orderData.distance);
+        console.log("distance given by client:", orderData.distance);
         orderData.distance = await calculateDistanceForClientOrder(orderData.fromAddress.coordinates, orderData.stops);
         console.log("distance calculated using google maps:", orderData.distance);
         const pricingInput = await validateObject(GetPricingDTO, {
@@ -165,12 +167,12 @@ export default class OrderService {
           shippingCompany: orderData.shipment ? orderData.shipment?.shippingCompany : null,
           lifters: orderData.stops.reduce((total, stop) => total + (stop.lifters || 0), 0)
         });
-        const {totalCost: costBeforePromo} = await this.pricingService.calculatePricing(pricingInput);
+        const { totalCost: costBeforePromo } = await this.pricingService.calculatePricing(pricingInput);
         console.log("total cost before discount:", costBeforePromo);
-        const {totalCost, discount, promoCodeStatus} = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
+        const { totalCost, discount, promoCodeStatus } = await this.promoCodeService.applyPromosToOrder(userId, costBeforePromo);
         total = totalCost;
         console.log("total cost after discount:", totalCost, "discount applied:", discount, "promo code status:", promoCodeStatus);
-    }
+      }
       const accessToken = generateToken();
       //🔹 Step 4: Create Order using OrderRepository
       const order = queryRunner.manager.create(Order, {
@@ -196,98 +198,98 @@ export default class OrderService {
         serviceFeePercentage: env.SERVICE_FEE_PERCENTAGE
       });
 
-    await queryRunner.manager.save(order);
+      await queryRunner.manager.save(order);
 
-    // 🔹 Step 4: Create multiple stops
-    if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK && (!orderData.stops || orderData.stops.length === 0)) {
-      throw new Error("At least one stop is required for multi-stop order");
-    }
-    
-    let stopEntities: OrderStop[] = [];
-    if (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
-      orderData.stops = [{
-        toAddress: orderData.stops[0].toAddress,
-        receiverEmail: orderData.stops[0].receiverEmail,
-        receiverName: orderData.stops[0].receiverName,
-        receiverPhoneNumber: orderData.stops[0].receiverPhoneNumber,
-        itemType: orderData.stops[0].itemType,
-        distance: 0,
-        sequence: 1
-    }
-    ];
-
-    if (orderData.shipment.shippingCompany === 'DHL') {
-      const dhlTrackingNumber = await this.createDHLShipment(orderData)
-      console.log("tracking number:", dhlTrackingNumber);
-      order.shipment.trackingNumber = dhlTrackingNumber;
-      await queryRunner.manager.save(order.shipment);
-    }
-  }
-
-     for (const [index, stopData] of orderData.stops.entries()) {
-      console.log("Creating stop:", stopData);
-      const receiver = await this.userService.findOrCreateUser({email: stopData.receiverEmail, phoneNumber: stopData.receiverPhoneNumber, name: stopData.receiverName}, queryRunner);
-      const toAddress = await this.addressService.createAddress(stopData.toAddress, queryRunner);
-
-      if (typeof stopData.items === 'string') {
-        stopData.items = JSON.parse(stopData.items);
+      // 🔹 Step 4: Create multiple stops
+      if (orderData.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK && (!orderData.stops || orderData.stops.length === 0)) {
+        throw new Error("At least one stop is required for multi-stop order");
       }
-      const stop = queryRunner.manager.create(OrderStop, {
-        order,
-        receiver,
-        toAddress,
-        itemDescription: stopData.itemDescription ?? null,
-        itemType: stopData.itemType,
-        distance: stopData.distance,
-        sequence: stopData.sequence ?? index + 1,
-        lifters: stopData.lifters ?? 0,
-        clientStopId: stopData.clientStopId ?? null,
-        items: stopData.items,
-        totalPrice: stopData.totalPrice ?? null,
-        paymentMethod: stopData.paymentMethod,
-        comments: stopData.comments ?? null,
-        deliveryFee: stopData.deliveryFee ?? null
-      });
 
-      stopEntities.push(stop);
-    }
+      let stopEntities: OrderStop[] = [];
+      if (orderData.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+        orderData.stops = [{
+          toAddress: orderData.stops[0].toAddress,
+          receiverEmail: orderData.stops[0].receiverEmail,
+          receiverName: orderData.stops[0].receiverName,
+          receiverPhoneNumber: orderData.stops[0].receiverPhoneNumber,
+          itemType: orderData.stops[0].itemType,
+          distance: 0,
+          sequence: 1
+        }
+        ];
 
-    await queryRunner.manager.save(stopEntities);
-     //Step 5: Add Order Status History
-    await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
-     orderData.orderNo = order.orderNo;
-     let recipientAdminMail;
-     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
-     else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
-     await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
-       console.error("Error sending emaill to admin:", err);
-      });
-     console.log('sent mail to admin: ', recipientAdminMail);
-     if (createdByUser.email) {
-      await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
-        console.error("Error sending email to user:", err);
+        if (orderData.shipment.shippingCompany === 'DHL') {
+          const dhlTrackingNumber = await this.createDHLShipment(orderData)
+          console.log("tracking number:", dhlTrackingNumber);
+          order.shipment.trackingNumber = dhlTrackingNumber;
+          await queryRunner.manager.save(order.shipment);
+        }
       }
-      );
-      console.log('sent mail to user: ', createdByUser.email);
-     }
 
-    
-     //🔹 Step 5: Create Payment
-     // await this.paymentService.createPayment(order, totalCost, queryRunner);
-     // Commit transaction
-     await queryRunner.commitTransaction();
-     await this.addAnsarOrder(order.id, order.orderNo, order.status)
-    //  if (env.SEND_SMS) {
-    //    sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
-    //  }
-     // Broadcast to online drivers with matching vehicleType
-     order.stops = stopEntities;
-     if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK && !isSandbox) {
-      console.log("Emitting order to drivers for order ID:", order.id);
-       scheduleOrderEmission(order);
-     }
-     broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the new order
-     return await toOrderResponseDto(order);
+      for (const [index, stopData] of orderData.stops.entries()) {
+        console.log("Creating stop:", stopData);
+        const receiver = await this.userService.findOrCreateUser({ email: stopData.receiverEmail, phoneNumber: stopData.receiverPhoneNumber, name: stopData.receiverName }, queryRunner);
+        const toAddress = await this.addressService.createAddress(stopData.toAddress, queryRunner);
+
+        if (typeof stopData.items === 'string') {
+          stopData.items = JSON.parse(stopData.items);
+        }
+        const stop = queryRunner.manager.create(OrderStop, {
+          order,
+          receiver,
+          toAddress,
+          itemDescription: stopData.itemDescription ?? null,
+          itemType: stopData.itemType,
+          distance: stopData.distance,
+          sequence: stopData.sequence ?? index + 1,
+          lifters: stopData.lifters ?? 0,
+          clientStopId: stopData.clientStopId ?? null,
+          items: stopData.items,
+          totalPrice: stopData.totalPrice ?? null,
+          paymentMethod: stopData.paymentMethod,
+          comments: stopData.comments ?? null,
+          deliveryFee: stopData.deliveryFee ?? null
+        });
+
+        stopEntities.push(stop);
+      }
+
+      await queryRunner.manager.save(stopEntities);
+      //Step 5: Add Order Status History
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
+      orderData.orderNo = order.orderNo;
+      let recipientAdminMail;
+      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
+      else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
+      await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
+        console.error("Error sending emaill to admin:", err);
+      });
+      console.log('sent mail to admin: ', recipientAdminMail);
+      if (createdByUser.email) {
+        await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
+          console.error("Error sending email to user:", err);
+        }
+        );
+        console.log('sent mail to user: ', createdByUser.email);
+      }
+
+
+      //🔹 Step 5: Create Payment
+      // await this.paymentService.createPayment(order, totalCost, queryRunner);
+      // Commit transaction
+      await queryRunner.commitTransaction();
+      await this.addAnsarOrder(order.id, order.orderNo, order.status)
+      //  if (env.SEND_SMS) {
+      //    sendOrderDetailsViaSms(order.id, orderData.senderPhoneNumber, orderData.receiverPhoneNumber, accessToken);
+      //  }
+      // Broadcast to online drivers with matching vehicleType
+      order.stops = stopEntities;
+      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK && !isSandbox) {
+        console.log("Emitting order to drivers for order ID:", order.id);
+        scheduleOrderEmission(order);
+      }
+      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the new order
+      return await toOrderResponseDto(order);
     } catch (error) {
       console.log(error.message);
       await queryRunner.rollbackTransaction();
@@ -299,52 +301,33 @@ export default class OrderService {
 
   async getOrdersbyUser(userId: string[], serviceType?: string, isLate?: boolean) {
     try {
-    console.log("Fetching orders for user ID:", userId);
-    const orders = await this.orderRepository.find({
-      where: {
-        createdBy: { id: In(userId) },
-        serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined
-      },
-      relations: [
-        "sender", "fromAddress", "serviceSubcategory", 
-        "orderStatusHistory", "orderStatusHistory.orderStop", "shipment", 
-        "createdBy", "orderStatusHistory.driver",
-        "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
-        "stops", "stops.receiver", "stops.toAddress",
-      ],
-      order: {
-        createdAt: "DESC",
-      },
-    })
+      console.log("Fetching orders for user ID:", userId);
+      const orders = await this.orderRepository.find({
+        where: {
+          createdBy: { id: In(userId) },
+          serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined
+        },
+        relations: [
+          "sender", "fromAddress", "serviceSubcategory",
+          "orderStatusHistory", "orderStatusHistory.orderStop", "shipment",
+          "createdBy", "orderStatusHistory.driver",
+          "cancellationRequests", "cancellationRequests.driver", "driver", "driver.vehicle",
+          "stops", "stops.receiver", "stops.toAddress",
+        ],
+        order: {
+          createdAt: "DESC",
+        },
+      })
 
-    let filteredOrders = orders;
+      const filteredOrders = isLate ? setIslatestOrderStatus(orders, isLate) : orders;
 
-    if (isLate !== undefined) {
-      console.log("Filtering orders by lateness:", isLate);
-      filteredOrders = orders.filter(order => {
-        const maxDuration = order.createdBy?.maxOrderDuration;
-
-        // If we cannot compute lateness, treat as NOT late
-        if (!maxDuration || !order.pickUpDate || !order.completedAt) {
-          // console.log("Cannot determine lateness for order ID:", order.id);
-          return isLate === false;
-        }
-      
-        const diffMinutes =
-          (order.completedAt.getTime() - order.pickUpDate.getTime()) / (1000 * 60);
-        const late = diffMinutes >= maxDuration;
-
-      
-        return late === isLate;
-      });
+      return await Promise.all(
+        filteredOrders.map(order => toOrderResponseDto(order))
+      );
+    } catch (error) {
+      console.error("Error fetching orders for user:", error.message);
+      throw new Error(`Could not fetch orders for user: ${error.message}`);
     }
-     return await Promise.all(
-      filteredOrders.map(order => toOrderResponseDto(order))
-    );
-  } catch (error) {
-    console.error("Error fetching orders for user:", error.message);
-    throw new Error(`Could not fetch orders for user: ${error.message}`);
-  }
   }
 
   async getOrders(serviceType: ServiceSubcategoryName, fromStatus?: string, toStatus?: string, thresholdMinutes?: number) {
@@ -361,34 +344,21 @@ export default class OrderService {
         }
       },
       relations: [
-          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
-          "orderStatusHistory.orderStop", "orderStatusHistory.driver", "driver", "driver.vehicle", "shipment", 
-          "createdBy", "cancellationRequests", "cancellationRequests.driver",
-          "stops", "stops.receiver", "stops.toAddress", 
+        "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory",
+        "orderStatusHistory.orderStop", "orderStatusHistory.driver", "driver", "driver.vehicle", "shipment",
+        "createdBy", "cancellationRequests", "cancellationRequests.driver",
+        "stops", "stops.receiver", "stops.toAddress",
       ],
       order: {
         createdAt: "DESC",
       },
     });
 
-    let filteredOrders = orders;
 
-    if (fromStatus && toStatus && thresholdMinutes !== undefined) {
-      filteredOrders = orders.filter(order => {
-        const fromTime = getStatusTimestamp(order, fromStatus);
-        const toTime = getStatusTimestamp(order, toStatus);
+    const filteredOrders = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
 
-        if (!fromTime || !toTime) return false;
 
-        if (toTime < fromTime) return false;
-
-        const duration = getDurationInMinutes(fromTime, toTime);
-        console.log(`Order ID: ${order.id}, Duration from ${fromStatus} to ${toStatus}: ${duration} minutes`);
-        return duration >= thresholdMinutes;
-      });
-    }
-
-     return await Promise.all(
+    return await Promise.all(
       filteredOrders.map(order => toOrderResponseDto(order))
     );
   }
@@ -408,7 +378,7 @@ export default class OrderService {
       order = await orderRepository.findOne({
         where: { id: orderId },
         relations: ["driver", "stops"],
-        lock: { 
+        lock: {
           mode: "pessimistic_write",
           tables: ["orders"]
         },
@@ -502,15 +472,15 @@ export default class OrderService {
     }
 
     console.log("Order status updated successfully");
-}
+  }
 
   async getOrderDetails(orderId: string, accessToken?: string): Promise<any> {
     console.log("Fetching order details for order ID:", orderId);
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ["sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment",
-            "orderStatusHistory.orderStop", "orderStatusHistory.driver",
-            "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle", "createdBy"
+        "orderStatusHistory.orderStop", "orderStatusHistory.driver",
+        "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle", "createdBy"
       ],
     });
     if (!order) {
@@ -545,11 +515,11 @@ export default class OrderService {
 
   async getPendingOrdersWithPickupAfter(date: Date) {
     return this.orderRepository.find({
-      where: { 
-         status: OrderStatus.PENDING,
-         pickUpDate: MoreThan(date),
-         serviceSubcategory: { name: ServiceSubcategoryName.PERSONAL_QUICK }
-       },
+      where: {
+        status: OrderStatus.PENDING,
+        pickUpDate: MoreThan(date),
+        serviceSubcategory: { name: ServiceSubcategoryName.PERSONAL_QUICK }
+      },
       relations: ["sender", "fromAddress", "stops", "stops.receiver", "stops.toAddress"], // add as needed
       order: { createdAt: "DESC" },
     });
@@ -569,71 +539,71 @@ export default class OrderService {
   }
 
   async acceptOrder(orderId: string, driverId: string) {
-  const queryRunner = AppDataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-  try {
-    console.log(`Driver ${driverId} attempting to accept order ${orderId}`);
-    const result = await queryRunner.manager
-      .createQueryBuilder(Order, "order")
-      .update(Order)
-      .set({
-        driver: { id: driverId } as any,
-        status: OrderStatus.ASSIGNED
-      })
-      .where("id = :orderId", { orderId })
-      .andWhere("status = :pending", { pending: OrderStatus.PENDING })
-      .returning("*") // get the updated row
-      .execute();
+    try {
+      console.log(`Driver ${driverId} attempting to accept order ${orderId}`);
+      const result = await queryRunner.manager
+        .createQueryBuilder(Order, "order")
+        .update(Order)
+        .set({
+          driver: { id: driverId } as any,
+          status: OrderStatus.ASSIGNED
+        })
+        .where("id = :orderId", { orderId })
+        .andWhere("status = :pending", { pending: OrderStatus.PENDING })
+        .returning("*") // get the updated row
+        .execute();
 
-    if (result.affected === 0 || !result.raw[0]) {
-      console.error(`Order ${orderId} is not available for acceptance by driver ${driverId}`);
-      throw new Error("Order already assigned or not available");
+      if (result.affected === 0 || !result.raw[0]) {
+        console.error(`Order ${orderId} is not available for acceptance by driver ${driverId}`);
+        throw new Error("Order already assigned or not available");
+      }
+      console.log(`Order ${orderId} accepted by driver ${driverId}`);
+      const order = result.raw[0] as Order;
+      console.log(`Order details: ${JSON.stringify(order, null, 2)}`);
+      // Update driver status to ON_DUTY
+      await queryRunner.manager.getRepository(Driver).update(
+        { id: driverId },
+        { status: DriverStatus.BUSY }
+      );
+      // Add to order status history
+      order.driver = { id: driverId } as any; // set driver relation for history record
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
+
+      await queryRunner.commitTransaction();
+
+      emitOrderAccepted(orderId, driverId); // Notify other drivers that the order has been accepted
+
+      clearNotificationsForOrder(order.id); // Clear notifications for this order
+      const fullOrder = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: [
+          "driver",
+          "sender",
+          "serviceSubcategory",
+          "fromAddress",
+          "stops",
+          "stops.toAddress",
+          "stops.receiver"
+        ]
+      });
+      sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
+        console.error("Error sending email to admin:", err);
+      });
+      console.log('sent mail to admin');
+      broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+      broadcastDriverStatusUpdate(driverId, DriverStatus.BUSY); // Notify all connected clients about the driver status update
+      this.updateAnsarOrderStatus(order.id, OrderStatus.ASSIGNED)
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-    console.log(`Order ${orderId} accepted by driver ${driverId}`);
-    const order = result.raw[0] as Order;
-    console.log(`Order details: ${JSON.stringify(order, null, 2)}`);
-    // Update driver status to ON_DUTY
-    await queryRunner.manager.getRepository(Driver).update(
-      { id: driverId },
-      { status: DriverStatus.BUSY }
-    );
-    // Add to order status history
-    order.driver = { id: driverId } as any; // set driver relation for history record
-    await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
-
-    await queryRunner.commitTransaction();
-
-    emitOrderAccepted(orderId, driverId); // Notify other drivers that the order has been accepted
-
-    clearNotificationsForOrder(order.id); // Clear notifications for this order
-    const fullOrder = await this.orderRepository.findOne({
-      where: { id: orderId },
-      relations: [
-        "driver",
-        "sender",
-        "serviceSubcategory",
-        "fromAddress",
-        "stops",
-        "stops.toAddress",
-        "stops.receiver"
-      ]
-    });
-    sendOrderConfirmation(fullOrder, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
-      console.error("Error sending email to admin:", err);
-    });
-    console.log('sent mail to admin');
-    broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-    broadcastDriverStatusUpdate(driverId, DriverStatus.BUSY); // Notify all connected clients about the driver status update
-    this.updateAnsarOrderStatus(order.id, OrderStatus.ASSIGNED)
-  } catch (err) {
-    await queryRunner.rollbackTransaction();
-    throw err;
-  } finally {
-    await queryRunner.release();
   }
-}
 
   async updateProofOfOrder(orderId: string, proofUrl: string) {
     console.log("Updating proof of order for order ID:", orderId, "with URL:", proofUrl);
@@ -671,15 +641,15 @@ export default class OrderService {
         broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
         this.updateAnsarOrderStatus(order.id, OrderStatus.EN_ROUTE_TO_PICKUP);
       }
-      
+
       else {
-        
+
         if (order.status !== OrderStatus.EN_ROUTE_TO_PICKUP && order.type == OrderType.SINGLE_STOP) {
           throw new Error(`Order with ID ${orderId} is not ready to start`);
         }
         const currentStop = order.stops.find(stop => stop.id === stopId);
         if (!currentStop) throw new Error(`Stop with ID ${stopId} not found for order ${orderId}`);
-        
+
         if (currentStop.status === OrderStatus.COMPLETED)
           throw new Error(`Stop ${stopId} already completed`);
         if (currentStop.status === OrderStatus.ACTIVE)
@@ -690,35 +660,35 @@ export default class OrderService {
           const activeStop = order.stops.find(s => s.status === OrderStatus.ACTIVE);
           if (activeStop) throw new Error(`Stop ${activeStop.sequence} is still active. Cannot start another stop.`);
         }
-        
+
         currentStop.status = OrderStatus.ACTIVE;
         await this.orderStopRepository.save(currentStop);
         // Add to order status history
         order.status = OrderStatus.ACTIVE;
         await this.orderRepository.save(order);
-        await this.orderStatusHistoryService.createOrderStatusHistory({order, stopId: currentStop.id});
+        await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: currentStop.id });
         stopNumber = currentStop.sequence;
         console.log(`Order ${orderId} by driver ${driverId} is going to stop #${currentStop.sequence}`);
         broadcastOrderUpdate(order.id, order.status, currentStop.sequence); // Notify all connected clients about the order status update
         this.updateAnsarOrderStatus(order.id, OrderStatus.ACTIVE)
       }
-      sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status', isPickup ? "pickup": stopNumber.toString()).catch((err) => {
+      sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status', isPickup ? "pickup" : stopNumber.toString()).catch((err) => {
         console.error("Error sending email to admin:", err);
       });
     } catch (error) {
       console.error("Error starting order:", error.message);
       throw new Error(`Could not start order: ${error.message}`);
     }
-} 
+  }
 
-async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl: string) {
+  async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl: string) {
     console.log("Completing order for order ID:", orderId, "by driver ID:", driverId);
     const queryRunner = this.orderRepository.manager.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    
+
     try {
-      const order = await queryRunner.manager.findOne(Order,{
+      const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId },
         relations: ["driver", "sender", "fromAddress", "serviceSubcategory",
           "stops", "stops.toAddress", "stops.receiver"
@@ -756,14 +726,14 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       // Check if all stops are completed and finalize order if so
       await this.finalizeOrderCompletion(order, driverId, stop, queryRunner);
       await queryRunner.commitTransaction();
-  } catch (error) {
-    console.error("Error completing order:", error.message);
-    await queryRunner.rollbackTransaction();
-    throw new Error(`Could not complete order: ${error.message}`);
-  } finally {
-    await queryRunner.release();
+    } catch (error) {
+      console.error("Error completing order:", error.message);
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Could not complete order: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
   }
-}
 
   async finalizeOrderCompletion(order: Order, driverId: string, stop: OrderStop, queryRunner?: QueryRunner, isReturned: boolean = false) {
     const allCompleted = order.stops.every((s) => s.status === OrderStatus.COMPLETED || s.status === OrderStatus.CANCELED);
@@ -773,30 +743,30 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       order.driver.status = DriverStatus.ACTIVE;
       await queryRunner.manager.save(Order, order);
       await queryRunner.manager.save(Driver, order.driver);
-      await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner});
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner });
       console.log(`Order ${order.id} completed successfully by driver ${driverId}`);
       sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
-          console.error("Error sending email to admin:", err);
-        });
+        console.error("Error sending email to admin:", err);
+      });
       console.log('sent mail to admin');
       broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
       broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
       await this.driverService.updateDriverIncomeAndCashBalance(driverId, order, queryRunner);
       this.updateAnsarOrderStatus(order.id, OrderStatus.COMPLETED)
-     if (this.isAnsarOrder(order.id)) {
+      if (this.isAnsarOrder(order.id)) {
         const driverCurrentLocation = getCurrentLocationOfDriver(order.driver?.id)
         const [latStr, lngStr] = driverCurrentLocation?.split(",");
         const latitude = parseFloat(latStr);
         const longitude = parseFloat(lngStr);
         externalTrackingSocket.send({
-              route: "shipbeeUpdate",
-              payload: {
-                id: order.orderNo,
-                status: order.status,
-                latitude,
-                longitude
-              }
-            })
+          route: "shipbeeUpdate",
+          payload: {
+            id: order.orderNo,
+            status: order.status,
+            latitude,
+            longitude
+          }
+        })
         console.log(`Sent location update to ansar upon completion for order #${order.orderNo}`)
         this.removeAnsarOrder(order.id)
       }
@@ -841,309 +811,309 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
   // }
 
   async getDriverOrders(driverId: string): Promise<myOrderResource[]> {
-        try {
-            const orders = await this.orderRepository.find({
-                where: { 
-                  driver: { id: driverId }, 
-                  status: In([
-                    OrderStatus.COMPLETED,
-                    OrderStatus.CANCELED,
-                    OrderStatus.ASSIGNED,
-                    OrderStatus.ACTIVE,
-                  ]), 
-                },
-                relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"],
-                order: { pickUpDate: "DESC" }
-            });
-            return orders.map(order => createMyOrderResource(order));
-        } catch (error) {
-            console.error("Error fetching driver orders:", error);
-            throw error;
-        }
+    try {
+      const orders = await this.orderRepository.find({
+        where: {
+          driver: { id: driverId },
+          status: In([
+            OrderStatus.COMPLETED,
+            OrderStatus.CANCELED,
+            OrderStatus.ASSIGNED,
+            OrderStatus.ACTIVE,
+          ]),
+        },
+        relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"],
+        order: { pickUpDate: "DESC" }
+      });
+      return orders.map(order => createMyOrderResource(order));
+    } catch (error) {
+      console.error("Error fetching driver orders:", error);
+      throw error;
+    }
+  }
+
+  async requestOrderCancellation(driverId: string, orderId: string, reason: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ["driver", "fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"],
+    });
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found`);
+    }
+    if (order.driver?.id !== driverId) {
+      throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
     }
 
-    async requestOrderCancellation(driverId: string, orderId: string, reason: string) {
-        const order = await this.orderRepository.findOne({
-            where: { id: orderId },
-            relations: ["driver", "fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver"],
-        });
-        if (!order) {
-            throw new Error(`Order with ID ${orderId} not found`);
-        }
-        if (order.driver?.id !== driverId) {
-            throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
-        }
-
-        if (order.status !== OrderStatus.ASSIGNED && order.status !== OrderStatus.ACTIVE && order.status !== OrderStatus.EN_ROUTE_TO_PICKUP) {
-            throw new Error(`Order with ID ${orderId} is not assigned or active`);
-        }
-        
-        const existingRequest = await this.orderCancellationRequestRepository.findOne({
-            where: { order: { id: orderId }, driver: { id: driverId }, status: CancelRequestStatus.PENDING }
-        });
-
-        if (existingRequest) {
-            throw new Error(`Cancellation request already exists for order ${orderId}`);
-        }
-
-        // Case 1️⃣: ASSIGNED — auto reassign, but store cancellation history
-        if ([OrderStatus.ASSIGNED, OrderStatus.EN_ROUTE_TO_PICKUP].includes(order.status)) {
-          console.log(`Order ${orderId} is ${order.status} — driver ${driverId} canceled. Creating auto-approved record.`);
-        
-          // 1. Create auto-approved cancellation request
-          const cancellationRequest = this.orderCancellationRequestRepository.create({
-            order: { id: orderId } as any,
-            driver: { id: driverId } as any,
-            status: CancelRequestStatus.APPROVED, // auto approved
-            reason,
-          });
-          await this.orderCancellationRequestRepository.save(cancellationRequest);
-        
-          // 2. Unassign order and reset to pending
-          order.status = OrderStatus.PENDING;
-          order.driver = null;
-          await this.orderRepository.save(order);
-          //Update driver status to Active
-          await this.driverService.updateDriverStatus(driverId, DriverStatus.ACTIVE)
-        
-          // 3. Broadcast updates
-          await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: reason });
-          resetNotifiedDrivers(order.id);
-          await emitOrderToDrivers(order);
-          broadcastOrderUpdate(order.id, order.status);
-          broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE)
-        
-          return cancellationRequest.id;
-        }
-
-        const cancellationRequest = this.orderCancellationRequestRepository.create({
-            order: { id: orderId } as any,
-            driver: { id: driverId } as any,
-            status: CancelRequestStatus.PENDING,
-            reason: reason
-        });
-
-        const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
-        console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
-        broadcastOrderUpdate(order.id, order.status, undefined, "order-cancel-request", cancelRequest.id); // Notify all connected clients about the order status update
-        sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
-            console.error('Error sending order cancellation email:', err);
-        });
-        return cancelRequest.id;
+    if (order.status !== OrderStatus.ASSIGNED && order.status !== OrderStatus.ACTIVE && order.status !== OrderStatus.EN_ROUTE_TO_PICKUP) {
+      throw new Error(`Order with ID ${orderId} is not assigned or active`);
     }
 
-    async processOrderCancellation(cancelRequestId: string, action: string) {
-      const queryRunner = AppDataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
+    const existingRequest = await this.orderCancellationRequestRepository.findOne({
+      where: { order: { id: orderId }, driver: { id: driverId }, status: CancelRequestStatus.PENDING }
+    });
 
-        try {
-            const cancellationRequest = await queryRunner.manager.findOne(OrderCancellationRequest, {
-                where: { id: cancelRequestId,  },
-                relations: ["order", "driver", "order.driver", "order.sender", "order.stops", "order.stops.toAddress", "order.stops.receiver", "order.fromAddress", "order.serviceSubcategory", "order.shipment"]
-            });
-            if (!cancellationRequest) {
-                throw new Error(`Cancellation request with ID ${cancelRequestId} not found`);
-            }
-            if (cancellationRequest.status == CancelRequestStatus.APPROVED) {
-                throw new Error(`Cancellation request with ID ${cancelRequestId} has already been approved`);
-            }
-            if (cancellationRequest.status == CancelRequestStatus.DECLINED) {
-                throw new Error(`Cancellation request with ID ${cancelRequestId} has already been declined`);
-            }
-            if (action === "APPROVE") {
-                // Approve the cancellation
-                const driverCurrentLocation = getCurrentLocationOfDriver(cancellationRequest.driver.id);
-                console.log(`Driver current location when cancellation request approved for driver ${cancellationRequest.driver.id}:`, driverCurrentLocation);
-                cancellationRequest.status = CancelRequestStatus.APPROVED;
-                await queryRunner.manager.save(cancellationRequest);
-                const order = cancellationRequest.order;
-                order.status = OrderStatus.PENDING;
-                await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE, queryRunner)
-                broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
-                order.driver = null;
-                await queryRunner.manager.save(order);
-                await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
-                resetNotifiedDrivers(order.id);
-                await emitOrderToDrivers(order, driverCurrentLocation);
-                broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
-            } else if (action === "DECLINE") {
-                // Decline the cancellation
-                cancellationRequest.status = CancelRequestStatus.DECLINED;
-                await queryRunner.manager.save(cancellationRequest);
-              } else {
-                throw new Error(`Invalid action: ${action}`);
-              }
-            await queryRunner.commitTransaction();
-            emitOrderCancellationUpdate(cancellationRequest.driver.id, cancellationRequest.order.id, cancellationRequest.status);
-            console.log(`Order cancellation request ${cancelRequestId} processed with action: ${action}`);
-        } catch (error) {
-            await queryRunner.rollbackTransaction();
-            console.error("Error processing order cancellation:", error.message);
-            throw new Error(`Could not process order cancellation: ${error.message}`);
-        }
-        finally {
-            await queryRunner.release();  
+    if (existingRequest) {
+      throw new Error(`Cancellation request already exists for order ${orderId}`);
+    }
+
+    // Case 1️⃣: ASSIGNED — auto reassign, but store cancellation history
+    if ([OrderStatus.ASSIGNED, OrderStatus.EN_ROUTE_TO_PICKUP].includes(order.status)) {
+      console.log(`Order ${orderId} is ${order.status} — driver ${driverId} canceled. Creating auto-approved record.`);
+
+      // 1. Create auto-approved cancellation request
+      const cancellationRequest = this.orderCancellationRequestRepository.create({
+        order: { id: orderId } as any,
+        driver: { id: driverId } as any,
+        status: CancelRequestStatus.APPROVED, // auto approved
+        reason,
+      });
+      await this.orderCancellationRequestRepository.save(cancellationRequest);
+
+      // 2. Unassign order and reset to pending
+      order.status = OrderStatus.PENDING;
+      order.driver = null;
+      await this.orderRepository.save(order);
+      //Update driver status to Active
+      await this.driverService.updateDriverStatus(driverId, DriverStatus.ACTIVE)
+
+      // 3. Broadcast updates
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: reason });
+      resetNotifiedDrivers(order.id);
+      await emitOrderToDrivers(order);
+      broadcastOrderUpdate(order.id, order.status);
+      broadcastDriverStatusUpdate(driverId, DriverStatus.ACTIVE)
+
+      return cancellationRequest.id;
+    }
+
+    const cancellationRequest = this.orderCancellationRequestRepository.create({
+      order: { id: orderId } as any,
+      driver: { id: driverId } as any,
+      status: CancelRequestStatus.PENDING,
+      reason: reason
+    });
+
+    const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
+    console.log(`Order cancellation requested for order ${orderId} by driver ${driverId}`);
+    broadcastOrderUpdate(order.id, order.status, undefined, "order-cancel-request", cancelRequest.id); // Notify all connected clients about the order status update
+    sendOrderCancellationEmail(order.orderNo, order.driver?.name, order.driver?.phoneNumber).catch((err) => {
+      console.error('Error sending order cancellation email:', err);
+    });
+    return cancelRequest.id;
+  }
+
+  async processOrderCancellation(cancelRequestId: string, action: string) {
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const cancellationRequest = await queryRunner.manager.findOne(OrderCancellationRequest, {
+        where: { id: cancelRequestId, },
+        relations: ["order", "driver", "order.driver", "order.sender", "order.stops", "order.stops.toAddress", "order.stops.receiver", "order.fromAddress", "order.serviceSubcategory", "order.shipment"]
+      });
+      if (!cancellationRequest) {
+        throw new Error(`Cancellation request with ID ${cancelRequestId} not found`);
       }
-    }
-    async notifySender(orderId: string, driverId: string) {
-      try {
-        const order = await this.orderRepository.findOne({
-          where: { id: orderId },
-          relations: ["driver", "sender", "stops", "stops.receiver"],
-          order: { stops: { sequence: "ASC" } }
-        });
-        if (!order) {
-          throw new Error(`Order with ID ${orderId} not found`);
-        }
-        if (order.driver?.id !== driverId) {
-          throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
-        }
-        if (!order.sender) {
-          throw new Error(`Sender for order ${orderId} does not exist`);
-        }
-        await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
-        console.log(`Arrival notification sent to sender for order ${orderId}`);
-
-        await this.orderStatusHistoryService.createOrderStatusHistory({ order, hasArrived: true });
-        // Notify first receiver (if any)
-        const firstStop = order.stops?.[0];
-        console.log("First stop for order:", firstStop);
-        if (firstStop && firstStop.receiver) {
-          await this.notifyReceiver(orderId, driverId, firstStop.id, true);
-        }
-      } catch (error) {
-        console.error("Error sending arrival notification to sender:", error.message);
-        throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+      if (cancellationRequest.status == CancelRequestStatus.APPROVED) {
+        throw new Error(`Cancellation request with ID ${cancelRequestId} has already been approved`);
       }
-    }
-
-    async notifyReceiver(orderId: string, driverId: string, stopId: string, atPickup: boolean = false) {
-      try {
-        const order = await this.orderRepository.findOne({
-          where: { id: orderId },
-          relations: ["driver", "stops", "stops.receiver"],
-          order: { stops: { sequence: "ASC" } }
-        });
-        if (!order) {
-          throw new Error(`Order with ID ${orderId} not found`);
-        }
-        if (order.driver?.id !== driverId) {
-          throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
-        }
-        // ✅ Find the specific stop
-        const stop = order.stops.find((s) => s.id === stopId);
-        if (!stop) {
-          throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
-        }
-      
-        if (!stop.receiver) {
-          throw new Error(`Receiver for stop ${stopId} in order ${orderId} not found`);
-        }
-      
-        if (!stop.receiver.phoneNumber) {
-          console.warn(`Receiver for stop ${stopId} does not have a phone number`);
-        }
-        await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence, atPickup);
-        console.log(`Arrival notification sent to receiver for order ${orderId}`);
-
-        // Only add order status history for the intended receiver (not for recursive calls)
-        if (!atPickup) {
-          await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, hasArrived: true });
-        }
-
-        // Notify next receiver in sequence, if any (but do NOT add status history for them)
-        if (!atPickup) {
-          const nextStopIndex = order.stops.findIndex((s) => s.id === stopId) + 1;
-          const nextStop = order.stops[nextStopIndex];
-          if (nextStop && nextStop.receiver) {
-            await this.notifyReceiver(orderId, driverId, nextStop.id, true);
-          }
-        }
-      } catch (error) {
-        console.error("Error sending arrival notification to sender:", error.message);
-        throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+      if (cancellationRequest.status == CancelRequestStatus.DECLINED) {
+        throw new Error(`Cancellation request with ID ${cancelRequestId} has already been declined`);
       }
+      if (action === "APPROVE") {
+        // Approve the cancellation
+        const driverCurrentLocation = getCurrentLocationOfDriver(cancellationRequest.driver.id);
+        console.log(`Driver current location when cancellation request approved for driver ${cancellationRequest.driver.id}:`, driverCurrentLocation);
+        cancellationRequest.status = CancelRequestStatus.APPROVED;
+        await queryRunner.manager.save(cancellationRequest);
+        const order = cancellationRequest.order;
+        order.status = OrderStatus.PENDING;
+        await this.driverService.updateDriverStatus(order.driver.id, DriverStatus.ACTIVE, queryRunner)
+        broadcastDriverStatusUpdate(order.driver.id, DriverStatus.ACTIVE)
+        order.driver = null;
+        await queryRunner.manager.save(order);
+        await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
+        resetNotifiedDrivers(order.id);
+        await emitOrderToDrivers(order, driverCurrentLocation);
+        broadcastOrderUpdate(order.id, order.status); // Notify all connected clients about the order status update
+      } else if (action === "DECLINE") {
+        // Decline the cancellation
+        cancellationRequest.status = CancelRequestStatus.DECLINED;
+        await queryRunner.manager.save(cancellationRequest);
+      } else {
+        throw new Error(`Invalid action: ${action}`);
+      }
+      await queryRunner.commitTransaction();
+      emitOrderCancellationUpdate(cancellationRequest.driver.id, cancellationRequest.order.id, cancellationRequest.status);
+      console.log(`Order cancellation request ${cancelRequestId} processed with action: ${action}`);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error("Error processing order cancellation:", error.message);
+      throw new Error(`Could not process order cancellation: ${error.message}`);
     }
-
-    async saveOrder(order: Order) {
-      return this.orderRepository.save(order);
+    finally {
+      await queryRunner.release();
     }
-
-    async updateOrder(orderId: string) {
-      const order = await this.orderRepository.findOne({ where: { id: orderId } });
+  }
+  async notifySender(orderId: string, driverId: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["driver", "sender", "stops", "stops.receiver"],
+        order: { stops: { sequence: "ASC" } }
+      });
       if (!order) {
         throw new Error(`Order with ID ${orderId} not found`);
       }
+      if (order.driver?.id !== driverId) {
+        throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+      }
+      if (!order.sender) {
+        throw new Error(`Sender for order ${orderId} does not exist`);
+      }
+      await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+      console.log(`Arrival notification sent to sender for order ${orderId}`);
 
-      order.isViewed = true;
-      order.viewedAt = new Date();
-      return this.orderRepository.save(order);
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, hasArrived: true });
+      // Notify first receiver (if any)
+      const firstStop = order.stops?.[0];
+      console.log("First stop for order:", firstStop);
+      if (firstStop && firstStop.receiver) {
+        await this.notifyReceiver(orderId, driverId, firstStop.id, true);
+      }
+    } catch (error) {
+      console.error("Error sending arrival notification to sender:", error.message);
+      throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+    }
+  }
+
+  async notifyReceiver(orderId: string, driverId: string, stopId: string, atPickup: boolean = false) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId },
+        relations: ["driver", "stops", "stops.receiver"],
+        order: { stops: { sequence: "ASC" } }
+      });
+      if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+      }
+      if (order.driver?.id !== driverId) {
+        throw new Error(`Driver with ID ${driverId} is not assigned to this order`);
+      }
+      // ✅ Find the specific stop
+      const stop = order.stops.find((s) => s.id === stopId);
+      if (!stop) {
+        throw new Error(`Stop with ID ${stopId} not found in order ${orderId}`);
+      }
+
+      if (!stop.receiver) {
+        throw new Error(`Receiver for stop ${stopId} in order ${orderId} not found`);
+      }
+
+      if (!stop.receiver.phoneNumber) {
+        console.warn(`Receiver for stop ${stopId} does not have a phone number`);
+      }
+      await sendArrivalNotification(stop.receiver.phoneNumber, stop.receiver.email, order.orderNo, order.driver.name, order.driver.phoneNumber, stop.sequence, atPickup);
+      console.log(`Arrival notification sent to receiver for order ${orderId}`);
+
+      // Only add order status history for the intended receiver (not for recursive calls)
+      if (!atPickup) {
+        await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId: stop.id, hasArrived: true });
+      }
+
+      // Notify next receiver in sequence, if any (but do NOT add status history for them)
+      if (!atPickup) {
+        const nextStopIndex = order.stops.findIndex((s) => s.id === stopId) + 1;
+        const nextStop = order.stops[nextStopIndex];
+        if (nextStop && nextStop.receiver) {
+          await this.notifyReceiver(orderId, driverId, nextStop.id, true);
+        }
+      }
+    } catch (error) {
+      console.error("Error sending arrival notification to sender:", error.message);
+      throw new Error(`Could not send arrival notification to sender: ${error.message}`);
+    }
+  }
+
+  async saveOrder(order: Order) {
+    return this.orderRepository.save(order);
+  }
+
+  async updateOrder(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new Error(`Order with ID ${orderId} not found`);
     }
 
-    async getAllOrderStatuses(userId: string) {
-      const orders =  await this.orderRepository.find({
-        where: { createdBy: { id: userId } },
-        select: ["id", "status", "createdAt"],
-        relations: ["driver"],
+    order.isViewed = true;
+    order.viewedAt = new Date();
+    return this.orderRepository.save(order);
+  }
+
+  async getAllOrderStatuses(userId: string) {
+    const orders = await this.orderRepository.find({
+      where: { createdBy: { id: userId } },
+      select: ["id", "status", "createdAt"],
+      relations: ["driver"],
+    });
+    console.log("Fetched orders for user:", JSON.stringify(orders, null, 2));
+    return orders.map(order => ({
+      id: order.id,
+      orderNo: order.orderNo,
+      status: order.status,
+      driver: order.driver ? {
+        name: order.driver.name,
+        phoneNumber: order.driver.phoneNumber,
+        profilePicture: generatePhotoLink(order.driver.profilePicture),
+        qid: order.driver.qid,
+        licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
+        licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,
+      } : null,
+    }));
+  }
+
+  async getOrderStatus(userId: string, orderId?: string) {
+    try {
+      if (!orderId) {
+        throw new Error("Either orderId or orderNo must be provided");
+      }
+      const order = await this.orderRepository.findOne({
+        where: {
+          stops: {
+            clientStopId: orderId
+          },
+          createdBy: { id: userId }
+        },
+        select: ["id", "status"],
+        relations: ["driver", "stops"],
       });
-      console.log("Fetched orders for user:", JSON.stringify(orders, null, 2));
-      return orders.map(order => ({
-        id: order.id,
-        orderNo: order.orderNo,
-        status: order.status,
-        driver: order.driver ? { 
-          name: order.driver.name, 
+
+      if (!order) {
+        throw new Error(`Order not found for user ${userId}`);
+      }
+      const clientStop = order.stops.find(stop => stop.clientStopId === orderId);
+      if (clientStop.status === OrderStatus.COMPLETED) {
+        order.status = OrderStatus.COMPLETED;
+      }
+      return {
+        orderId,
+        status: clientStop.isReturned ? "Returned" : order.status,
+        amount: clientStop.totalPrice,
+        deliveryFee: clientStop.deliveryFee,
+        driver: order.driver ? {
+          name: order.driver.name,
           phoneNumber: order.driver.phoneNumber,
           profilePicture: generatePhotoLink(order.driver.profilePicture),
           qid: order.driver.qid,
           licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
-          licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,  
+          licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,
+          currentLocation: getCurrentLocationOfDriver(order.driver.id)
         } : null,
-      }) );
-    }
-
-    async getOrderStatus(userId: string, orderId?: string) {
-      try {
-          if (!orderId) {
-            throw new Error("Either orderId or orderNo must be provided");
-          }
-          const order =  await this.orderRepository.findOne({
-            where: { 
-              stops: {
-                clientStopId: orderId
-              }, 
-              createdBy: { id: userId } 
-            },
-            select: ["id", "status"],
-            relations: ["driver", "stops"],
-          });   
-          
-          if (!order) {
-            throw new Error(`Order not found for user ${userId}`);
-          }
-          const clientStop = order.stops.find(stop => stop.clientStopId === orderId);
-          if (clientStop.status === OrderStatus.COMPLETED) {
-            order.status = OrderStatus.COMPLETED;
-          }
-          return {
-            orderId,
-            status: clientStop.isReturned ? "Returned" : order.status,
-            amount: clientStop.totalPrice,
-            deliveryFee: clientStop.deliveryFee,
-            driver: order.driver ? { 
-              name: order.driver.name, 
-              phoneNumber: order.driver.phoneNumber,
-              profilePicture: generatePhotoLink(order.driver.profilePicture),
-              qid: order.driver.qid,
-              licenseFront: order.driver.licenseFront ? generatePhotoLink(order.driver.licenseFront) : null,
-              licenseBack: order.driver.licenseBack ? generatePhotoLink(order.driver.licenseBack) : null,
-              currentLocation: getCurrentLocationOfDriver(order.driver.id)
-            } : null,
-          };
-      } catch (error) {
-        console.error("Error fetching order status:", error.message);
-        throw new Error(`Could not fetch order status: ${error.message}`);
+      };
+    } catch (error) {
+      console.error("Error fetching order status:", error.message);
+      throw new Error(`Could not fetch order status: ${error.message}`);
     }
   }
 
@@ -1186,9 +1156,9 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }
 
       const cancellationRequest = this.orderCancellationRequestRepository.create({
-          order: { id: orderId } as any,
-          status: CancelRequestStatus.PENDING,
-          reason
+        order: { id: orderId } as any,
+        status: CancelRequestStatus.PENDING,
+        reason
       });
 
       const cancelRequest = await this.orderCancellationRequestRepository.save(cancellationRequest);
@@ -1200,11 +1170,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
   async adminApproveClientCancellation(orderId: string, cancellationRequestId: string, status: CancelRequestStatus, reason?: string) {
     const order = await this.orderRepository.findOne({
-      where: { 
-        id: orderId, 
-        cancellationRequests: 
-        { id: cancellationRequestId }
-       },
+      where: {
+        id: orderId,
+        cancellationRequests:
+          { id: cancellationRequestId }
+      },
       relations: ["driver"],
     });
 
@@ -1235,7 +1205,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     return;
 
   }
-  
+
   // Check if a given order belongs to the user
   async isOrderOwnedByUser(orderId: string, userId: string): Promise<Order | null> {
     const order = await this.orderRepository.findOne({
@@ -1296,10 +1266,10 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         avgDistancePerOrder: parseFloat(ordersReport.avgDistance) || null,
         avgDurationMinutesPerOrder: parseFloat(ordersReport.avgDurationMinutes) || null,
       };
-      } catch (error) {
-        console.error("Error generating orders report:", error.message);
-        throw new Error(`Could not generate orders report: ${error.message}`);
-      }
+    } catch (error) {
+      console.error("Error generating orders report:", error.message);
+      throw new Error(`Could not generate orders report: ${error.message}`);
+    }
   }
 
   async getCurrentActiveStop(orderId: string) {
@@ -1347,70 +1317,70 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
               phone: `+${getCountryCallingCode(getCountryIsoCode(orderData.fromAddress.country) as CountryCode)} ${orderData.senderPhoneNumber}`,
               companyName: orderData.senderName,
               fullName: orderData.senderName,
-          }
-        },
-        receiverDetails: {
-          postalAddress: {
-            postalCode: "",
-            cityName: orderData.stops[0].toAddress.city,
-            countryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
-            addressLine1: formatAddressSingleLine(orderData.stops[0].toAddress),
+            }
           },
-          contactInformation: {
-            
-            phone: `+${getCountryCallingCode(getCountryIsoCode(orderData.stops[0].toAddress.country) as CountryCode)} ${orderData.stops[0].receiverPhoneNumber}`,
-            companyName: orderData.stops[0].receiverName,
-            fullName: orderData.stops[0].receiverName,
-        }
-      },
-    },
-    content: {
-      packages: [
-        { 
-          weight: orderData.shipment.weight,  // Weight in KG
-          dimensions: {
-            length: orderData.shipment.length,
-            width: orderData.shipment.width,
-            height: orderData.shipment.height,
+          receiverDetails: {
+            postalAddress: {
+              postalCode: "",
+              cityName: orderData.stops[0].toAddress.city,
+              countryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
+              addressLine1: formatAddressSingleLine(orderData.stops[0].toAddress),
+            },
+            contactInformation: {
+
+              phone: `+${getCountryCallingCode(getCountryIsoCode(orderData.stops[0].toAddress.country) as CountryCode)} ${orderData.stops[0].receiverPhoneNumber}`,
+              companyName: orderData.stops[0].receiverName,
+              fullName: orderData.stops[0].receiverName,
+            }
+          },
+        },
+        content: {
+          packages: [
+            {
+              weight: orderData.shipment.weight,  // Weight in KG
+              dimensions: {
+                length: orderData.shipment.length,
+                width: orderData.shipment.width,
+                height: orderData.shipment.height,
+              }
+            }
+          ],
+          description: orderData.shipment.description,
+          unitOfMeasurement: "metric",
+          declaredValue: orderData.shipment.totalValue,
+          declaredValueCurrency: "USD",
+          isCustomsDeclarable: true,
+          incoterm: orderData.shipment.incoterm || "DAF",
+          exportDeclaration: {
+            lineItems: orderData.shipment.lineItems,
+            invoice: {
+              number: orderData.shipment.invoiceNumber || "INV-" + Math.floor(Math.random() * 1000000),
+              date: orderData.shipment.invoiceDate || new Date().toISOString().split('T')[0],
+            }
           }
         }
-      ],
-      description: orderData.shipment.description,
-      unitOfMeasurement: "metric",
-      declaredValue: orderData.shipment.totalValue,
-      declaredValueCurrency: "USD",
-      isCustomsDeclarable: true,
-      incoterm: orderData.shipment.incoterm || "DAF",
-      exportDeclaration: {
-        lineItems: orderData.shipment.lineItems,
-        invoice: {
-          number: orderData.shipment.invoiceNumber || "INV-" + Math.floor(Math.random() * 1000000),
-          date: orderData.shipment.invoiceDate || new Date().toISOString().split('T')[0],
-        }
-      }
-    }
 
-    
-  };
-    console.log("phone number from:", data.customerDetails.shipperDetails.contactInformation.phone)
-    console.log("phone number to:", data.customerDetails.receiverDetails.contactInformation.phone)
-    const config = {
-      auth: {
-        username: env.DHL.API_KEY,
-        password: env.DHL.API_SECRET,
-      },
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    console.log("url:", env.DHL.DOMAIN + '/shipments');
-    const response = await axios.post(env.DHL.DOMAIN + '/shipments', data, config);
-    if (response.data.status && response.data.status.code !== "200") {
-      console.error("DHL API error:", response.data);
-      throw new Error(`DHL API error: ${response.data.detail}`);
+
+      };
+      console.log("phone number from:", data.customerDetails.shipperDetails.contactInformation.phone)
+      console.log("phone number to:", data.customerDetails.receiverDetails.contactInformation.phone)
+      const config = {
+        auth: {
+          username: env.DHL.API_KEY,
+          password: env.DHL.API_SECRET,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+      console.log("url:", env.DHL.DOMAIN + '/shipments');
+      const response = await axios.post(env.DHL.DOMAIN + '/shipments', data, config);
+      if (response.data.status && response.data.status.code !== "200") {
+        console.error("DHL API error:", response.data);
+        throw new Error(`DHL API error: ${response.data.detail}`);
+      }
+      return response.data.shipmentTrackingNumber;
     }
-    return response.data.shipmentTrackingNumber;
-  }
     catch (error) {
       console.error("Error creating DHL shipment:", error.message);
       console.error("Full error:", error.response.data);
@@ -1420,28 +1390,28 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
   async getOrdersDashboard(userId: string, serviceType?: string) {
     try {
-        const dashboardQuery = this.orderRepository
-          .createQueryBuilder("order")
-          .innerJoin("order.serviceSubcategory", "subcategory")
-          .select("order.status", "status")
-          .addSelect("COUNT(order.id)", "count")
+      const dashboardQuery = this.orderRepository
+        .createQueryBuilder("order")
+        .innerJoin("order.serviceSubcategory", "subcategory")
+        .select("order.status", "status")
+        .addSelect("COUNT(order.id)", "count")
 
-        if (userId !== "admin") {
-          dashboardQuery.andWhere("order.createdById = :userId", {
-            userId
-          })
-        }
-
-        if (serviceType) {
-          dashboardQuery.andWhere("subcategory.name = :serviceType", {
-            serviceType,
-          });
-        }
-
-        dashboardQuery.groupBy("order.status")
-        const dashboard = await dashboardQuery.getRawMany();
-        return dashboard;
+      if (userId !== "admin") {
+        dashboardQuery.andWhere("order.createdById = :userId", {
+          userId
+        })
       }
+
+      if (serviceType) {
+        dashboardQuery.andWhere("subcategory.name = :serviceType", {
+          serviceType,
+        });
+      }
+
+      dashboardQuery.groupBy("order.status")
+      const dashboard = await dashboardQuery.getRawMany();
+      return dashboard;
+    }
     catch (err) {
       console.error(err)
       throw new Error(`Couldn't fetch orders dashboard: ${err.message}`)
@@ -1453,7 +1423,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       const order = await this.orderRepository.findOne({
         where: {
           orderNo,
-          createdBy: {id: userId}
+          createdBy: { id: userId }
         },
         relations: ["driver"]
       })
@@ -1492,11 +1462,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           status: In([OrderStatus.ASSIGNED, OrderStatus.ACTIVE, OrderStatus.EN_ROUTE_TO_PICKUP])
         },
         relations: [
-          "fromAddress", "sender", "stops", 
+          "fromAddress", "sender", "stops",
           "stops.toAddress", "stops.receiver",
           "orderStatusHistory", "orderStatusHistory.orderStop"
         ]
-      }) 
+      })
       console.log(`current active order: ${JSON.stringify(activeOrder, null, 2)}`)
       if (!activeOrder) {
         return null;
@@ -1553,21 +1523,21 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
         return {
           orderNo: order.orderNo,
           pickUpDate: order.pickUpDate.toLocaleString("en-US", {
-                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-                        day: "numeric",
-                        month: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "numeric"
-                      }),
+            timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+            day: "numeric",
+            month: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "numeric"
+          }),
           completedAt: order.completedAt.toLocaleString("en-US", {
-                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-                        day: "numeric",
-                        month: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "numeric"
-                      }),
+            timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+            day: "numeric",
+            month: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "numeric"
+          }),
           driverName: order.driver?.name || 'N/A',
           vehicleType: order.vehicleType || 'N/A',
           logisticsCompany: order.driver?.businessOwner ? order.driver.businessOwner.name : 'Freelance',
@@ -1580,7 +1550,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           paymentMethod: order.stops.some(stop => stop.totalPrice) ?
             //check if at least one stop has paymentMethod then get unique payment methods from all stops, else use order.paymentMethod
             (order.stops.some(stop => stop.paymentMethod) ?
-              Array.from(new Set(order.stops.map(stop => stop.paymentMethod).filter(method => method !== null))) 
+              Array.from(new Set(order.stops.map(stop => stop.paymentMethod).filter(method => method !== null)))
               : [order.paymentMethod])
             : [order.paymentMethod],
           paymentStatus: 'Completed'
@@ -1603,8 +1573,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
   async getOrdersSummary(driverId: string, serviceType?: ServiceSubcategoryName) {
     try {
-     // i want to get driver cash balance, driver income from driver table
-     //  then get total number of completed orders and their complete order details
+      // i want to get driver cash balance, driver income from driver table
+      //  then get total number of completed orders and their complete order details
       const completedOrders = await this.orderRepository.find({
         where: {
           driver: { id: driverId },
@@ -1612,11 +1582,11 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           status: OrderStatus.COMPLETED
         },
         relations: [
-          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", 
+          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory",
           "orderStatusHistory.orderStop", "orderStatusHistory.driver",
           "driver", "driver.vehicle", "shipment", "createdBy",
           "cancellationRequests", "cancellationRequests.driver",
-          "stops", "stops.receiver", "stops.toAddress", 
+          "stops", "stops.receiver", "stops.toAddress",
         ],
         order: {
           createdAt: "DESC",
@@ -1639,7 +1609,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       });
 
       console.log(`Total paid amount for driver ${driverId}: ${totalPaidAmount}`);
-      
+
       return {
         cashBalance: Number(driver.cashBalance),
         income: Number(driver.income),
@@ -1655,8 +1625,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       console.error(err.message)
       throw new Error(`Error getting orders summary: ${err.message}`)
     }
-  } 
-  
+  }
+
   async getUnassignedOrders(serviceType?: ServiceSubcategoryName, thresholdMinutes?: number) {
     try {
       const now = new Date();
@@ -1670,7 +1640,7 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
           relations: ["fromAddress", "sender", "stops", "stops.toAddress", "stops.receiver", "serviceSubcategory"],
           order: { createdAt: "ASC" }
         });
-      
+
       return await Promise.all(
         unassignedOrders.map(order => toOrderResponseDto(order))
       );
@@ -1719,8 +1689,8 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
 
       stop.status = OrderStatus.RETURNING;
       await this.orderStopRepository.save(stop);
-      
-      await this.orderStatusHistoryService.createOrderStatusHistory({order, stopId, returnedStartedAt: new Date()});
+
+      await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId, returnedStartedAt: new Date() });
     } catch (error) {
       console.error("Error in order service starting return:", error.message);
       throw new Error(`Error starting return: ${error.message}`);
@@ -1750,13 +1720,13 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       if (stop.status == OrderStatus.COMPLETED) {
         throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
       }
-      
+
       stop.status = OrderStatus.COMPLETED;
       stop.proofOfReturn = proofOfReturnUrl.split("image/upload/")[1];
       stop.isReturned = true;
       await queryRunner.manager.save(OrderStop, stop);
       console.log(`Return completed for stop ${stopId} in order ${orderId} by driver ${driverId}`);
-      await this.orderStatusHistoryService.updateOrderStatusHistory({order, stopId, queryRunner, returnedCompletedAt: new Date()});
+      await this.orderStatusHistoryService.updateOrderStatusHistory({ order, stopId, queryRunner, returnedCompletedAt: new Date() });
       await this.finalizeOrderCompletion(order, driverId, stop, queryRunner, true);
       await queryRunner.commitTransaction();
     } catch (error) {
@@ -1801,10 +1771,10 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
       }
       emitOrderStopUpdate(orderId, order.driver?.id, stopId, stop.status);
       await this.orderStatusHistoryService.createOrderStatusHistory(
-        { 
-          order, stopId, cancellationReason: reason, 
-          triggeredByAdmin: true, returnedStartedAt, 
-          event: action === "CANCEL_STOP" ? OrderEventType.STOP_CANCELED : OrderEventType.STOP_RETURNED 
+        {
+          order, stopId, cancellationReason: reason,
+          triggeredByAdmin: true, returnedStartedAt,
+          event: action === "CANCEL_STOP" ? OrderEventType.STOP_CANCELED : OrderEventType.STOP_RETURNED
         }
       );
       await this.orderStopRepository.save(stop);
@@ -1873,39 +1843,57 @@ async completeOrder(orderId: string, driverId: string, stopId: string, proofUrl:
     }
   }
   async getCompletedOrdersByDateRange(
-  startDate: Date,
-  endDate: Date,
-  businessIds?: string[],
-  driverIds?: string[]
-) : Promise<OrderResponseDto[]> {
-  try {
-    const whereClause: any = {
-      status: OrderStatus.COMPLETED,
-      completedAt: Between(startDate, endDate)
-    };
-    if (driverIds && driverIds.length > 0) {
-      whereClause.driver = { id: In(driverIds) };
-    }
-    if (businessIds && businessIds.length > 0) {
-      whereClause.createdBy = { id: In(businessIds) };
-    }
-    const completedOrders = await this.orderRepository.find({
-      where: whereClause,
-      relations: [
-        "createdBy", // business/user who created the order
-        "driver",    // driver assigned to the order
-        "driver.businessOwner"
-      ],
-      order: {
-        completedAt: "DESC"
+    startDate: Date,
+    endDate: Date,
+    businessIds?: string[],
+    driverIds?: string[],
+    isLate: boolean = false,
+    fromStatus?: string,
+    toStatus?: string,
+    thresholdMinutes?: number,
+
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ data: OrderResponseDto[]; total: number; page: number; limit: number }> {
+    try {
+      const whereClause: any = {
+        status: OrderStatus.COMPLETED,
+      };
+      if (startDate && endDate) {
+        whereClause.completedAt = Between(startDate, endDate);
       }
-    });
-     return await Promise.all(
-      completedOrders.map(order => toOrderResponseDto(order))
-    );  } catch (error) {
-    console.error("Error fetching completed orders by date range:", error.message);
-    throw new Error(`Could not fetch completed orders: ${error.message}`);
+      if (driverIds && driverIds.length > 0) {
+        whereClause.driver = { id: In(driverIds) };
+      }
+      if (businessIds && businessIds.length > 0) {
+        whereClause.createdBy = { id: In(businessIds) };
+      }
+
+      let [completedOrders, total] = await this.orderRepository.findAndCount({
+        where: whereClause,
+        relations: [
+          "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory", "shipment",
+          "orderStatusHistory.orderStop", "orderStatusHistory.driver",
+          "stops", "stops.toAddress", "stops.receiver", "driver", "driver.vehicle", "driver.businessOwner", "createdBy"
+        ],
+        order: {
+          completedAt: "DESC"
+        },
+        skip: (page) * limit,
+        take: limit
+      });
+      completedOrders = isLate ? setIslatestOrderStatus(completedOrders, isLate) : completedOrders;
+      completedOrders = intraStatusDuration(completedOrders, fromStatus, toStatus, thresholdMinutes);
+      return {
+        data: await Promise.all(completedOrders.map(order => toOrderResponseDto(order))),
+        total,
+        page,
+        limit
+      };
+    } catch (error) {
+      console.error("Error fetching completed orders by date range:", error.message);
+      throw new Error(`Could not fetch completed orders: ${error.message}`);
+    }
   }
-}
 
 }
