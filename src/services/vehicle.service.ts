@@ -87,7 +87,8 @@ export default class VehicleService {
             vehicleType: vehicle.name,
             serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
             distance,
-            lifters
+            lifters,
+            userId
           });
           const afterPromoPricing = userId
             ? await this.promoCodeService.applyPromosToOrder(
