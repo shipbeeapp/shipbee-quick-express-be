@@ -122,20 +122,20 @@ export default class PricingService {
 
     getPersonalQuickWhere(getPricingDto: GetPricingDTO) {
         return [
-          {
-            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-            vehicleType: getPricingDto.vehicleType,
-            minDistance: LessThanOrEqual(getPricingDto.distance),
-            maxDistance: MoreThan(getPricingDto.distance),
-            isCurrent: true,
-          },
-          {
-            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-            vehicleType: getPricingDto.vehicleType,
-            minDistance: LessThanOrEqual(getPricingDto.distance),
-            maxDistance: null,
-            isCurrent: true,
-          },
+            {
+                serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                vehicleType: getPricingDto.vehicleType,
+                minDistance: LessThanOrEqual(getPricingDto.distance),
+                maxDistance: MoreThan(getPricingDto.distance),
+                isCurrent: true,
+            },
+            {
+                serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                vehicleType: getPricingDto.vehicleType,
+                minDistance: LessThanOrEqual(getPricingDto.distance),
+                maxDistance: null,
+                isCurrent: true,
+            },
         ];
     }
 
@@ -143,17 +143,17 @@ export default class PricingService {
         if (!getPricingDto.userId) return null;
 
         return this.userPricingRepository.findOne({
-          where: this.getPersonalQuickWhere(getPricingDto).map(where => ({
-            ...where,
-            userId: getPricingDto.userId,
-          })),
-          order: { maxDistance: "DESC" },
+            where: this.getPersonalQuickWhere(getPricingDto).map(where => ({
+                ...where,
+                userId: getPricingDto.userId,
+            })),
+            order: { maxDistance: "DESC" },
         });
     }
 
 
     async calculatePricing(getPricingDTO: GetPricingDTO) {
-        try {    
+        try {
             if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.PERSONAL_QUICK) {
                 const basePricing = await this.pricingRepository.findOne({
                     where: this.getPersonalQuickWhere(getPricingDTO),
@@ -167,33 +167,34 @@ export default class PricingService {
                 console.log("client pricing: ", JSON.stringify(clientPricing, null, 2))
                 const currentPricing = clientPricing ?? basePricing
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
-                  return {
-                    totalCost: Number(currentPricing.baseCost) + Number(getPricingDTO.distance) * Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
-                  } 
+                    return {
+                        totalCost: Number(currentPricing.baseCost) + Number(getPricingDTO.distance) * Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    }
                 }
-            
+
                 return {
                     totalCost: (
-                  Number(currentPricing.baseCost) +
-                  (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
-                    Number(currentPricing.additionalPerKm) + 
-                    (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
-                )};
+                        Number(currentPricing.baseCost) +
+                        (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
+                        Number(currentPricing.additionalPerKm) +
+                        (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    )
+                };
             } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
                 if (getPricingDTO.shippingCompany === 'DHL') {
                     const params = {
-                      accountNumber: env.DHL.ACCOUNT_NUMBER,
-                      originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
-                      originCityName: getPricingDTO.fromCity,
-                      destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
-                      destinationCityName: getPricingDTO.toCity,
-                      weight: getPricingDTO.weight,
-                      length: getPricingDTO.length,
-                      width: getPricingDTO.width,
-                      height: getPricingDTO.height,
-                      plannedShippingDate: getPricingDTO.plannedShippingDate,
-                      isCustomsDeclarable: true,
-                      unitOfMeasurement: "metric",
+                        accountNumber: env.DHL.ACCOUNT_NUMBER,
+                        originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+                        originCityName: getPricingDTO.fromCity,
+                        destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+                        destinationCityName: getPricingDTO.toCity,
+                        weight: getPricingDTO.weight,
+                        length: getPricingDTO.length,
+                        width: getPricingDTO.width,
+                        height: getPricingDTO.height,
+                        plannedShippingDate: getPricingDTO.plannedShippingDate,
+                        isCustomsDeclarable: true,
+                        unitOfMeasurement: "metric",
                     };
                     console.log('shipping date: ', getPricingDTO.plannedShippingDate);
 
@@ -208,7 +209,14 @@ export default class PricingService {
                         totalCost: Number(cost),
                         estimatedDeliveryDays: response.data.products[0].deliveryCapabilities.totalTransitDays
                     };
-                } else {
+                } else if (getPricingDTO.shippingCompany === 'Aramex') {
+                    const aramexPricing = await this.getAramexPricing(getPricingDTO);
+                    if(!aramexPricing.totalCost) {
+                        throw new Error(`Aramex error: ${aramexPricing.message}`);
+                    }
+                    return aramexPricing;
+                }
+                else {
                     const currentPricing = await this.pricingRepository.findOne({
                         where: {
                             serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
@@ -230,15 +238,120 @@ export default class PricingService {
                 }
             }
             else {
-                throw new Error('Unsupported service subcategory'); 
+                throw new Error('Unsupported service subcategory');
             }
         } catch (error) {
             console.error('Error fetching current pricing:', error);
             console.error(error.response?.data?.message);
             throw new Error(`Error fetching current pricing: ${error.message} ${error.response?.data?.detail || ''}`.trim());
         }
- }
- 
+    }
+
+    public async getAramexPricing(getPricingDTO: GetPricingDTO) {
+        const wsdlUrl = env.ARAMEX.API_URL;
+
+        const client = await soap.createClientAsync(wsdlUrl);
+
+        // 🔥 Override endpoint
+        client.setEndpoint(
+            'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc'
+        );
+        const isDomestic = getCountryIsoCode(getPricingDTO.fromCountry) === getCountryIsoCode(getPricingDTO.toCountry);
+        const request = {
+            ClientInfo: {
+                UserName: env.ARAMEX.USERNAME,
+                Password: env.ARAMEX.PASSWORD,
+                Version: 'v1.0',
+                AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+                AccountPin: env.ARAMEX.ACCOUNT_PIN,
+                AccountEntity: env.ARAMEX.ENTITY,
+                AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
+            },
+            OriginAddress: {
+                Line1: 'Some street or area',
+                Line2: '',        // if not used, empty string
+                Line3: '',        // if not used, empty string
+                City: getPricingDTO.fromCity,
+                StateOrProvinceCode: '', // optional
+                PostCode: '',           // optional
+                CountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+            },
+            DestinationAddress: {
+                Line1: 'Some street or area',
+                Line2: '',        // if not used, empty string
+                Line3: '',        // if not used, empty string
+                City: getPricingDTO.toCity,
+                StateOrProvinceCode: '', // optional
+                PostCode: '',           // optional
+                CountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+            },
+            ShipmentDetails: {
+                Dimensions: {
+                    Length: getPricingDTO.length,
+                    Width: getPricingDTO.width,
+                    Height: getPricingDTO.height,
+                    Unit: 'CM',
+                },
+                ActualWeight: {
+                    Unit: 'KG',
+                    Value: getPricingDTO.weight,
+                },
+                ChargeableWeight: {
+                    Unit: 'KG',
+                    Value: getPricingDTO.weight,
+                },
+                DescriptionOfGoods: 'Documents',
+                GoodsOriginCountry: getCountryIsoCode(getPricingDTO.fromCountry),
+                NumberOfPieces: 1,
+                ProductGroup: isDomestic ? 'DOM' : 'EXP',
+                ProductType: isDomestic ? 'SMP' : 'PPX',
+                PaymentType: 'P', // P for prepaid, R for receiver
+                PaymentOptions: 'Account',
+                // Optional fields can be included if needed
+                CustomsValueAmount: { CurrencyCode: 'QAR', Value: 100 },
+                CashOnDeliveryAmount: { CurrencyCode: 'QAR', Value: 0 },
+                InsuranceAmount: { CurrencyCode: 'QAR', Value: 0 },
+                CashAdditionalAmount: { CurrencyCode: 'QAR', Value: 0 },
+                CollectAmount: { CurrencyCode: 'QAR', Value: 0 },
+                Services: '',
+                Items: {
+                    ShipmentItem: [
+                        {
+                            PackageType: 'Box',
+                            Quantity: 1,
+                            Weight: { Unit: 'KG', Value: 2 },
+                            Comments: 'Handle with care',
+                            Reference: 'Ref001',
+                        },
+                    ],
+                },
+            },
+        };
+        console.log({ Destination: request.DestinationAddress });
+        console.log({ original: request.OriginAddress });
+
+
+        const [result] = await client.CalculateRateAsync(request);
+        console.log('Rate response:', result);
+        console.log('Notification:', JSON.stringify(result.Notifications, null, 2));
+        if (result.HasErrors) {
+            const errorMessages = result.Notifications?.Notification?.map((n: any) => n.Message).join('; ') || 'Unknown error';
+            return {
+                carrier: 'Aramex',
+                totalCost: null,
+                message: errorMessages
+            };
+
+        }
+        else {
+            return {
+                carrier: 'Aramex',
+                totalCost: Number(result.TotalAmount.Value),
+                estimatedDeliveryDays: result.DeliveryTime
+            };
+        }
+    }
+
     async getAllExpressPricings(getPricingDTO: GetPricingDTO) {
         try {
             const pricingList = [];
@@ -263,15 +376,15 @@ export default class PricingService {
                 password: env.DHL.API_SECRET,
             }
             const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
-            console.log('DHL response data:', response.data.products);
+            // console.log('DHL response data:', response.data.products);
             const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
-            const estimatedDeliveryDays =  response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
+            const estimatedDeliveryDays = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
             console.log('DHL pricing:', cost, " estimated days: ", estimatedDeliveryDays);
             pricingList.push({
                 carrier: 'DHL',
                 totalCost: Number(cost),
                 estimatedDeliveryDays
-            }); 
+            });
 
             //Qatar Post
             const currentPricing = await this.pricingRepository.findOne({
@@ -297,100 +410,13 @@ export default class PricingService {
             }
 
             //aramex
-            // const wsdlUrl = env.ARAMEX.API_URL;
-
-            // const client = await soap.createClientAsync(wsdlUrl);
-
-            // // 🔥 Override endpoint
-            // client.setEndpoint(
-            //   'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc'
-            // );
-
-            // const request = {
-            //   ClientInfo: {
-            //     UserName: env.ARAMEX.USERNAME,
-            //     Password: env.ARAMEX.PASSWORD,
-            //     Version: 'v1.0',
-            //     AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
-            //     AccountPin: env.ARAMEX.ACCOUNT_PIN,
-            //     AccountEntity: env.ARAMEX.ENTITY,
-            //     AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
-            //   },
-            //   OriginAddress: {
-            //     Line1: 'Some street or area',
-            //     Line2: '',        // if not used, empty string
-            //     Line3: '',        // if not used, empty string
-            //     City: 'Doha',
-            //     StateOrProvinceCode: '', // optional
-            //     PostCode: '',           // optional
-            //     CountryCode: 'QA',
-            //   },
-            //   DestinationAddress: {
-            //     Line1: 'Some street or area',
-            //     Line2: '',        // if not used, empty string
-            //     Line3: '',        // if not used, empty string
-            //     City: 'Doha',
-            //     StateOrProvinceCode: '', // optional
-            //     PostCode: '',           // optional
-            //     CountryCode: 'QA',
-            //   },
-            //   ShipmentDetails: {
-            //     Dimensions: {
-            //       Length: 10,
-            //       Width: 10,
-            //       Height: 10,
-            //       Unit: 'CM',
-            //     },
-            //     ActualWeight: {
-            //       Unit: 'KG',
-            //       Value: 2,
-            //     },
-            //     ChargeableWeight: {
-            //       Unit: 'KG',
-            //       Value: 2,
-            //     },
-            //     DescriptionOfGoods: 'Documents',
-            //     GoodsOriginCountry: 'QA',
-            //     NumberOfPieces: 1,
-            //     ProductGroup: 'EXP',
-            //     ProductType: 'PPX',
-            //     PaymentType: 'P',
-            //     PaymentOptions: '',
-            //     // Optional fields can be included if needed
-            //     CustomsValueAmount: { CurrencyCode: 'QAR', Value: 100 },
-            //     CashOnDeliveryAmount: { CurrencyCode: 'QAR', Value: 0 },
-            //     InsuranceAmount: { CurrencyCode: 'QAR', Value: 0 },
-            //     CashAdditionalAmount: { CurrencyCode: 'QAR', Value: 0 },
-            //     CollectAmount: { CurrencyCode: 'QAR', Value: 0 },
-            //     Services: '',
-            //     Items: {
-            //       ShipmentItem: [
-            //         {
-            //           PackageType: 'Box',
-            //           Quantity: 1,
-            //           Weight: { Unit: 'KG', Value: 2 },
-            //           Comments: 'Handle with care',
-            //           Reference: 'Ref001',
-            //         },
-            //       ],
-            //     },
-            //   },
-            // };
-        
-            // const [result] = await client.CalculateRateAsync(request);
-        
-            // console.log('Rate response:', result);
-            // console.log('Notification:', JSON.stringify(result.Notifications, null, 2));
-            // pricingList.push({
-            //     carrier: 'Aramex',
-            //     totalCost: Number(result.TotalAmount),
-            //     estimatedDeliveryDays: result.DeliveryTime
-            // });
+            const aramexPricing = await this.getAramexPricing(getPricingDTO);
+            pricingList.push(aramexPricing);
             return pricingList;
         } catch (error) {
             console.error('Error fetching Express pricing:', error);
             throw new Error(`Error fetching Express pricing: ${error.message}`);
-        } 
+        }
     }
 
     async getCurrentShipbeePricings(serviceType: ServiceSubcategoryName = ServiceSubcategoryName.PERSONAL_QUICK) {
@@ -414,34 +440,34 @@ export default class PricingService {
         console.log(vehicleNames)
         const pricings = (await Promise.all(
             vehicleNames.map(async (vehicleName) => {
-              try {
-                console.log(vehicleName)
-                console.log("distance: ", distance)
-                console.log("lifters: ", lifters)
-                if (distance > 15 && vehicleName == VehicleType.MOTORCYCLE) {
-                    console.warn('Max for motorcycle is 15km')
-                }
-                else {
-                const pricing = await this.calculatePricing({
-                  vehicleType: vehicleName,
-                  serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-                  distance,
-                  lifters
-                });
+                try {
+                    console.log(vehicleName)
+                    console.log("distance: ", distance)
+                    console.log("lifters: ", lifters)
+                    if (distance > 15 && vehicleName == VehicleType.MOTORCYCLE) {
+                        console.warn('Max for motorcycle is 15km')
+                    }
+                    else {
+                        const pricing = await this.calculatePricing({
+                            vehicleType: vehicleName,
+                            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                            distance,
+                            lifters
+                        });
 
-                return {
-                    vehicleType: vehicleName,
-                    totalCost: pricing.totalCost
+                        return {
+                            vehicleType: vehicleName,
+                            totalCost: pricing.totalCost
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`No pricing found for ${vehicleName}: ${err.message}`);
                 }
             }
-              } catch (err) {
-                  console.warn(`No pricing found for ${vehicleName}: ${err.message}`);
-              }
-            }
-           )
-         )
+            )
+        )
         ).filter(Boolean);
-     return pricings;
+        return pricings;
     }
 
     async deletePricing(id: string) {

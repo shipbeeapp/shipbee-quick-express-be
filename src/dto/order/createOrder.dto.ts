@@ -89,6 +89,9 @@ class LineItemDto {
   @IsString()
   manufacturerCountry: string;
 
+  @IsString()
+  packageType: string;
+  
   @ValidateNested()
   @Type(() => WeightDto)
   weight: WeightDto;
