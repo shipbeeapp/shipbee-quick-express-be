@@ -58,20 +58,20 @@ export function setIslatestOrderStatus(orders: Order[], isLate: boolean): Order[
 }
 
 export function intraStatusDuration(orders: Order[], fromStatus: string, toStatus: string, thresholdMinutes: number): Order[] {
-  if (fromStatus && toStatus && thresholdMinutes !== undefined) {
-    const filteredOrders = orders.filter(order => {
-      const fromTime = getStatusTimestamp(order, fromStatus);
-      const toTime = getStatusTimestamp(order, toStatus);
 
-      if (!fromTime || !toTime) return false;
 
-      if (toTime < fromTime) return false;
+  const filteredOrders = orders.filter(order => {
+    const fromTime = getStatusTimestamp(order, fromStatus);
+    const toTime = getStatusTimestamp(order, toStatus);
 
-      const duration = getDurationInMinutes(fromTime, toTime);
-      console.log(`Order ID: ${order.id}, Duration from ${fromStatus} to ${toStatus}: ${duration} minutes`);
-      return duration >= thresholdMinutes;
-    });
-    return filteredOrders;
-  }
-  return [];
+    if (!fromTime || !toTime) return false;
+
+    if (toTime < fromTime) return false;
+
+    const duration = getDurationInMinutes(fromTime, toTime);
+    console.log(`Order ID: ${order.id}, Duration from ${fromStatus} to ${toStatus}: ${duration} minutes`);
+    return duration >= thresholdMinutes;
+  });
+  return filteredOrders;
+
 }

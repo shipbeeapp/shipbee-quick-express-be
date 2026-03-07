@@ -354,10 +354,10 @@ export default class OrderService {
       },
     });
 
-
-    const filteredOrders = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
-
-
+    let filteredOrders = orders;
+    if (fromStatus && toStatus && thresholdMinutes !== undefined) {
+      filteredOrders = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
+    }
     return await Promise.all(
       filteredOrders.map(order => toOrderResponseDto(order))
     );
@@ -1883,7 +1883,9 @@ export default class OrderService {
         take: limit
       });
       completedOrders = isLate ? setIslatestOrderStatus(completedOrders, isLate) : completedOrders;
-      completedOrders = intraStatusDuration(completedOrders, fromStatus, toStatus, thresholdMinutes);
+      if (fromStatus && toStatus && thresholdMinutes !== undefined) {
+        completedOrders = intraStatusDuration(completedOrders, fromStatus, toStatus, thresholdMinutes);
+      }
       return {
         data: await Promise.all(completedOrders.map(order => toOrderResponseDto(order))),
         total,
