@@ -13,6 +13,7 @@ export class UserResponseDto {
     hasLoggedInQuick?: boolean;
     hasLoggedInExpress?: boolean;
     monthlyBillingEnabled?: boolean;
+    bankFeePercentage?: number;
 }
 
 export function toUserResponseDto(user: User): UserResponseDto {
@@ -28,5 +29,6 @@ export function toUserResponseDto(user: User): UserResponseDto {
     userResponseDto.hasLoggedInQuick = user.hasLoggedInQuick;
     userResponseDto.hasLoggedInExpress = user.hasLoggedInExpress;
     userResponseDto.monthlyBillingEnabled = user.monthlyBillingEnabled;
+    userResponseDto.bankFeePercentage = user.bankFeePercentage ? Number(user.bankFeePercentage) : 0;
     return userResponseDto;
 }

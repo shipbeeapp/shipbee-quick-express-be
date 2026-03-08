@@ -1570,6 +1570,7 @@ export default class OrderService {
             : [order.paymentMethod],
           paymentStatus: 'Completed',
           cardOnDeliveryPayments: cardOnDeliveryPayments,
+          bankFee: (cardOnDeliveryPayments * bankFeePercentage) / 100
         }
       });
 
