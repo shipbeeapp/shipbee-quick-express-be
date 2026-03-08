@@ -772,7 +772,7 @@ export default class OrderService {
       }
     }
     else {
-      console.log(`🟢 Stop ${stop.id} completed, but order ${order.id} still has pending stops.`);
+      console.log(`🟢 Stop ${stop.id} is ${stop.status}, but order ${order.id} still has pending stops.`);
       if (!isReturned) await this.orderStatusHistoryService.createOrderStatusHistory({ order, queryRunner, stopId: stop.id, event: OrderEventType.STOP_COMPLETED });
       broadcastOrderUpdate(order.id, order.status, stop.sequence); // Notify all connected clients about the order status update
     }
@@ -1739,8 +1739,11 @@ export default class OrderService {
   }
 
   async cancelOrReturnStop(orderId: string, stopId: string, action: string, reason: string) {
+    const queryRunner = this.orderRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      const order = await this.orderRepository.findOne({
+      const order = await queryRunner.manager.findOne(Order, {
         where: { id: orderId },
         relations: ["stops", "stops.toAddress", "stops.receiver", "driver"]
       });
@@ -1774,13 +1777,18 @@ export default class OrderService {
         {
           order, stopId, cancellationReason: reason,
           triggeredByAdmin: true, returnedStartedAt,
+          queryRunner,
           event: action === "CANCEL_STOP" ? OrderEventType.STOP_CANCELED : OrderEventType.STOP_RETURNED
         }
       );
-      await this.orderStopRepository.save(stop);
+      await queryRunner.manager.save(OrderStop, stop);
+      await this.finalizeOrderCompletion(order, order.driver?.id, stop, queryRunner, true);
     } catch (error) {
       console.error("Error in order service canceling or returning stop:", error.message);
+      await queryRunner.rollbackTransaction();
       throw new Error(`Error canceling or returning stop: ${error.message}`);
+    } finally {
+      await queryRunner.release();
     }
   }
 
