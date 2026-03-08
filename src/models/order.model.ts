@@ -127,6 +127,10 @@ export class Order extends BaseEntity {
 
   @Column({ type: "float", nullable: false })
   serviceFeePercentage: number;
+
+  // New field to store bank fee percentage at the time of order creation (to be paid by client)
+  @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
+  bankFeePercentage: number;
   
   @Column({ type: "text", nullable: true })
   proofOfPickup: string; // URL to the proof of pickup photo uploaded by the driver

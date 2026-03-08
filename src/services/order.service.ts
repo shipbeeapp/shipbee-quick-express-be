@@ -195,7 +195,8 @@ export default class OrderService {
         accessToken, // Generate a secure access token for the order
         payer: orderData.payer,
         type: orderData.type,
-        serviceFeePercentage: env.SERVICE_FEE_PERCENTAGE
+        serviceFeePercentage: env.SERVICE_FEE_PERCENTAGE,
+        bankFeePercentage: createdByUser.bankFeePercentage ? Number(createdByUser.bankFeePercentage) : 0
       });
 
       await queryRunner.manager.save(order);
@@ -1504,6 +1505,8 @@ export default class OrderService {
       let totalServiceFees = 0;
       let totalCashDeliveryFees = 0;
       let totalOnlineDeliveryFees = 0;
+      let totalCardOnDeliveryPayments = 0;
+      let bankFee = 0;
 
       const orders = completedOrders.map(order => {
         // Only include stops that are not canceled and not returned
@@ -1520,6 +1523,18 @@ export default class OrderService {
         } else {
           totalCashDeliveryFees += Number(order.totalCost);
         }
+        //CHECK payment method for each stop if totalPrice exists, if payment method is CARD_ON_DELIVERY then add to cardOnDeliveryPayments
+        // if no stops have payment method but have totalPrice, check order payment method and if it's CARD_ON_DELIVERY then add totalPrice to cardOnDeliveryPayments
+        const cardOnDeliveryPayments = validStops
+          .filter(stop => stop.totalPrice && (stop.paymentMethod ?? order.paymentMethod) === PaymentMethod.CARD_ON_DELIVERY)
+          .reduce((sum, stop) => sum + Number(stop.totalPrice) + (Number(stop.deliveryFee) || 0), 0);
+        
+        totalCardOnDeliveryPayments += cardOnDeliveryPayments;
+          
+        //get bankFee Percentage from user pricing table using order.createdBy
+        const bankFeePercentage = Number(order.bankFeePercentage) || 0;
+        if (bankFeePercentage > 0) console.log(`Card on delivery payments for order ${order.orderNo}: ${cardOnDeliveryPayments}`);
+        bankFee += (cardOnDeliveryPayments * bankFeePercentage) / 100;
         return {
           orderNo: order.orderNo,
           pickUpDate: order.pickUpDate.toLocaleString("en-US", {
@@ -1553,7 +1568,8 @@ export default class OrderService {
               Array.from(new Set(order.stops.map(stop => stop.paymentMethod).filter(method => method !== null)))
               : [order.paymentMethod])
             : [order.paymentMethod],
-          paymentStatus: 'Completed'
+          paymentStatus: 'Completed',
+          cardOnDeliveryPayments: cardOnDeliveryPayments,
         }
       });
 
@@ -1563,6 +1579,8 @@ export default class OrderService {
         totalServiceFees,
         totalCashDeliveryFees,
         totalOnlineDeliveryFees,
+        totalCardOnDeliveryPayments,
+        bankFee,
         orders
       };
     } catch (err) {
