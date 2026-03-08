@@ -111,6 +111,7 @@ export class OrderResponseDto {
       proofOfOrder?: string | null;
       items?: any;
       totalPrice?: number;
+      deliveryFee?: number;
       paymentMethod?: PaymentMethod;
       clientStopId?: string;
       comments?: string;
@@ -254,6 +255,7 @@ export class OrderResponseDto {
       proofOfOrder: stop.status === OrderStatus.COMPLETED ? generatePhotoLink(stop.proofOfOrder) : null,
       items: stop.items,
       totalPrice: stop.totalPrice,
+      deliveryFee: stop.deliveryFee,
       paymentMethod: stop.paymentMethod,
       clientStopId: stop.clientStopId,
       comments: stop.comments,
