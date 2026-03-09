@@ -72,6 +72,9 @@ export class User extends BaseEntity {
   @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
   bankFeePercentage: number;
 
+  @Column({ type: "boolean", nullable: true, default: false })
+  showGoodsAndDeliveryValues: boolean;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];
