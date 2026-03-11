@@ -324,14 +324,14 @@ export async function sendArrivalNotification(phoneNumber: string, email: string
       });
       console.log(`Arrival notification email to ${email}`);
     } 
-    else if (phoneNumber) {
-      await twilioClient.messages.create({
-        body: content,
-        from: 'ShipBee',
-        to: `${phoneNumber}`,
-      });
-      console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
-    }
+    // else if (phoneNumber) {
+    //   await twilioClient.messages.create({
+    //     body: content,
+    //     from: 'ShipBee',
+    //     to: `${phoneNumber}`,
+    //   });
+    //   console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
+    // }
   } catch (error) {
     console.error('Error sending arrival notification SMS:', error);
     throw new Error(`Failed to send arrival notification SMS to ${phoneNumber}: ${error.message}`);
