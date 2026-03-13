@@ -123,6 +123,7 @@ export class OrderResponseDto {
     }[];
 
     timestamps: {
+      id: string;
       status: string;
       timestamp: Date;
       isStop?: boolean;
@@ -137,6 +138,7 @@ export class OrderResponseDto {
       returnedStartedAt?: Date;
       returnedCompletedAt?: Date;
       event?: OrderEventType;
+      requestStatus?: CancelRequestStatus;
     }[];
 
     shipment: {
@@ -355,6 +357,7 @@ export class OrderResponseDto {
         timestamp: status.createdAt,
       })),
       timestamps: (order.orderStatusHistory?.map(status => ({
+        id: status.id,
         status: status.status,
         timestamp: status.createdAt,
         isStop: !!status.orderStop,
@@ -369,6 +372,7 @@ export class OrderResponseDto {
         returnedStartedAt: status.returnedStartedAt,
         returnedCompletedAt: status.returnedCompletedAt,
         event: status.event,
+        requestStatus: status.requestStatus,
       })
       )?.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       ) || [],
