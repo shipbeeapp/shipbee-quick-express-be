@@ -446,14 +446,14 @@ export function emitOrderAccepted(orderId: string, acceptedByDriverId: string): 
   }
 }
 
-export function emitOrderStopUpdate(orderId: string, driverId: string, stopId: string, status: OrderStatus): void {
+export function emitOrderStopUpdate(orderId: string, driverId: string, stopId: string, status: OrderStatus, adminApproved: boolean = true): void {
   const io = getSocketInstance();
   const onlineDrivers = getOnlineDrivers();
   const driver = onlineDrivers.get(driverId);
 
   if (driver) {
     if (driver.socketId) {
-      io.to(driver.socketId).emit("order-stop-update", { orderId, stopId, status });
+      io.to(driver.socketId).emit("order-stop-update", { orderId, stopId, status, adminApproved });
       console.log(`Emitted order stop update for order ${orderId} stop ${stopId} with status ${status} to driver ${driverId}`);
     }
   } else {

@@ -262,6 +262,18 @@ export class OrderController {
     );
 
     this.router.post(
+      "/orders/:orderId/request-stop-cancellation-return",
+      authenticationMiddleware,
+      this.requestStopCancellationReturn.bind(this)
+    );
+
+    this.router.post(
+      "/orders/:orderId/process-stop-cancellation-return",
+      authenticationMiddleware,
+      this.processStopCancellationReturn.bind(this)
+    );
+
+    this.router.post(
       "/orders/process-cancellation/:cancelRequestId",
       authenticationMiddleware,
       this.processOrderCancellation.bind(this)
@@ -941,6 +953,40 @@ export class OrderController {
       res.status(200).json({ success: true, ...orders });
     } catch (error) {
       console.error("Error in order controller getting completed orders by date range:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  public async requestStopCancellationReturn(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const driverId = req.driverId;
+      const { stopId, action, reason } = req.body; // action can be "REQUEST_CANCEL_STOP" or "REQUEST_RETURN_STOP"
+      if (!orderId || !stopId || !action) {
+        return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
+      }
+      const requestId = await this.orderService.requestStopCancellationReturn(orderId, stopId, driverId, action, reason);
+      res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "cancellation" : "return"} requested successfully.`, requestId });
+    }
+    catch (error) {      
+      console.error("Error in order controller requesting stop cancellation or return:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  public async processStopCancellationReturn(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const { action, historyId, reason } = req.body;
+      if (req.email !== env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to process stop cancellation or return requests." });
+      }
+      console.log("Processing stop cancellation/return with orderId:", orderId, "and action:", action, "and reason:", reason);
+      await this.orderService.processStopCancellationReturn(historyId, action, reason);
+      res.status(200).json({ success: true, message: "Stop cancellation/return request processed successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller processing stop cancellation or return request:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }

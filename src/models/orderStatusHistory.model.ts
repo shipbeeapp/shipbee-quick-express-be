@@ -5,6 +5,7 @@ import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import { Driver } from "./driver.model.js";
 import { OrderStop } from "./orderStops.model.js";
 import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 @Entity("order_status_history")
 export class OrderStatusHistory extends BaseEntity {
@@ -38,6 +39,13 @@ export class OrderStatusHistory extends BaseEntity {
 
   @Column({ type: "enum", enum: OrderEventType })
   event: OrderEventType;
+
+  @Column({ 
+    type: "enum", 
+    enum: CancelRequestStatus, 
+    nullable: true
+  })
+  requestStatus?: CancelRequestStatus; // ✅ PENDING/APPROVED/REJECTED
 
   @Column({type: "text", nullable: true})
   cancellationReason?: string;

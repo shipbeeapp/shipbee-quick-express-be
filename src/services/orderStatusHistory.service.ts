@@ -3,7 +3,8 @@ import { Order } from "../models/order.model.js";
 import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { AppDataSource } from "../config/data-source.js";
 import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
-import { IsNull, Not } from "typeorm";
+import { In, IsNull, Not } from "typeorm";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 
 @Service()
@@ -19,7 +20,8 @@ export default class OrderStatusHistoryService {
       hasArrived?: boolean,
       returnedStartedAt?: Date,
       returnedCompletedAt?: Date,
-      event?: OrderEventType
+      event?: OrderEventType,
+      requestStatus?: CancelRequestStatus
     }) {
       try {
         const orderStatusHistory = new OrderStatusHistory();
@@ -33,6 +35,7 @@ export default class OrderStatusHistoryService {
         orderStatusHistory.hasArrived = options.hasArrived ?? false;
         orderStatusHistory.returnedStartedAt = options.returnedStartedAt ?? null;
         orderStatusHistory.returnedCompletedAt = options.returnedCompletedAt ?? null;
+        orderStatusHistory.requestStatus = options.requestStatus ?? null;
 
         if (options.queryRunner) {
           await options.queryRunner.manager.save(OrderStatusHistory, orderStatusHistory);
@@ -78,6 +81,31 @@ export default class OrderStatusHistoryService {
       } catch (error) {
         console.log(error);
         throw new Error(`Error updating order status history: ${error.message}`);
+      }
+    }
+
+    async findExistingCancelReturnRequest(options: {
+      orderId: string,
+      stopId: string,
+      driverId: string,
+      eventType: OrderEventType[],
+      requestStatus?: CancelRequestStatus
+    }): Promise<OrderStatusHistory | null> {
+      try {
+        const existingRequest = await this.orderStatusHistoryRepository.findOne({
+          where: {
+            order: { id: options.orderId },
+            orderStop: { id: options.stopId },  
+            driver: { id: options.driverId },
+            event: In(options.eventType),
+            requestStatus: options.requestStatus ?? CancelRequestStatus.PENDING
+          }
+        });
+        return existingRequest;
+      }
+      catch (error) {
+        console.log(error.message);
+        throw new Error(`Error finding existing cancel/return request: ${error.message}`);
       }
     }
 }

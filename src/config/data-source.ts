@@ -117,6 +117,7 @@ import {MakeFloorStringInAddress1772284155567} from "../migrations/1772284155567
 import {AddEventTypeInOrderStatusHistory1772564281435} from "../migrations/1772564281435-AddEventTypeInOrderStatusHistory.js"; // Import the migration for adding event type in OrderStatusHistory
 import { AddBankFeePercentageInUserAndOrder1772978362076 } from "../migrations/1772978362076-AddBankFeePercentageInUserPricing.js";
 import { AddFlagForGoodsAndDeliveryView1773050413585 } from "../migrations/1773050413585-AddFlagForGoodsAndDeliveryView.js";
+import { AddOrderEventTypesAndRequestStatus1773406453482 } from "../migrations/1773406453482-AddOrderEventTypesAndRequestStatus.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -246,6 +247,7 @@ export const AppDataSource = new DataSource({
     AddEventTypeInOrderStatusHistory1772564281435,
     AddBankFeePercentageInUserAndOrder1772978362076,
     AddFlagForGoodsAndDeliveryView1773050413585,
+    AddOrderEventTypesAndRequestStatus1773406453482,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

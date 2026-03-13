@@ -53,6 +53,8 @@ import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.
 import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
 import { calculateDistanceForClientOrder } from "../utils/google-maps/distance-time.js";
 import { setIslatestOrderStatus, intraStatusDuration } from "../utils/global.utils.js";
+import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
+import { userType } from "../utils/enums/userType.enum.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -266,7 +268,7 @@ export default class OrderService {
         console.error("Error sending emaill to admin:", err);
       });
       console.log('sent mail to admin: ', recipientAdminMail);
-      if (createdByUser.email) {
+      if (createdByUser.email && createdByUser.type !== userType.BUSINESS) {
         await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
           console.error("Error sending email to user:", err);
         }
@@ -1472,9 +1474,9 @@ export default class OrderService {
       if (!activeOrder) {
         return null;
       }
-      // check if the order has an order status history with returnedStartedAt and no returnedCompletedAt, if so add hasReturn and include orderStopId of that history record in the resource
-      const returnStatusHistory = activeOrder?.orderStatusHistory.find(history => history.returnedStartedAt && !history.returnedCompletedAt);
-      if (returnStatusHistory) return createDriverOrderResource(activeOrder, null, null, true, returnStatusHistory.orderStop.id);
+      
+      const returnedStop = activeOrder?.stops.find(stop => stop.status === OrderStatus.RETURNING);
+      if (returnedStop) return createDriverOrderResource(activeOrder, null, null, true, returnedStop.id);
       return createDriverOrderResource(activeOrder, null, null)
 
     } catch (err) {
@@ -1706,9 +1708,6 @@ export default class OrderService {
         throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
       }
 
-      stop.status = OrderStatus.RETURNING;
-      await this.orderStopRepository.save(stop);
-
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId, returnedStartedAt: new Date() });
     } catch (error) {
       console.error("Error in order service starting return:", error.message);
@@ -1925,4 +1924,111 @@ export default class OrderService {
     }
   }
 
+  async requestStopCancellationReturn(orderId: string, stopId: string, driverId: string, action: string, reason: string) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, driver: { id: driverId } },
+        relations: ["stops", "stops.toAddress", "stops.receiver", "driver"]
+      });
+      if (!order) {
+        throw new Error("Order not found or you are not authorized to request stop cancellation/return for this order.");
+      }
+      if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED) {
+        throw new Error(`Order is already ${order.status}. Cannot request stop cancellation or return.`);
+      }
+      const stop = order.stops.find(s => s.id === stopId);
+      if (!stop) {
+        throw new Error("Stop not found for this order.");
+      }
+      
+      if (stop.status === OrderStatus.COMPLETED || stop.status === OrderStatus.CANCELED || stop.status === OrderStatus.RETURNING) {
+        throw new Error(`Stop is already ${stop.status}. Cannot request cancellation or return.`);
+      }
+      
+      if (action !== "CANCEL_STOP" && action !== "RETURN_STOP") {
+        throw new Error("Invalid action. Must be either CANCEL_STOP or RETURN_STOP.");
+      }
+
+      const existingRequest = await this.orderStatusHistoryService.findExistingCancelReturnRequest({
+        orderId,
+        stopId,
+        driverId,
+        eventType: action === "CANCEL_STOP" ? [OrderEventType.STOP_CANCELLATION_REQUESTED] : [OrderEventType.STOP_RETURN_REQUESTED],
+        requestStatus: CancelRequestStatus.PENDING
+      });
+      
+      if (existingRequest) {
+        throw new Error(`There is already an existing ${existingRequest.event === OrderEventType.STOP_CANCELLATION_REQUESTED ? 'cancellation' : 'return'} request for this stop.`);
+      }
+
+      await this.orderStatusHistoryService.createOrderStatusHistory({
+        order,
+        stopId,
+        cancellationReason: reason,
+        event: action === "CANCEL_STOP" ? OrderEventType.STOP_CANCELLATION_REQUESTED : OrderEventType.STOP_RETURN_REQUESTED,
+        requestStatus: CancelRequestStatus.PENDING
+      });
+    } catch (error) {
+      console.error("Error in order service requesting stop cancellation or return:", error.message);
+      throw new Error(`Failed to request stop cancellation or return: ${error.message}`);
+    }
+  }
+
+  async processStopCancellationReturn(historyId: string, action: string, reason: string) {
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const historyRecord = await queryRunner.manager.findOne(OrderStatusHistory, {
+        where: { id: historyId },
+        relations: ["order", "order.driver", "order.stops", "orderStop"]
+      });
+      
+      if (!historyRecord) {
+        throw new Error("Order status history record not found.");
+      }
+
+      if (historyRecord.requestStatus !== CancelRequestStatus.PENDING) {
+        throw new Error("This cancellation or return request has already been processed.");
+      }
+      
+      if (action !== "APPROVE" && action !== "DECLINE") {
+        throw new Error("Invalid action. Must be either APPROVE or DECLINE.");
+      }
+
+      await queryRunner.manager.update(OrderStatusHistory, historyId, {
+        requestStatus: action === 'APPROVE' ? CancelRequestStatus.APPROVED : CancelRequestStatus.DECLINED,
+      });
+
+      const isReturn = historyRecord.event === OrderEventType.STOP_RETURN_REQUESTED;
+      
+      await this.orderStatusHistoryService.createOrderStatusHistory({
+        order: historyRecord.order,
+        stopId: historyRecord.orderStop.id,
+        cancellationReason: reason,
+        triggeredByAdmin: true,
+        queryRunner,
+        event: action === 'APPROVE'
+        ? (isReturn ? OrderEventType.STOP_RETURN_APPROVED : OrderEventType.STOP_CANCELLATION_APPROVED)
+        : (isReturn ? OrderEventType.STOP_RETURN_REJECTED : OrderEventType.STOP_CANCELLATION_REJECTED)
+      });
+      
+      const newStatus = isReturn ? OrderStatus.RETURNING : OrderStatus.CANCELED;
+      
+      if (action === 'APPROVE') {
+        await queryRunner.manager.update(OrderStop, historyRecord.orderStop.id, {
+          status: newStatus,
+        });
+        await this.finalizeOrderCompletion(historyRecord.order, historyRecord.order.driver?.id, historyRecord.orderStop, queryRunner, true);
+      }
+      emitOrderStopUpdate(historyRecord.order.id, historyRecord.order.driver?.id, historyRecord.orderStop.id, newStatus, );
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      console.error("Error processing stop cancellation or return:", error.message);
+      await queryRunner.rollbackTransaction();
+      throw new Error(`Failed to process stop cancellation or return: ${error.message}`);
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
