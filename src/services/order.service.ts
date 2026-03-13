@@ -1710,6 +1710,12 @@ export default class OrderService {
         throw new Error(`Stop with ID ${stopId} is completed and cannot be returned`);
       }
 
+      if (stop.status !== OrderStatus.RETURNING) {
+        stop.status = OrderStatus.RETURNING;
+        await this.orderRepository.save(order);
+        console.log(`Return started for stop ${stopId} in order ${orderId} by driver ${driverId}`);
+      }
+      console.log(`adding started at record for returning stop`)
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, stopId, returnedStartedAt: new Date() });
     } catch (error) {
       console.error("Error in order service starting return:", error.message);
