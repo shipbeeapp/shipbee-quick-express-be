@@ -38,9 +38,9 @@ export default class OrderStatusHistoryService {
         orderStatusHistory.requestStatus = options.requestStatus ?? null;
 
         if (options.queryRunner) {
-          await options.queryRunner.manager.save(OrderStatusHistory, orderStatusHistory);
+          return await options.queryRunner.manager.save(OrderStatusHistory, orderStatusHistory);
         } else {
-          await this.orderStatusHistoryRepository.save(orderStatusHistory);
+          return await this.orderStatusHistoryRepository.save(orderStatusHistory);
         }
       } catch (error) {
         console.log(error);

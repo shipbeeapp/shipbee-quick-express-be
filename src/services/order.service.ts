@@ -1961,7 +1961,7 @@ export default class OrderService {
         throw new Error(`There is already an existing ${existingRequest.event === OrderEventType.STOP_CANCELLATION_REQUESTED ? 'cancellation' : 'return'} request for this stop.`);
       }
 
-      await this.orderStatusHistoryService.createOrderStatusHistory({
+      return await this.orderStatusHistoryService.createOrderStatusHistory({
         order,
         stopId,
         cancellationReason: reason,

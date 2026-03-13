@@ -965,8 +965,8 @@ export class OrderController {
       if (!orderId || !stopId || !action) {
         return res.status(400).json({ success: false, message: "Order ID, stop ID, and action are required." });
       }
-      const requestId = await this.orderService.requestStopCancellationReturn(orderId, stopId, driverId, action, reason);
-      res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "cancellation" : "return"} requested successfully.`, requestId });
+      const statusHistory = await this.orderService.requestStopCancellationReturn(orderId, stopId, driverId, action, reason);
+      res.status(200).json({ success: true, message: `Stop ${action === "CANCEL_STOP" ? "cancellation" : "return"} requested successfully.`, historyId: statusHistory.id });
     }
     catch (error) {      
       console.error("Error in order controller requesting stop cancellation or return:", error.message);
