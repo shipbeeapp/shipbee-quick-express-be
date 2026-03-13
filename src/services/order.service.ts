@@ -975,8 +975,10 @@ export default class OrderService {
       if (!order.sender) {
         throw new Error(`Sender for order ${orderId} does not exist`);
       }
-      await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
-      console.log(`Arrival notification sent to sender for order ${orderId}`);
+      if (order.sender.type !== userType.BUSINESS) {
+        await sendArrivalNotification(order.sender.phoneNumber, order.sender.email, order.orderNo, order.driver.name, order.driver.phoneNumber);
+        console.log(`Arrival notification sent to sender for order ${orderId}`);
+      }
 
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, hasArrived: true });
       // Notify first receiver (if any)
