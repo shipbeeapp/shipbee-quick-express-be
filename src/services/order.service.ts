@@ -1566,22 +1566,8 @@ export default class OrderService {
         bankFee += (cardOnDeliveryPayments * bankFeePercentage) / 100;
         return {
           orderNo: order.orderNo,
-          pickUpDate: order.pickUpDate.toLocaleString("en-US", {
-            timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-            day: "numeric",
-            month: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "numeric"
-          }),
-          completedAt: order.completedAt.toLocaleString("en-US", {
-            timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-            day: "numeric",
-            month: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "numeric"
-          }),
+          pickUpDate: order.pickUpDate,
+          completedAt: order.completedAt,
           driverName: order.driver?.name || 'N/A',
           vehicleType: order.vehicleType || 'N/A',
           logisticsCompany: order.driver?.businessOwner ? order.driver.businessOwner.name : 'Freelance',
