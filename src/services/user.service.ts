@@ -99,7 +99,7 @@ export default class UserService {
     }
   }
 
-  async getUsers(serviceType?: ServiceSubcategoryName): Promise<UserResponseDto[]> {
+  async getUsers(serviceType?: ServiceSubcategoryName, type?: userType): Promise<UserResponseDto[]> {
     try {
       let users: User[] = [];
 
@@ -115,15 +115,15 @@ export default class UserService {
         const userIds = orders.map(o => o.userId);
 
         if (userIds.length === 0) return []; // no users found
-
+        console.log("user type: ", type)
         // 2 Fetch users by these IDs
         users = await this.userRepository.find({
-          where: { id: In(userIds) }, 
+          where: { id: In(userIds), type: type ? type : undefined }, 
           order: { createdAt: "DESC" }
         });
       } else {
         // return all users if no filter
-        users = await this.userRepository.find({ order: { createdAt: "DESC" } });
+        users = await this.userRepository.find({ where: { type: type ? type : undefined }, order: { createdAt: "DESC" } });
       }
 
       return users.map(toUserResponseDto);

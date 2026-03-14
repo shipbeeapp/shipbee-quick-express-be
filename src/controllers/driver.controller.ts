@@ -859,7 +859,11 @@ export class DriverController {
             }
             const driverId = req.params.id;
             const serviceType = req.query.serviceType as ServiceSubcategoryName
-            const ordersSummary = await this.orderService.getOrdersSummary(driverId, serviceType);
+            const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+            const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+            const userId = req.query.userId as string;
+            
+            const ordersSummary = await this.orderService.getOrdersSummary(driverId, serviceType, userId, startDate, endDate);
             res.status(200).json({ success: true, data: ordersSummary });
         } catch (error) {
             console.error("Error fetching orders summary:", error.message);

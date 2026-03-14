@@ -8,6 +8,7 @@ import { env } from '../config/environment.js';
 import jwt from "jsonwebtoken";
 import OrderService from '../services/order.service.js';
 import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import { userType } from '../utils/enums/userType.enum.js';
 
 let clients: Response[] = [];
 let driverStatusClients: Response[] = [];
@@ -192,8 +193,9 @@ export class UserController {
         return res.status(403).json({ success: false, message: "Unauthorized access" });
       }
       const serviceType = req.query.serviceType as ServiceSubcategoryName;
+      const type = req.query.type as userType;
 
-      const users = await this.userService.getUsers(serviceType as ServiceSubcategoryName);
+      const users = await this.userService.getUsers(serviceType as ServiceSubcategoryName, type);
       res.status(200).json({ success: true, data: users });
     }
     catch (error) {

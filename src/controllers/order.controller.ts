@@ -451,14 +451,31 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let orders;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType, fromStatus, toStatus, thresholdMinutes } = req.query;
+      const { 
+        serviceType, 
+        fromStatus, 
+        toStatus, 
+        thresholdMinutes,
+        userId,
+        startDate,
+        endDate, 
+      } = req.query;
       if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
         serviceType as ServiceSubcategoryName,
         fromStatus as string,
         toStatus as string,
-        thresholdMinutes ? Number(thresholdMinutes) : undefined
+        thresholdMinutes ? Number(thresholdMinutes) : undefined,
+        userId as string,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined,
       );
-      else orders = await this.orderService.getOrdersbyUser([req.userId], serviceType as string);
+      else orders = await this.orderService.getOrdersbyUser(
+        [req.userId], 
+        serviceType as string,
+        null,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined,
+      );
       res.status(200).json({ success: true, total: orders.length, orders: orders });
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
@@ -836,11 +853,24 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let financials;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      if (req.email != env.ADMIN.EMAIL) {
-        return res.status(403).json({ success: false, message: "You are not authorized to view financials." });
-      }
-      const { serviceType } = req.query;
-      financials = await this.orderService.getOrdersFinancials(serviceType as ServiceSubcategoryName);
+     
+      const { serviceType, startDate, endDate, userId } = req.query as {
+        serviceType?: string;
+        startDate?: string;
+        endDate?: string;
+        userId?: string;
+      };
+      const isAdmin = req.email === env.ADMIN.EMAIL;
+      const resolvedUserId = isAdmin ? userId : req.userId;
+
+      const parsedStartDate = startDate ? new Date(startDate) : undefined;
+      const parsedEndDate = endDate ? new Date(endDate) : undefined;
+      financials = await this.orderService.getOrdersFinancials(
+        serviceType as ServiceSubcategoryName,
+        parsedStartDate,
+        parsedEndDate,
+        resolvedUserId,
+      );
       res.status(200).json({ success: true, data: financials });
     } catch (error) {
       console.error("Error in order controller getting orders financials:", error.message);

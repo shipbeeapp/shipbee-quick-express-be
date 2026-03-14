@@ -18,7 +18,7 @@ import {
   formatAddressSingleLine
 } from "../services/email.service.js";
 import { env } from "../config/environment.js";
-import { Between, MoreThan, In, Not, LessThan, QueryRunner } from "typeorm";
+import { Between, MoreThan, In, Not, LessThan, QueryRunner, MoreThanOrEqual, LessThanOrEqual } from "typeorm";
 import { scheduleOrderEmission } from "../utils/order.scheduler.js";
 import { VehicleType } from "../utils/enums/vehicleType.enum.js";
 import { clearNotificationsForOrder, resetNotifiedDrivers } from "../utils/notification-tracker.js";
@@ -302,13 +302,20 @@ export default class OrderService {
     }
   }
 
-  async getOrdersbyUser(userId: string[], serviceType?: string, isLate?: boolean) {
+  async getOrdersbyUser(
+    userId: string[], 
+    serviceType?: string, 
+    isLate?: boolean, 
+    startDate?: Date, 
+    endDate?: Date
+  ) {
     try {
       console.log("Fetching orders for user ID:", userId);
       const orders = await this.orderRepository.find({
         where: {
           createdBy: { id: In(userId) },
-          serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined
+          serviceSubcategory: serviceType ? { name: In([serviceType]) } : undefined,
+          pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
         },
         relations: [
           "sender", "fromAddress", "serviceSubcategory",
@@ -333,7 +340,15 @@ export default class OrderService {
     }
   }
 
-  async getOrders(serviceType: ServiceSubcategoryName, fromStatus?: string, toStatus?: string, thresholdMinutes?: number) {
+  async getOrders(
+    serviceType: ServiceSubcategoryName, 
+    fromStatus?: string, 
+    toStatus?: string, 
+    thresholdMinutes?: number, 
+    userId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ) {
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
       await AppDataSource.initialize();
@@ -344,7 +359,9 @@ export default class OrderService {
       where: {
         serviceSubcategory: {
           name: serviceType
-        }
+        },
+        createdBy: userId ? { id: userId } : undefined,
+        pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
       },
       relations: [
         "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory",
@@ -1487,7 +1504,12 @@ export default class OrderService {
     }
   }
 
-  async getOrdersFinancials(serviceType?: ServiceSubcategoryName) {
+  async getOrdersFinancials(
+    serviceType?: ServiceSubcategoryName, 
+    startDate?: Date, 
+    endDate?: Date, 
+    userId?: string
+  ) {
     try {
       // I want some insights for completed orders which include:
       // - total sale: some of order.order_stops.total_price + order.total_cost for all completed orders
@@ -1496,10 +1518,13 @@ export default class OrderService {
       // - total cash delivery fee: sum of order.totalCost if no order.order_stops.totalprice and order.paymentMethod = CASH
       // - total online delivery fee: sum of order.totalCost if order.order_stops.totalprice or order.paymentMethod != CASH
       // - the completed orders details should include orderNo, pickupDate, completedAt, drivername, vehicleType, driver.businessOwner.name if exists (else freelance), order.createdBy.name, order.distance, (sum of order.order_stops.total_price + order.totalCost), order.total_cost, order.totalCost * 10% as service fee, paymentMethod (if there is order_stops.totalPrice then get order.order_stops.paymentMethods), paymentStatus(always Completed)
+      // if startDate given and endDate not get from startDate to now, if endDate given and startDate not get from beginning to endDate, if both given get between them, if none get all completed orders
       const completedOrders = await this.orderRepository.find({
         where: {
           status: OrderStatus.COMPLETED,
-          serviceSubcategory: serviceType ? { name: serviceType } : undefined
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined,
+          pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
+          createdBy: userId ? { id: userId } : undefined
         },
         order: { createdAt: "DESC" },
         relations: ["driver", "driver.businessOwner", "createdBy", "stops"]
@@ -1594,7 +1619,13 @@ export default class OrderService {
     }
   }
 
-  async getOrdersSummary(driverId: string, serviceType?: ServiceSubcategoryName) {
+  async getOrdersSummary(
+    driverId: string, 
+    serviceType?: ServiceSubcategoryName,
+    userId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ) {
     try {
       // i want to get driver cash balance, driver income from driver table
       //  then get total number of completed orders and their complete order details
@@ -1602,7 +1633,9 @@ export default class OrderService {
         where: {
           driver: { id: driverId },
           serviceSubcategory: serviceType ? { name: serviceType } : undefined,
-          status: OrderStatus.COMPLETED
+          status: OrderStatus.COMPLETED,
+          pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
+          createdBy: userId ? { id: userId } : undefined
         },
         relations: [
           "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory",
