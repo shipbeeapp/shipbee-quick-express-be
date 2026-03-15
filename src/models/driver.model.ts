@@ -169,6 +169,12 @@ export class Driver extends BaseEntity {
     @Column({type: "timestamptz", nullable: true})
     lastOnlineAt: Date;
 
+    @Column({type: "timestamptz", nullable: true})
+    incomeLastResolvedAt: Date;
+
+    @Column({type: "timestamptz", nullable: true})
+    cashBalanceLastResolvedAt: Date;
+
     @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('driver_no_seq')", })
     driverNo: number;
 

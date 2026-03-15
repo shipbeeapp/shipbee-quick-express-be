@@ -17,6 +17,8 @@ export class DriverResource {
             cashIncome: Number(driver.driver_cashIncome),
             onlineIncome: Number(driver.driver_onlineIncome),
             cashBalance: Number(driver.driver_cashBalance),
+            incomeLastResolvedAt: driver.driver_incomeLastResolvedAt,
+            cashBalanceLastResolvedAt: driver.driver_cashBalanceLastResolvedAt,
             signUpStatus: driver.driver_signUpStatus,
             lastActiveAt: driver.driver_updatedAt,
             dateOfBirth: driver.driver_dateOfBirth,

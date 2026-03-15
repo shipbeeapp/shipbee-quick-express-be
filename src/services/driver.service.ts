@@ -205,6 +205,8 @@ export default class DriverService {
                     "driver.driverNo",
                     "driver.onlineIncome",
                     "driver.cashBalance",
+                    "driver.incomeLastResolvedAt",
+                    "driver.cashBalanceLastResolvedAt",
                     "driver.name",
                     "driver.phoneNumber",
                     "driver.hasCardOnDelivery",
@@ -470,6 +472,8 @@ export default class DriverService {
                 cashIncome: Number(driver.cashIncome) || 0,
                 onlineIncome: Number(driver.onlineIncome) || 0,
                 cashBalance: Number(driver.cashBalance) || 0,
+                incomeLastResolvedAt: driver.incomeLastResolvedAt,
+                cashBalanceLastResolvedAt: driver.cashBalanceLastResolvedAt,
                 orders
             };
         } catch (error) {
@@ -1383,6 +1387,7 @@ export default class DriverService {
             }
             driver.cashBalance = driver.cashBalance - amount;
             console.log(`Driver ${driverId} cash balance resolved by ${amount}.`);
+            driver.cashBalanceLastResolvedAt = new Date();
             await this.driverRepository.save(driver);
         }
         catch (error) {
@@ -1419,6 +1424,7 @@ export default class DriverService {
                 driver.cashIncome = Number(driver.cashIncome) - Number(amount);
             }
             driver.income = Number(driver.income) - Number(amount);
+            driver.incomeLastResolvedAt = new Date();
             await this.driverRepository.save(driver);
         }
         catch (error) {
