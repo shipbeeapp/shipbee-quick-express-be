@@ -75,6 +75,9 @@ export class User extends BaseEntity {
   @Column({ type: "boolean", nullable: true, default: false })
   showGoodsAndDeliveryValues: boolean;
 
+  @Column({ type: "boolean", nullable: true, default: false })
+  cardOnDeliveryEnabled: boolean;
+
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)
   sentOrders: Order[];

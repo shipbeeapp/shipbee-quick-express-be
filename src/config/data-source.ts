@@ -119,6 +119,7 @@ import { AddBankFeePercentageInUserAndOrder1772978362076 } from "../migrations/1
 import { AddFlagForGoodsAndDeliveryView1773050413585 } from "../migrations/1773050413585-AddFlagForGoodsAndDeliveryView.js";
 import { AddOrderEventTypesAndRequestStatus1773406453482 } from "../migrations/1773406453482-AddOrderEventTypesAndRequestStatus.js";
 import {AddIncomeAndCashBalanceLastResolvedAt1773540629338} from "../migrations/1773540629338-AddIncomeAndCashBalanceLastResolvedAt.js"; // Import the migration for adding incomeLastResolvedAt and cashBalanceLastResolvedAt in Driver
+import {AddCardOnDeliveryEnabledForUser1773866017933} from "../migrations/1773866017933-AddCardOnDeliveryEnabledForUser.js"; // Import the migration for adding cardOnDeliveryEnabled in User
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -250,6 +251,7 @@ export const AppDataSource = new DataSource({
     AddFlagForGoodsAndDeliveryView1773050413585,
     AddOrderEventTypesAndRequestStatus1773406453482,
     AddIncomeAndCashBalanceLastResolvedAt1773540629338,
+    AddCardOnDeliveryEnabledForUser1773866017933,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

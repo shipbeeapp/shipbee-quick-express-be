@@ -116,7 +116,8 @@ export class AuthController {
                 userType: user.type, // Assuming userType is a field in your User model
                 proceedWithoutPayment: user.proceedWithoutPayment,
                 monthlyBillingEnabled: user.monthlyBillingEnabled,
-                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues
+                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: user.cardOnDeliveryEnabled,
             }
             const myToken = jwt.sign(
                 userData,
@@ -318,7 +319,8 @@ export class AuthController {
                 userType: user.type,
                 proceedWithoutPayment: user.proceedWithoutPayment,
                 monthlyBillingEnabled: user.monthlyBillingEnabled,
-                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues  
+                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: user.cardOnDeliveryEnabled  
             }
             const myToken = jwt.sign(
                 userData,
@@ -405,7 +407,8 @@ export class AuthController {
             userType: user.type, // Assuming userType is a field in your User model  
             proceedWithoutPayment: user.proceedWithoutPayment,
             monthlyBillingEnabled: user.monthlyBillingEnabled,
-            showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues
+            showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+            cardOnDeliveryEnabled: user.cardOnDeliveryEnabled
         }
         const myToken = jwt.sign(
             userData,
@@ -671,7 +674,8 @@ export class AuthController {
                 numOfVehicles: businessUser.numOfVehicles,
                 proceedWithoutPayment: businessUser.proceedWithoutPayment,
                 monthlyBillingEnabled: businessUser.monthlyBillingEnabled,
-                showGoodsAndDeliveryValues: businessUser.showGoodsAndDeliveryValues
+                showGoodsAndDeliveryValues: businessUser.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: businessUser.cardOnDeliveryEnabled,
             }
             const token = jwt.sign(businessUserData, env.JWT_SECRET);
             return res.status(200).json({ success: true, token, businessUserData });
