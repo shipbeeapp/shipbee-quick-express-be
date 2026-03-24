@@ -289,7 +289,7 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
 
-    if (driver.fcmToken) {
+    if (driver.fcmToken && !hasDriverBeenNotified(order.id, driverId)) {
       console.log(`Driver ${driverId} has FCM token, sending push notification for order ${order.id}`);
       // Here you would integrate with FCM to send a push notification
       // send notification every env.FCM_INTERVAL_SECONDS seconds until order is no longer pending
