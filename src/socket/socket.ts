@@ -289,15 +289,18 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
       console.log(`📦 Sent order ${order.id} to driver ${driverId} who is ${distanceMeters} km away`);
     }
 
-    if (driver.fcmToken && !hasDriverBeenNotified(order.id, driverId)) {
-      console.log(`Driver ${driverId} has FCM token, sending push notification for order ${order.id}`);
+    if (driver.fcmToken) {
+      console.log(`Driver ${driverId} has FCM token`);
       // Here you would integrate with FCM to send a push notification
       // send notification every env.FCM_INTERVAL_SECONDS seconds until order is no longer pending
       if (!fcmNotificationIntervals.has(order.id)) {
         const interval = setInterval(async () => {
           const latestOrder = await AppDataSource.getRepository(Order).findOneBy({ id: order.id });
-          if (latestOrder?.status === OrderStatus.PENDING) {
-            console.log(`Order ${order.id} is still pending, sending FCM notification to driver ${driverId}`);
+          if (latestOrder?.status === OrderStatus.PENDING && !hasDriverBeenNotified(order.id, driverId)) {
+            console.log(
+              `Order ${order.id} is still pending or not notified, 
+              sending FCM notification to driver ${driverId}`
+            );
             await sendFcmNotification(driver.fcmToken, {
               title: "New Order Available",
               body: `Order ${order.id} is available for pickup.`,
@@ -315,7 +318,10 @@ export async function emitOrderToDrivers(order: Order, locationOnCancel?: string
         } else {
             clearInterval(fcmNotificationIntervals.get(order.id));
             fcmNotificationIntervals.delete(order.id);
-            console.log(`Order ${order.id} is no longer pending, stopped FCM notifications to driver ${driverId}`);
+            console.log(
+              `Order ${order.id} is no longer pending or has been notified,
+               stopped FCM notifications to driver ${driverId}`
+            );
             console.log(`fcm notificationIntervals: ${JSON.stringify(Array.from(fcmNotificationIntervals.entries()))}`);
           }
         }, env.FCM_INTERVAL_SECONDS * 1000); // every 5 seconds
