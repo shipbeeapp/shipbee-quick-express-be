@@ -48,7 +48,33 @@ class App {
       })
     );
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
-    this.app.use(cors({ origin: "*" }));
+    const allowedOrigins = [
+      'https://admin.staging.shipbee.io',
+      'https://www.admin.staging.shipbee.io',
+      'https://staging.shipbee.io',
+      'https://www.staging.shipbee.io',
+      'https://admin.shipbee.io',
+      'https://www.admin.shipbee.io',
+      'https://shipbee.io',
+      'https://www.shipbee.io',
+      'http://localhost:3000'
+    ];
+
+    this.app.use(
+      cors({
+        origin: (origin, callback) => {
+          if (!origin) return callback(null, true); // backend tools
+        
+          if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+          }
+        
+          return callback(new Error('CORS blocked'));
+        },
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+      })
+    );
 
     // Rate limiting
     const globalLimiter = rateLimit({
