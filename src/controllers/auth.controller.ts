@@ -1,5 +1,6 @@
 import { NextFunction, Response, Router, Request } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { env } from '../config/environment.js';
@@ -43,33 +44,33 @@ export class AuthController {
     this.initializeRoutes();
   }
 
+    private authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 15, // limit each IP to 15 auth requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many authentication attempts, please try again later.' },
+    });
+
     private initializeRoutes() {
-        // Define your routes here
-        // Example: this.router.get('/orders', this.getOrders.bind(this));
-        // You can add more routes as needed
         this.router.get(`${this.path}`, this.auth);
         this.router.get(`${this.path}/callback`, this.authCallback);
         this.router.post(`/webhooks/orders_create`, this.orderCreateWebhook);
-        this.router.post(`${this.path}/sign-up`, this.signup);
-        this.router.post(`${this.path}/login`, this.login);
-        this.router.post(`${this.path}/send-otp`, this.sendOtp)
-        this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
-        this.router.post(`${this.path}/forgot-password`, this.forgetPassword);
-        this.router.post(`${this.path}/reset-password`, this.resetPassword);
-        this.router.post(`${this.path}/admin/login`, this.adminLogin);
+        this.router.post(`${this.path}/sign-up`, this.authLimiter, this.signup);
+        this.router.post(`${this.path}/login`, this.authLimiter, this.login);
+        this.router.post(`${this.path}/send-otp`, this.authLimiter, this.sendOtp)
+        this.router.post(`${this.path}/verify-otp`, this.authLimiter, this.verifyOtp);
+        this.router.post(`${this.path}/forgot-password`, this.authLimiter, this.forgetPassword);
+        this.router.post(`${this.path}/reset-password`, this.authLimiter, this.resetPassword);
+        this.router.post(`${this.path}/admin/login`, this.authLimiter, this.adminLogin);
         this.router.post(`${this.path}/admin/driver/reset-password`, authenticationMiddleware, this.adminResetPasswordForDriver);
         this.router.post(`${this.path}/driver/signup`, authenticationMiddleware, this.driverSignup);
-        this.router.post(`${this.path}/driver/login`, this.driverLogin);
-        //forget password for driver
-        this.router.post(`${this.path}/driver/forget-password`, this.driverForgetPassword);
-        // verify otp for driver
-        this.router.post(`${this.path}/driver/verify-otp`, this.driverVerifyOtp);
-        // reset password for driver
-        this.router.post(`${this.path}/driver/reset-password`, this.driverResetPassword);
-        // sign up for business
-        this.router.post(`${this.path}/business/sign-up`, this.businessSignup);
-        // login for business
-        this.router.post(`${this.path}/business/login`, this.businessLogin);
+        this.router.post(`${this.path}/driver/login`, this.authLimiter, this.driverLogin);
+        this.router.post(`${this.path}/driver/forget-password`, this.authLimiter, this.driverForgetPassword);
+        this.router.post(`${this.path}/driver/verify-otp`, this.authLimiter, this.driverVerifyOtp);
+        this.router.post(`${this.path}/driver/reset-password`, this.authLimiter, this.driverResetPassword);
+        this.router.post(`${this.path}/business/sign-up`, this.authLimiter, this.businessSignup);
+        this.router.post(`${this.path}/business/login`, this.authLimiter, this.businessLogin);
 
     }
 

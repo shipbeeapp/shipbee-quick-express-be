@@ -254,7 +254,7 @@ export class UserController {
     const { apiKey, token, receiverToken } = req.query;
     console.log("Order tracking connection attempt with apiKey:", apiKey, "or token:", token, "or receiverToken:", receiverToken);
     if (token) {
-      const secretKey = env.JWT_SECRET || 'your-secret-key';
+      const secretKey = env.JWT_SECRET;
       const decoded = jwt.verify(token as string, secretKey) as { userId: string, email: string, driverId?: string };
       if (!decoded || decoded.email !== env.ADMIN.EMAIL) {
         return res.status(403).json({ success: false, message: "Unauthorized access" });

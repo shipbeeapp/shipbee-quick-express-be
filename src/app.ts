@@ -4,6 +4,8 @@ import { env } from "./config/environment.js";
 import { seedDatabase } from "./seeders/initial.seeder.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import session from 'express-session';
 import { oauthStateStore } from "./controllers/auth.controller.js";
 import path from "path";
@@ -35,6 +37,9 @@ class App {
   }
 
   private initializeMiddlewares(): void {
+    // Security headers
+    this.app.use(helmet());
+
     this.app.use(
       express.json({
         verify: (req: any, res, buf) => {
@@ -44,8 +49,18 @@ class App {
     );
     this.app.use(express.urlencoded({ extended: true })); // ✅ Handles form data
     this.app.use(cors({ origin: "*" }));
+
+    // Rate limiting
+    const globalLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // limit each IP to 100 requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many requests, please try again later.' },
+    });
+    this.app.use(globalLimiter);
     this.app.use(session({
-      secret: process.env.SESSION_SECRET || 'some_secret',
+      secret: env.SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       cookie: {

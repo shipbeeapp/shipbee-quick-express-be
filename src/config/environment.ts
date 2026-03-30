@@ -38,6 +38,7 @@ export const env = {
     EMAIL: process.env.ADMIN_EMAIL,
     PASSWORD: process.env.ADMIN_PASSWORD,
   },
+  SESSION_SECRET: process.env.SESSION_SECRET || 'some_secret',
   DRIVER_APP_LINK: process.env.DRIVER_APP_LINK || 'https://drive.google.com/drive/folders/1k4aXRRXQIhe4Rmo9wI7Lg-5eaLtCUi1u',
   GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
   RADIUS_KM_MOTORCYCLE: Number(process.env.RADIUS_KM_MOTORCYCLE) || 5,

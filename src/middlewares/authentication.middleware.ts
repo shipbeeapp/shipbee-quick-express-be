@@ -20,7 +20,7 @@ export const authenticationMiddleware = (req: AuthenticatedRequest, res: Respons
     }
 
     try {
-        const secretKey = env.JWT_SECRET || 'your-secret-key';
+        const secretKey = env.JWT_SECRET;
         const decoded = jwt.verify(token as string, secretKey) as { userId: string, email: string, driverId?: string };
 
         req.userId = decoded.userId; // Add userId to the request object
