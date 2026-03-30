@@ -57,6 +57,8 @@ class App {
       'https://www.admin.shipbee.io',
       'https://shipbee.io',
       'https://www.shipbee.io',
+      'https://www.trucks.shipbee.io',
+      'https://trucks.shipbee.io',
       'http://localhost:3000'
     ];
 
