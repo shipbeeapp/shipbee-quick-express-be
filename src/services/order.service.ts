@@ -1520,11 +1520,11 @@ export default class OrderService {
       }
 
       if (startDate && endDate) {
-        dashboardQuery.andWhere("order.pickUpDate BETWEEN :startDate AND :endDate", { startDate, endDate });
+        dashboardQuery.andWhere("o.pickUpDate BETWEEN :startDate AND :endDate", { startDate, endDate });
       } else if (startDate) {
-        dashboardQuery.andWhere("order.pickUpDate >= :startDate", { startDate });
+        dashboardQuery.andWhere("o.pickUpDate >= :startDate", { startDate });
       } else if (endDate) {
-        dashboardQuery.andWhere("order.pickUpDate <= :endDate", { endDate });
+        dashboardQuery.andWhere("o.pickUpDate <= :endDate", { endDate });
       }
 
       if (startDate && endDate) {
