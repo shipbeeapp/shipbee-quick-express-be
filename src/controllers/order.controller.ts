@@ -11,6 +11,7 @@ import { env } from "../config/environment.js";
 import jwt from 'jsonwebtoken';
 import UserService from "../services/user.service.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
+import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 
 
 /**
@@ -459,6 +460,10 @@ export class OrderController {
         userId,
         startDate,
         endDate,
+        status,
+        driverId,
+        hasCanceledStops,
+        hasReturnedStops,
         page,
         limit,
       } = req.query;
@@ -474,6 +479,10 @@ export class OrderController {
           userId as string,
           startDate ? new Date(startDate as string) : undefined,
           endDate ? new Date(endDate as string) : undefined,
+          status as OrderStatus,
+          driverId as string,
+          hasCanceledStops === "true" ? true : hasCanceledStops === "false" ? false : undefined,
+          hasReturnedStops === "true" ? true : hasReturnedStops === "false" ? false : undefined,
           pageNum,
           limitNum,
         );
@@ -803,7 +812,19 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let dashboard;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType, startDate, endDate, userId, fromStatus, toStatus, thresholdMinutes } = req.query;
+      const { 
+        serviceType, 
+        startDate, 
+        endDate, 
+        userId, 
+        fromStatus, 
+        toStatus, 
+        driverId, 
+        status, 
+        thresholdMinutes,
+        hasCanceledStops,
+        hasReturnedStops, 
+      } = req.query;
       if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard(
         "admin",
         serviceType as string,
@@ -813,6 +834,10 @@ export class OrderController {
         fromStatus as string,
         toStatus as string,
         thresholdMinutes ? Number(thresholdMinutes) : undefined,
+        driverId as string,
+        status as OrderStatus,
+        hasCanceledStops === "true" ? true : hasCanceledStops === "false" ? false : undefined,
+        hasReturnedStops === "true" ? true : hasReturnedStops === "false" ? false : undefined,
       );
       else dashboard = await this.orderService.getOrdersDashboard(
         req.userId,
