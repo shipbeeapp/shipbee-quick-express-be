@@ -348,6 +348,10 @@ export default class OrderService {
     userId?: string,
     startDate?: Date,
     endDate?: Date,
+    status?: OrderStatus,
+    driverId?: string,
+    hasCanceledStops?: boolean,
+    hasReturnedStops?: boolean,
     page: number = 1,
     limit: number = 20,
   ) {
@@ -363,14 +367,23 @@ export default class OrderService {
     // be expressed in a WHERE clause), then paginate the filtered result.
     const needsInMemoryFilter = fromStatus && toStatus && thresholdMinutes !== undefined;
 
+    const baseWhere = {
+      serviceSubcategory: { name: serviceType },
+      createdBy: userId ? { id: userId } : undefined,
+      pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
+      status: status ? status : undefined,
+      driver: driverId ? { id: driverId } : undefined,
+    };
+    
+    const where = hasCanceledStops || hasReturnedStops
+      ? [
+          ...(hasCanceledStops ? [{ ...baseWhere, stops: { status: OrderStatus.CANCELED } }] : []),
+          ...(hasReturnedStops ? [{ ...baseWhere, stops: { isReturned: true } }] : []),
+        ]
+      : baseWhere;
+      
     const [orders, total] = await this.orderRepository.findAndCount({
-      where: {
-        serviceSubcategory: {
-          name: serviceType
-        },
-        createdBy: userId ? { id: userId } : undefined,
-        pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
-      },
+      where,
       relations: [
         "sender", "fromAddress", "serviceSubcategory", "orderStatusHistory",
         "orderStatusHistory.orderStop", "orderStatusHistory.driver", "driver", "driver.vehicle", "shipment",
@@ -387,7 +400,7 @@ export default class OrderService {
     let resultTotal = total;
 
     if (needsInMemoryFilter) {
-      const filtered = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
+      const filtered = intraStatusDuration(resultOrders, fromStatus, toStatus, thresholdMinutes);
       resultTotal = filtered.length;
       resultOrders = filtered.slice((page - 1) * limit, page * limit);
     }
@@ -1437,6 +1450,10 @@ export default class OrderService {
     fromStatus?: string,
     toStatus?: string,
     thresholdMinutes?: number,
+    driverId?: string,
+    status?: OrderStatus,
+    hasCanceledStops?: boolean,
+    hasReturnedStops?: boolean
   ) {
     try {
       const needsInMemoryFilter = fromStatus && toStatus && thresholdMinutes !== undefined;
@@ -1449,7 +1466,15 @@ export default class OrderService {
         };
         if (userId !== "admin") where.createdBy = { id: userId };
         if (filterByUserId) where.createdBy = { id: filterByUserId };
-
+        if (driverId) where.driver = { id: driverId };
+        if (status) where.status = status;
+        if (hasCanceledStops || hasReturnedStops) {
+          where.stops = hasCanceledStops && hasReturnedStops ? 
+            [
+              { status: OrderStatus.CANCELED },
+              { isReturned: true }
+            ] : hasCanceledStops ? { status: OrderStatus.CANCELED } : { isReturned: true };
+        }
         const orders = await this.orderRepository.find({
           where,
           relations: [
@@ -1470,20 +1495,20 @@ export default class OrderService {
 
       // Fast path: aggregate in DB
       const dashboardQuery = this.orderRepository
-        .createQueryBuilder("order")
-        .innerJoin("order.serviceSubcategory", "subcategory")
-        .select("order.status", "status")
-        .addSelect("COUNT(order.id)", "count")
+        .createQueryBuilder("o")
+        .innerJoin("o.serviceSubcategory", "subcategory")
+        .select("o.status", "status")
+        .addSelect("COUNT(o.id)", "count")
 
       console.log("Generating orders dashboard with filters - userId:", userId, "serviceType:", serviceType, "startDate:", startDate, "endDate:", endDate, "filterByUserId:", filterByUserId);
       if (userId !== "admin") {
-        dashboardQuery.andWhere("order.createdById = :userId", {
+        dashboardQuery.andWhere("o.createdById = :userId", {
           userId
         })
       }
 
       if (filterByUserId) {
-        dashboardQuery.andWhere("order.createdById = :filterByUserId", {
+        dashboardQuery.andWhere("o.createdById = :filterByUserId", {
           filterByUserId,
         });
       }
@@ -1502,7 +1527,47 @@ export default class OrderService {
         dashboardQuery.andWhere("order.pickUpDate <= :endDate", { endDate });
       }
 
-      dashboardQuery.groupBy("order.status")
+      if (startDate && endDate) {
+        dashboardQuery.andWhere("o.pickUpDate BETWEEN :startDate AND :endDate", { startDate, endDate });
+      } else if (startDate) {
+        dashboardQuery.andWhere("o.pickUpDate >= :startDate", { startDate });
+      } else if (endDate) {
+        dashboardQuery.andWhere("o.pickUpDate <= :endDate", { endDate });
+      }
+
+      if (driverId) {
+        dashboardQuery.andWhere("o.driverId = :driverId", { driverId });
+      }
+
+      if (status) {
+        dashboardQuery.andWhere("o.status = :status", { status });
+      }
+
+      if (hasCanceledStops || hasReturnedStops) {
+        const conditions = [];
+
+        if (hasCanceledStops) {
+          conditions.push(`stops.status = :canceledStatus`);
+        }
+      
+        if (hasReturnedStops) {
+          conditions.push(`stops."isReturned" = :isReturned`);
+        }
+      
+        dashboardQuery.andWhere(
+          `EXISTS (
+            SELECT 1 FROM order_stops stops
+            WHERE stops."orderId" = o.id
+            AND (${conditions.join(" OR ")})
+          )`,
+          {
+            canceledStatus: OrderStatus.CANCELED,
+            isReturned: true,
+          }
+        );
+      }
+
+      dashboardQuery.groupBy("o.status")
       const statusCounts = await dashboardQuery.getRawMany();
       const total = statusCounts.reduce((sum: number, s: any) => sum + Number(s.count), 0);
       return { statusCounts, total };
