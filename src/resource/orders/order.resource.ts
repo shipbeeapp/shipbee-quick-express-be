@@ -427,4 +427,195 @@ export class OrderResponseDto {
       }: null,
     };
   }
-  
+
+  /**
+   * Lightweight synchronous mapper for list endpoints.
+   * Skips Google Maps ETA calls to avoid N external HTTP round-trips.
+   */
+  export function toOrderListDto(order: Order): OrderResponseDto {
+    const stops = order.stops?.map(stop => {
+      let itemDesc;
+      try {
+        itemDesc = stop.itemDescription ? JSON.parse(stop.itemDescription) : { text: "", images: [] };
+        itemDesc.images = itemDesc.images.map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`);
+      } catch {
+        itemDesc = { text: stop.itemDescription || "", images: [] };
+      }
+
+      return {
+        id: stop.id,
+        receiver: {
+          id: stop.receiver?.id,
+          name: stop.receiver?.name,
+          email: stop.receiver?.email,
+          phoneNumber: stop.receiver?.phoneNumber,
+        },
+        toAddress: {
+          country: stop.toAddress.country,
+          city: stop.toAddress.city,
+          district: stop.toAddress.district,
+          street: stop.toAddress.street,
+          buildingNumber: stop.toAddress.buildingNumber,
+          floor: stop.toAddress.floor,
+          apartmentNumber: stop.toAddress.apartmentNumber,
+          zone: stop.toAddress.zone,
+          landmarks: stop.toAddress.landmarks,
+          coordinates: stop.toAddress.coordinates,
+        },
+        itemDescription: {
+          text: itemDesc.text || "",
+          images: itemDesc.images || [],
+        },
+        sequence: stop.sequence,
+        isReturned: stop.isReturned,
+        proofOfReturn: stop.proofOfReturn ? generatePhotoLink(stop.proofOfReturn) : null,
+        distance: stop.distance,
+        itemType: stop.itemType,
+        status: stop.status,
+        proofOfOrder: stop.status === OrderStatus.COMPLETED ? generatePhotoLink(stop.proofOfOrder) : null,
+        items: stop.items,
+        totalPrice: stop.totalPrice,
+        deliveryFee: stop.deliveryFee,
+        paymentMethod: stop.paymentMethod,
+        clientStopId: stop.clientStopId,
+        comments: stop.comments,
+      };
+    }) || [];
+
+    const hasCardOnDelivery = order.stops?.some(
+      stop => stop.paymentMethod === PaymentMethod.CARD_ON_DELIVERY
+    ) ?? false;
+
+    const clientCost = (() => {
+      if (!order.stops || order.stops.length === 0) return null;
+      const prices = order.stops
+        .filter(stop => stop.status !== OrderStatus.CANCELED && !stop.isReturned)
+        .map(stop => stop.totalPrice)
+        .filter((price): price is number => typeof price === 'number');
+      if (prices.length === 0) return null;
+      return prices.reduce((sum, price) => sum + price, 0);
+    })();
+
+    return {
+      id: order.id,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      orderNo: order.orderNo,
+      pickUpDate: order.pickUpDate,
+      type: order.type,
+      lifters: order.lifters,
+      distance: order.distance,
+      totalCost: order.totalCost ? Number(order.totalCost) : null,
+      paymentMethod: order.paymentMethod,
+      clientCost,
+      currentStatus: order.status,
+      vehicleType: order.vehicleType,
+      hasCardOnDelivery,
+      proofOfPickup: order.proofOfPickup ? generatePhotoLink(order.proofOfPickup) : null,
+      payer: order.payer,
+      isViewed: order.isViewed,
+      viewedAt: order.viewedAt,
+      ETA: null, // ETA is only computed on single-order detail endpoints
+      accessToken: order.accessToken,
+      sender: {
+        id: order.sender?.id,
+        name: order.sender?.name,
+        email: order.sender?.email,
+        phoneNumber: order.sender?.phoneNumber,
+      },
+      createdBy: {
+        id: order.createdBy?.id,
+        name: order.createdBy?.name,
+        email: order.createdBy?.email,
+        phoneNumber: order.createdBy?.phoneNumber,
+      },
+      stops,
+      serviceSubcategory: {
+        id: order.serviceSubcategory.id,
+        name: order.serviceSubcategory.name,
+        type: order.serviceSubcategory.type,
+      },
+      fromAddress: {
+        country: order.fromAddress.country,
+        city: order.fromAddress.city,
+        district: order.fromAddress.district,
+        street: order.fromAddress.street,
+        buildingNumber: order.fromAddress.buildingNumber,
+        floor: order.fromAddress.floor,
+        apartmentNumber: order.fromAddress.apartmentNumber,
+        zone: order.fromAddress.zone,
+        landmarks: order.fromAddress.landmarks,
+        coordinates: order.fromAddress.coordinates,
+      },
+      statusHistory: order.orderStatusHistory?.map(status => ({
+        status: status.status,
+        reason: status.cancellationReason,
+        timestamp: status.createdAt,
+      })),
+      timestamps: (order.orderStatusHistory?.map(status => ({
+        id: status.id,
+        status: status.status,
+        timestamp: status.createdAt,
+        isStop: !!status.orderStop,
+        stopNumber: status.orderStop ? status.orderStop.sequence : undefined,
+        driver: status.driver ? {
+          name: status.driver.name,
+          phoneNumber: status.driver.phoneNumber,
+        } : null,
+        cancellationReason: status.cancellationReason,
+        triggeredByAdmin: status.triggeredByAdmin,
+        hasArrived: status.hasArrived,
+        returnedStartedAt: status.returnedStartedAt,
+        returnedCompletedAt: status.returnedCompletedAt,
+        event: status.event,
+        requestStatus: status.requestStatus,
+      }))?.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())) || [],
+      shipment: {
+        weight: Number(order.shipment?.weight),
+        length: Number(order.shipment?.length),
+        width: Number(order.shipment?.width),
+        height: Number(order.shipment?.height),
+        itemCount: Number(order.shipment?.itemCount),
+        totalValue: Number(order.shipment?.totalValue),
+      },
+      cancellationRequests: order.cancellationRequests
+        ?.filter(request => request.driver !== null)
+        .map(request => ({
+          id: request.id,
+          status: request.status,
+          reason: request.reason,
+          updatedAt: request.updatedAt,
+          driver: {
+            name: request.driver?.name,
+            phoneNumber: request.driver?.phoneNumber,
+          },
+        })) || [],
+      clientCancellationRequests: order.cancellationRequests
+        ?.filter(request => request.driver?.id === null)
+        .map(request => ({
+          id: request.id,
+          status: request.status,
+          reason: request.reason,
+          updatedAt: request.updatedAt,
+        })) || [],
+      driver: order.driver ? {
+        id: order.driver.id,
+        name: order.driver.name,
+        phoneNumber: order.driver.phoneNumber,
+        vehicle: order.driver.vehicle ? {
+          type: order.driver.vehicle.type,
+          model: order.driver.vehicle.model,
+          number: order.driver.vehicle.number,
+        } : null,
+      } : order.deletedDriverData ? {
+        id: null,
+        name: JSON.parse(order.deletedDriverData).name,
+        phoneNumber: JSON.parse(order.deletedDriverData).phoneNumber,
+        vehicle: {
+          type: JSON.parse(order.deletedDriverData).vehicleType,
+          model: JSON.parse(order.deletedDriverData).vehicleModel,
+          number: JSON.parse(order.deletedDriverData).vehicleNumber,
+        },
+      } : null,
+    };
+  }
