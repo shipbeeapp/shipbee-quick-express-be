@@ -458,25 +458,43 @@ export class OrderController {
         thresholdMinutes,
         userId,
         startDate,
-        endDate, 
+        endDate,
+        page,
+        limit,
       } = req.query;
-      if (req.email == env.ADMIN.EMAIL) orders = await this.orderService.getOrders(
-        serviceType as ServiceSubcategoryName,
-        fromStatus as string,
-        toStatus as string,
-        thresholdMinutes ? Number(thresholdMinutes) : undefined,
-        userId as string,
-        startDate ? new Date(startDate as string) : undefined,
-        endDate ? new Date(endDate as string) : undefined,
-      );
-      else orders = await this.orderService.getOrdersbyUser(
-        [req.userId], 
-        serviceType as string,
-        null,
-        startDate ? new Date(startDate as string) : undefined,
-        endDate ? new Date(endDate as string) : undefined,
-      );
-      res.status(200).json({ success: true, total: orders.length, orders: orders });
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = Math.min(100, Math.max(1, Number(limit) || 100));
+      console.log("page and limit:", pageNum, limitNum);
+      if (req.email == env.ADMIN.EMAIL) {
+        const result = await this.orderService.getOrders(
+          serviceType as ServiceSubcategoryName,
+          fromStatus as string,
+          toStatus as string,
+          thresholdMinutes ? Number(thresholdMinutes) : undefined,
+          userId as string,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined,
+          pageNum,
+          limitNum,
+        );
+        res.status(200).json({
+          success: true,
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+          orders: result.orders,
+        });
+      } else {
+        orders = await this.orderService.getOrdersbyUser(
+          [req.userId], 
+          serviceType as string,
+          null,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined,
+        );
+        res.status(200).json({ success: true, total: orders.length, orders: orders });
+      }
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });
@@ -785,10 +803,28 @@ export class OrderController {
       console.log("Authenticated user email:", req.email);
       let dashboard;
       console.log("admin in email: ", env.ADMIN.EMAIL);
-      const { serviceType } = req.query;
-      if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard("admin");
-      else dashboard = await this.orderService.getOrdersDashboard(req.userId, serviceType as string);
-      res.status(200).json({ success: true, dashboard: dashboard });
+      const { serviceType, startDate, endDate, userId, fromStatus, toStatus, thresholdMinutes } = req.query;
+      if (req.email == env.ADMIN.EMAIL) dashboard = await this.orderService.getOrdersDashboard(
+        "admin",
+        serviceType as string,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined,
+        userId as string,
+        fromStatus as string,
+        toStatus as string,
+        thresholdMinutes ? Number(thresholdMinutes) : undefined,
+      );
+      else dashboard = await this.orderService.getOrdersDashboard(
+        req.userId,
+        serviceType as string,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined,
+        undefined,
+        fromStatus as string,
+        toStatus as string,
+        thresholdMinutes ? Number(thresholdMinutes) : undefined,
+      );
+      res.status(200).json({ success: true, total: dashboard.total, dashboard: dashboard.statusCounts });
     } catch (error) {
       console.error("Error in order controller getting orders:", error.message);
       res.status(400).json({ success: false, message: error.message });

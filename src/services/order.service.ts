@@ -8,7 +8,7 @@ import { Order } from "../models/order.model.js";
 import ServiceSubcategoryService from "./serviceSubcategory.service.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import { OrderResponseDto, toOrderResponseDto } from "../resource/orders/order.resource.js";
+import { OrderResponseDto, toOrderResponseDto, toOrderListDto } from "../resource/orders/order.resource.js";
 import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
 import {
   sendOrderConfirmation,
@@ -347,15 +347,23 @@ export default class OrderService {
     thresholdMinutes?: number, 
     userId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    page: number = 1,
+    limit: number = 20,
   ) {
     if (!AppDataSource.isInitialized) {
       console.log("wasnt initialized, initializing now...");
       await AppDataSource.initialize();
       console.log("Data Source has been initialized! in OrderService");
     }
-    console.log("Fetching all orders for admin");
-    const orders = await this.orderRepository.find({
+    console.log("Fetching orders for admin, page:", page, "limit:", limit);
+
+    // When filtering by intra-status duration we must load all matching orders
+    // first (the filter depends on status history timestamps that can't easily
+    // be expressed in a WHERE clause), then paginate the filtered result.
+    const needsInMemoryFilter = fromStatus && toStatus && thresholdMinutes !== undefined;
+
+    const [orders, total] = await this.orderRepository.findAndCount({
       where: {
         serviceSubcategory: {
           name: serviceType
@@ -372,15 +380,25 @@ export default class OrderService {
       order: {
         createdAt: "DESC",
       },
+      ...(needsInMemoryFilter ? {} : { skip: (page - 1) * limit, take: limit }),
     });
 
-    let filteredOrders = orders;
-    if (fromStatus && toStatus && thresholdMinutes !== undefined) {
-      filteredOrders = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
+    let resultOrders = orders;
+    let resultTotal = total;
+
+    if (needsInMemoryFilter) {
+      const filtered = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
+      resultTotal = filtered.length;
+      resultOrders = filtered.slice((page - 1) * limit, page * limit);
     }
-    return await Promise.all(
-      filteredOrders.map(order => toOrderResponseDto(order))
-    );
+
+    return {
+      orders: resultOrders.map(order => toOrderListDto(order)),
+      total: resultTotal,
+      page,
+      limit,
+      totalPages: Math.ceil(resultTotal / limit),
+    };
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus) {
@@ -1410,18 +1428,64 @@ export default class OrderService {
     }
   }
 
-  async getOrdersDashboard(userId: string, serviceType?: string) {
+  async getOrdersDashboard(
+    userId: string,
+    serviceType?: string,
+    startDate?: Date,
+    endDate?: Date,
+    filterByUserId?: string,
+    fromStatus?: string,
+    toStatus?: string,
+    thresholdMinutes?: number,
+  ) {
     try {
+      const needsInMemoryFilter = fromStatus && toStatus && thresholdMinutes !== undefined;
+
+      // When threshold filter is active, we need full order entities with status history
+      if (needsInMemoryFilter) {
+        const where: any = {
+          serviceSubcategory: serviceType ? { name: serviceType } : undefined,
+          pickUpDate: startDate && endDate ? Between(startDate, endDate) : startDate ? MoreThanOrEqual(startDate) : endDate ? LessThanOrEqual(endDate) : undefined,
+        };
+        if (userId !== "admin") where.createdBy = { id: userId };
+        if (filterByUserId) where.createdBy = { id: filterByUserId };
+
+        const orders = await this.orderRepository.find({
+          where,
+          relations: [
+            "serviceSubcategory", 
+            "orderStatusHistory"
+          ],
+        });
+        console.log("orders length: ", orders.length);
+        const filtered = intraStatusDuration(orders, fromStatus, toStatus, thresholdMinutes);
+        const counts: Record<string, number> = {};
+        for (const order of filtered) {
+          counts[order.status] = (counts[order.status] || 0) + 1;
+        }
+        const statusCounts = Object.entries(counts).map(([status, count]) => ({ status, count: String(count) }));
+        const total = statusCounts.reduce((sum, s) => sum + Number(s.count), 0);
+        return { statusCounts, total };
+      }
+
+      // Fast path: aggregate in DB
       const dashboardQuery = this.orderRepository
         .createQueryBuilder("order")
         .innerJoin("order.serviceSubcategory", "subcategory")
         .select("order.status", "status")
         .addSelect("COUNT(order.id)", "count")
 
+      console.log("Generating orders dashboard with filters - userId:", userId, "serviceType:", serviceType, "startDate:", startDate, "endDate:", endDate, "filterByUserId:", filterByUserId);
       if (userId !== "admin") {
         dashboardQuery.andWhere("order.createdById = :userId", {
           userId
         })
+      }
+
+      if (filterByUserId) {
+        dashboardQuery.andWhere("order.createdById = :filterByUserId", {
+          filterByUserId,
+        });
       }
 
       if (serviceType) {
@@ -1430,9 +1494,18 @@ export default class OrderService {
         });
       }
 
+      if (startDate && endDate) {
+        dashboardQuery.andWhere("order.pickUpDate BETWEEN :startDate AND :endDate", { startDate, endDate });
+      } else if (startDate) {
+        dashboardQuery.andWhere("order.pickUpDate >= :startDate", { startDate });
+      } else if (endDate) {
+        dashboardQuery.andWhere("order.pickUpDate <= :endDate", { endDate });
+      }
+
       dashboardQuery.groupBy("order.status")
-      const dashboard = await dashboardQuery.getRawMany();
-      return dashboard;
+      const statusCounts = await dashboardQuery.getRawMany();
+      const total = statusCounts.reduce((sum: number, s: any) => sum + Number(s.count), 0);
+      return { statusCounts, total };
     }
     catch (err) {
       console.error(err)
