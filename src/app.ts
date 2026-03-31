@@ -59,7 +59,9 @@ class App {
       'https://www.shipbee.io',
       'https://www.trucks.shipbee.io',
       'https://trucks.shipbee.io',
-      'http://localhost:3000'
+      'http://localhost:3000',
+      'http://localhost:3010',
+      'http://localhost:8080'
     ];
 
     this.app.use(
