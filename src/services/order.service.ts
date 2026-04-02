@@ -1404,7 +1404,7 @@ export default class OrderService {
       },
     };
     console.log('before request');
-    console.log('Aramex shipment request items:', request.Shipments.Shipment[0].Details.Items.length);
+    console.log('Aramex shipment request items:', request.Shipments.Shipment[0].Details.Items.ShipmentItem.length);
     console.log('shipping date and time:', request.Shipments.Shipment[0].ShippingDateTime);
     try {
       // const response = await axios.post(url, request, {
