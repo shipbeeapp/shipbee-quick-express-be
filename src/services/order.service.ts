@@ -46,7 +46,7 @@ import { OrderType } from "../utils/enums/orderType.enum.js";
 import axios from "axios";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import { formatAddress } from "../services/email.service.js";
-import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
+import { CountryCode, getCountryCallingCode, PhoneNumber } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
@@ -55,6 +55,7 @@ import { calculateDistanceForClientOrder } from "../utils/google-maps/distance-t
 import { setIslatestOrderStatus, intraStatusDuration } from "../utils/global.utils.js";
 import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { userType } from "../utils/enums/userType.enum.js";
+import * as soap from 'soap';
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -225,6 +226,12 @@ export default class OrderService {
           const dhlTrackingNumber = await this.createDHLShipment(orderData)
           console.log("tracking number:", dhlTrackingNumber);
           order.shipment.trackingNumber = dhlTrackingNumber;
+          await queryRunner.manager.save(order.shipment);
+        }
+        else if (orderData.shipment.shippingCompany === 'Aramex') {
+          const aramexShipment = await this.createAramexShipment(orderData);
+          // console.log("tracking number:", aramexShipment);
+          order.shipment.trackingNumber = aramexShipment.shipmentId;
           await queryRunner.manager.save(order.shipment);
         }
       }
@@ -1342,6 +1349,164 @@ export default class OrderService {
       throw new Error(`Could not fetch current active stop: ${error.message}`);
     }
   }
+
+  async createAramexShipment(orderData: CreateOrderDto) {
+    const wsdlUrl = env.ARAMEX.API_URL;
+
+    const isDomestic = getCountryIsoCode(orderData.fromAddress.country) === getCountryIsoCode(orderData.stops[0].toAddress.country);
+    console.log({ isDomestic });
+    const request = {
+      ClientInfo: {
+        UserName: env.ARAMEX.USERNAME,
+        Password: env.ARAMEX.PASSWORD,
+        Version: 'v1',
+        AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+        AccountPin: env.ARAMEX.ACCOUNT_PIN,
+        AccountEntity: env.ARAMEX.ENTITY,
+        AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
+      },
+      Transaction: {
+        Reference1: `ORDER-${Date.now()}`,
+        Reference2: '',
+        Reference3: '',
+        Reference4: '',
+        Reference5: '',
+      },
+     Shipments: {
+        Shipment: [
+          {
+            Reference1: `REF-${Date.now()}`,
+            Shipper: {
+              AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+              PartyAddress: {
+                Line1: orderData.fromAddress.landmarks,
+                Line2: '',
+                Line3: '',
+                City: orderData.fromAddress.city,
+                StateOrProvinceCode: '',
+                PostCode: '',
+                CountryCode: getCountryIsoCode(orderData.fromAddress.country),
+              },
+              Contact: {
+                PersonName: orderData.senderName,
+                CompanyName: orderData.senderName,
+                PhoneNumber1: orderData.senderPhoneNumber,
+                PhoneNumber2: '',
+                CellPhone: orderData.senderPhoneNumber,
+                EmailAddress: orderData.senderEmail,
+                Type: '',
+              },
+            },
+            Consignee: {
+              PartyAddress: {
+                Line1: orderData.stops[0].toAddress.landmarks,
+                Line2: '',
+                Line3: '',
+                City: orderData.stops[0].toAddress.city,
+                StateOrProvinceCode: '',
+                PostCode: '',
+                CountryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
+              },
+              Contact: {
+                PersonName: orderData.stops[0].receiverName,
+                CompanyName: orderData.stops[0].receiverName,
+                PhoneNumber1: orderData.stops[0].receiverPhoneNumber,
+                PhoneNumber2: '',
+                CellPhone: orderData.stops[0].receiverPhoneNumber,
+                EmailAddress: orderData.stops[0].receiverEmail,
+                Type: '',
+              },
+            },
+            ShippingDateTime: new Date(orderData.shipment.plannedShippingDateAndTime.replace(" GMT", "")).toISOString(),
+            Details: {
+              Dimensions: {
+                Length: orderData.shipment.length,
+                Width: orderData.shipment.width,
+                Height: orderData.shipment.height,
+                Unit: 'CM',
+              },
+              ActualWeight: { Unit: 'KG', Value: orderData.shipment.weight },
+              ChargeableWeight: { Unit: 'KG', Value: orderData.shipment.weight },
+              DescriptionOfGoods: orderData.shipment.description,
+              GoodsOriginCountry: getCountryIsoCode(orderData.fromAddress.country),
+              NumberOfPieces: orderData.shipment?.itemCount || 1,
+              ProductGroup: isDomestic ? 'DOM' : 'EXP',
+              ProductType: isDomestic ? 'SMP' : 'PPX',
+              PaymentType: 'P',
+              PaymentOptions: {},
+              CustomsValueAmount: {
+                CurrencyCode: 'USD', // or your shipment currency
+                Value: orderData.shipment?.totalValue || 0,
+              },
+              Items: {
+                ShipmentItem: orderData.shipment.lineItems.map((item, index) => ({
+                  PackageType: item.packageType || 'Box',
+                  Quantity: item.quantity.value,
+                  Weight: { Unit: 'KG', Value: item.weight.netValue },
+                  Comments: item.description,
+                  Reference: `REF-${Date.now()}-${index}`,
+                })),
+              },
+            },
+          },
+        ],
+      },    
+      LabelInfo: {
+        ReportID: 9201,
+        ReportType: 'URL', // returns label as a download URL
+      },
+    };
+    console.log('before request');
+    console.log('Aramex shipment request items:', request.Shipments.Shipment[0].Details.Items.length);
+    console.log('shipping date and time:', request.Shipments.Shipment[0].ShippingDateTime);
+    try {
+      // const response = await axios.post(url, request, {
+      //   headers: { 'Content-Type': 'application/json' },
+      // });
+      // const data = response.data;
+      // console.log('Create order response:', JSON.stringify(data, null, 2));
+
+      // if (data.HasErrors) {
+      //   const msg = data.Notifications?.[0]?.Message ?? 'Unknown error';
+      //   throw new Error(`Aramex order creation failed: ${msg}`);
+      // }
+
+      // const shipment = data.Shipments?.[0];
+
+      // if (shipment?.HasErrors) {
+      //   const msg = shipment.Notifications?.[0]?.Message ?? 'Unknown shipment error';
+      //   throw new Error(`Aramex shipment error: ${msg}`);
+      // }
+      const client = await soap.createClientAsync(wsdlUrl);
+
+      client.setEndpoint(
+        wsdlUrl
+      );
+      const [result] = await client.CreateShipmentsAsync(request);
+      console.log({ result });
+      console.log('Create shipment result:', JSON.stringify(result, null, 2));
+      if (result.HasErrors) {
+        const msg = result.Notifications?.[0]?.Message ?? 'Unknown error';
+        throw new Error(`Aramex order creation failed: ${msg}`);
+      }
+
+      const shipmentId = result.Shipments?.ProcessedShipment?.[0]?.ID;
+
+      return {
+        shipmentId,
+        // labelUrl: shipment.ShipmentLabel?.LabelURL,
+        // reference: shipment.Reference1,
+      };
+    } catch (error) {
+      console.error("Error creating Aramex shipment:", error.message);
+      throw new Error(`Could not create Aramex shipment: ${error.message}`);
+    }
+
+
+  }
+
+
+
 
   async createDHLShipment(orderData: CreateOrderDto) {
     console.log("from address:", orderData.fromAddress);

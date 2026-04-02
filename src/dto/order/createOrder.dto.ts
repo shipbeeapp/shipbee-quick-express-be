@@ -52,43 +52,57 @@ class AddressDto {
 }
 
 class QuantityDto {
+  @IsOptional()
   @IsNumber()
   @Transform(({ value }) => (value ? Number(value) : value))
   value: number;
 
+  @IsOptional()
   @IsString()
   unitOfMeasurement: string;
 }
 
 class WeightDto {
+  @IsOptional()
   @IsNumber()
   @Transform(({ value }) => (value ? Number(value) : value))
   netValue: number;
 
+  @IsOptional()
   @IsNumber()
   @Transform(({ value }) => (value ? Number(value) : value))
   grossValue: number;
 }
 
 class LineItemDto {
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   number: number;
   
+  @IsOptional()
   @IsString()
   description: string;
 
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   price: number;
 
+  @IsOptional()
   @ValidateNested()
   @Type(() => QuantityDto)
   quantity: QuantityDto;
 
+  @IsOptional()
   @IsString()
   manufacturerCountry: string;
 
+  @IsString()
+  @IsOptional()
+  packageType: string;
+  
+  @IsOptional()
   @ValidateNested()
   @Type(() => WeightDto)
   weight: WeightDto;

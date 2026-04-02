@@ -85,13 +85,22 @@ export const env = {
   },
   ORDER_EMIT_BUFFER_MINUTES: Number(process.env.ORDER_EMIT_BUFFER_MINUTES) || 2, // Default to 2 minutes
   ARAMEX: {
-    API_URL: process.env.ARAMEX_API_URL,
+    API_URL: process.env.ARAMEX_API_URL || 'https://ws.aramex.net/shippingapi.v2/shipping/service_1_0.svc?wsdl',
     USERNAME: process.env.ARAMEX_USERNAME,
     PASSWORD: process.env.ARAMEX_PASSWORD,
     ACCOUNT_NUMBER: process.env.ARAMEX_ACCOUNT_NUMBER,
     ACCOUNT_PIN: process.env.ARAMEX_ACCOUNT_PIN,
     COUNTRY_CODE: process.env.ARAMEX_COUNTRY_CODE || 'QA',
     ENTITY: process.env.ARAMEX_ENTITY || 'DOH',
+    RATES_API_URL: process.env.ARAMEX_RATES_API_URL || 'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc?wsdl',
+
+    SB_ARAMEX_USERNAME: process.env.SB_ARAMEX_USERNAME,
+    SB_ARAMEX_PASSWORD: process.env.SB_ARAMEX_PASSWORD,
+    SB_ARAMEX_API_URL: process.env.SB_ARAMEX_API_URL,
+    SB_ARAMEX_ACCOUNT_NUMBER: process.env.SB_ARAMEX_ACCOUNT_NUMBER,
+    SB_ARAMEX_ACCOUNT_PIN: process.env.SB_ARAMEX_ACCOUNT_PIN,
+    SB_ARAMEX_ENTITY: process.env.SB_ARAMEX_ENTITY,
+    SB_ARAMEX_COUNTRY_CODE: process.env.SB_ARAMEX_COUNTRY_CODE || 'GB'
   },
   DISCONNECTION_NOTIFICATION_MINUTES: Number(process.env.DISCONNECTION_NOTIFICATION_MINUTES) || 15, // Default to 15 minutes
 };
