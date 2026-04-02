@@ -248,14 +248,10 @@ export default class PricingService {
     }
 
     public async getAramexPricing(getPricingDTO: GetPricingDTO) {
-        const wsdlUrl = env.ARAMEX.API_URL;
+        const wsdlUrl = env.ARAMEX.RATES_API_URL;
+        console.log('Using Aramex WSDL URL:', wsdlUrl);
 
         const client = await soap.createClientAsync(wsdlUrl);
-
-        // 🔥 Override endpoint
-        client.setEndpoint(
-            'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc'
-        );
         const isDomestic = getCountryIsoCode(getPricingDTO.fromCountry) === getCountryIsoCode(getPricingDTO.toCountry);
         const request = {
             ClientInfo: {
@@ -347,6 +343,7 @@ export default class PricingService {
             return {
                 carrier: 'Aramex',
                 totalCost: Number(result.TotalAmount.Value),
+                currency: result.TotalAmount.CurrencyCode,
                 estimatedDeliveryDays: result.DeliveryTime
             };
         }

@@ -46,7 +46,7 @@ import { OrderType } from "../utils/enums/orderType.enum.js";
 import axios from "axios";
 import { getCountryIsoCode } from "../utils/dhl.utils.js";
 import { formatAddress } from "../services/email.service.js";
-import { CountryCode, getCountryCallingCode } from 'libphonenumber-js';
+import { CountryCode, getCountryCallingCode, PhoneNumber } from 'libphonenumber-js';
 import { externalTrackingSocket } from "../socket/external-tracking-socket.js";
 import { createDriverOrderResource } from "../resource/drivers/driverOrder.resource.js";
 import { getStatusTimestamp, getDurationInMinutes } from "../utils/global.utils.js";
@@ -226,12 +226,9 @@ export default class OrderService {
           await queryRunner.manager.save(order.shipment);
         }
         else if (orderData.shipment.shippingCompany === 'Aramex') {
-          console.log('beforeeeeeeeeeeeee');
-
           const aramexShipment = await this.createAramexShipment(orderData);
-          console.log('aftteeeeeeeeeeeeer');
-          console.log("tracking number:", aramexShipment);
-          // order.shipment.trackingNumber = aramexShipment.shipmentId;
+          // console.log("tracking number:", aramexShipment);
+          order.shipment.trackingNumber = aramexShipment.shipmentId;
           await queryRunner.manager.save(order.shipment);
         }
       }
@@ -269,19 +266,19 @@ export default class OrderService {
       await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: null, queryRunner });
       orderData.orderNo = order.orderNo;
       let recipientAdminMail;
-      // if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
-      // else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
-      // await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
-      //   console.error("Error sending emaill to admin:", err);
-      // });
-      // console.log('sent mail to admin: ', recipientAdminMail);
-      // if (createdByUser.email) {
-      //   await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
-      //     console.error("Error sending email to user:", err);
-      //   }
-      //   );
-      //   console.log('sent mail to user: ', createdByUser.email);
-      // }
+      if (order.serviceSubcategory.name == ServiceSubcategoryName.PERSONAL_QUICK) recipientAdminMail = env.SMTP.USER;
+      else recipientAdminMail = env.EXPRESS_ADMIN_EMAIL;
+      await sendOrderConfirmation(orderData, total, orderData.vehicleType, recipientAdminMail, 'admin').catch((err) => {
+        console.error("Error sending emaill to admin:", err);
+      });
+      console.log('sent mail to admin: ', recipientAdminMail);
+      if (createdByUser.email) {
+        await sendOrderConfirmation(orderData, total, orderData.vehicleType, createdByUser.email).catch((err) => {
+          console.error("Error sending email to user:", err);
+        }
+        );
+        console.log('sent mail to user: ', createdByUser.email);
+      }
 
 
       //🔹 Step 5: Create Payment
@@ -1301,20 +1298,19 @@ export default class OrderService {
   }
 
   async createAramexShipment(orderData: CreateOrderDto) {
-    const url = env.ARAMEX.SB_ARAMEX_API_URL;
+    const wsdlUrl = env.ARAMEX.API_URL;
 
     const isDomestic = getCountryIsoCode(orderData.fromAddress.country) === getCountryIsoCode(orderData.stops[0].toAddress.country);
     console.log({ isDomestic });
-
     const request = {
       ClientInfo: {
-        UserName: env.ARAMEX.SB_ARAMEX_USERNAME,
-        Password: env.ARAMEX.SB_ARAMEX_PASSWORD,
-        Version: 'v1.0',
-        AccountNumber: env.ARAMEX.SB_ARAMEX_ACCOUNT_NUMBER,
-        AccountPin: env.ARAMEX.SB_ARAMEX_ACCOUNT_PIN,
-        AccountEntity: env.ARAMEX.SB_ARAMEX_ENTITY,
-        AccountCountryCode: env.ARAMEX.SB_ARAMEX_COUNTRY_CODE,
+        UserName: env.ARAMEX.USERNAME,
+        Password: env.ARAMEX.PASSWORD,
+        Version: 'v1',
+        AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+        AccountPin: env.ARAMEX.ACCOUNT_PIN,
+        AccountEntity: env.ARAMEX.ENTITY,
+        AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
       },
       Transaction: {
         Reference1: `ORDER-${Date.now()}`,
@@ -1323,100 +1319,93 @@ export default class OrderService {
         Reference4: '',
         Reference5: '',
       },
-      Shipments: [
-        {
-          Reference1: `REF-${Date.now()}`,
-          Reference2: '',
-          Reference3: '',
-          Shipper: {
-            Reference1: '',
-            Reference2: '',
-            AccountNumber: env.ARAMEX.SB_ARAMEX_ACCOUNT_NUMBER,
-            PartyAddress: {
-              Line1: orderData.fromAddress.landmarks,
-              Line2: '',
-              Line3: '',
-              City: orderData.fromAddress.city,
-              StateOrProvinceCode: '',
-              PostCode: '',
-              CountryCode: getCountryIsoCode(orderData.fromAddress.country),
+     Shipments: {
+        Shipment: [
+          {
+            Reference1: `REF-${Date.now()}`,
+            Shipper: {
+              AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+              PartyAddress: {
+                Line1: orderData.fromAddress.landmarks,
+                Line2: '',
+                Line3: '',
+                City: orderData.fromAddress.city,
+                StateOrProvinceCode: '',
+                PostCode: '',
+                CountryCode: getCountryIsoCode(orderData.fromAddress.country),
+              },
+              Contact: {
+                PersonName: orderData.senderName,
+                CompanyName: orderData.senderName,
+                PhoneNumber1: orderData.senderPhoneNumber,
+                PhoneNumber2: '',
+                CellPhone: orderData.senderPhoneNumber,
+                EmailAddress: orderData.senderEmail,
+                Type: '',
+              },
             },
-            Contact: {
-              PersonName: orderData.senderName,
-              CompanyName: orderData.senderName,
-              PhoneNumber1: orderData.senderPhoneNumber,
-              PhoneNumber2: '',
-              EmailAddress: orderData.senderEmail,
-              Type: '',
+            Consignee: {
+              PartyAddress: {
+                Line1: orderData.stops[0].toAddress.landmarks,
+                Line2: '',
+                Line3: '',
+                City: orderData.stops[0].toAddress.city,
+                StateOrProvinceCode: '',
+                PostCode: '',
+                CountryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
+              },
+              Contact: {
+                PersonName: orderData.stops[0].receiverName,
+                CompanyName: orderData.stops[0].receiverName,
+                PhoneNumber1: orderData.stops[0].receiverPhoneNumber,
+                PhoneNumber2: '',
+                CellPhone: orderData.stops[0].receiverPhoneNumber,
+                EmailAddress: orderData.stops[0].receiverEmail,
+                Type: '',
+              },
+            },
+            ShippingDateTime: new Date(orderData.shipment.plannedShippingDateAndTime.replace(" GMT", "")).toISOString(),
+            Details: {
+              Dimensions: {
+                Length: orderData.shipment.length,
+                Width: orderData.shipment.width,
+                Height: orderData.shipment.height,
+                Unit: 'CM',
+              },
+              ActualWeight: { Unit: 'KG', Value: orderData.shipment.weight },
+              ChargeableWeight: { Unit: 'KG', Value: orderData.shipment.weight },
+              DescriptionOfGoods: orderData.shipment.description,
+              GoodsOriginCountry: getCountryIsoCode(orderData.fromAddress.country),
+              NumberOfPieces: orderData.shipment?.itemCount || 1,
+              ProductGroup: isDomestic ? 'DOM' : 'EXP',
+              ProductType: isDomestic ? 'SMP' : 'PPX',
+              PaymentType: 'P',
+              PaymentOptions: {},
+              CustomsValueAmount: {
+                CurrencyCode: 'USD', // or your shipment currency
+                Value: orderData.shipment?.totalValue || 0,
+              },
+              Items: {
+                ShipmentItem: orderData.shipment.lineItems.map((item, index) => ({
+                  PackageType: item.packageType || 'Box',
+                  Quantity: item.quantity.value,
+                  Weight: { Unit: 'KG', Value: item.weight.netValue },
+                  Comments: item.description,
+                  Reference: `REF-${Date.now()}-${index}`,
+                })),
+              },
             },
           },
-          Consignee: {
-            Reference1: '',
-            Reference2: '',
-            AccountNumber: '',
-            PartyAddress: {
-              Line1: orderData.stops[0].toAddress.landmarks,
-              Line2: '',
-              Line3: '',
-              City: orderData.stops[0].toAddress.city,
-              StateOrProvinceCode: '',
-              PostCode: '',
-              CountryCode: getCountryIsoCode(orderData.stops[0].toAddress.country),
-            },
-            Contact: {
-              PersonName: orderData.stops[0].receiverName,
-              CompanyName: orderData.stops[0].receiverName,
-              PhoneNumber1: orderData.stops[0].receiverPhoneNumber,
-              PhoneNumber2: '',
-              EmailAddress: orderData.stops[0].receiverEmail,
-              Type: '',
-            },
-          },
-          ShippingDateTime: `/Date(${orderData.shipment.plannedShippingDateAndTime})/`,
-          // DueDate: `/Date(${orderData.shippingDate.getTime() + 7 * 24 * 60 * 60 * 1000})/`,
-          Comments: '',
-          PickupLocation: 'Reception',
-          OperationsInstructions: '',
-          AccountingInstrcutions: '',
-          Details: {
-            Dimensions: {
-              Length: orderData.shipment.length,
-              Width: orderData.shipment.width,
-              Height: orderData.shipment.height,
-              Unit: 'CM',
-            },
-            ActualWeight: { Unit: 'KG', Value: orderData.shipment.weight },
-            ChargeableWeight: { Unit: 'KG', Value: orderData.shipment.weight },
-            DescriptionOfGoods: orderData.shipment.description,
-            GoodsOriginCountry: getCountryIsoCode(orderData.fromAddress.country),
-            NumberOfPieces: 1,
-            ProductGroup: isDomestic ? 'DOM' : 'EXP',
-            ProductType: isDomestic ? 'SMP' : 'PPX',
-            PaymentType: 'P',
-            PaymentOptions: '',
-            CustomsValueAmount: { CurrencyCode: 'QAR', Value: 100 },
-            CashOnDeliveryAmount: { CurrencyCode: 'QAR', Value: 0 },
-            InsuranceAmount: { CurrencyCode: 'QAR', Value: 0 },
-            CashAdditionalAmount: { CurrencyCode: 'QAR', Value: 0 },
-            CollectAmount: { CurrencyCode: 'QAR', Value: 0 },
-            Services: '',
-            items: orderData.shipment.lineItems.map((item, index) => ({
-
-              PackageType: item.packageType || 'Box',  // neet to be changed to dynamic based on item type from fronend
-              Quantity: item.quantity,
-              Weight: { Unit: 'KG', Value: item.weight },
-              Comments: item.description,
-              Reference: `REF-${Date.now()}-${index}`,
-            })),
-          },
-        },
-      ],
+        ],
+      },    
       LabelInfo: {
         ReportID: 9201,
         ReportType: 'URL', // returns label as a download URL
       },
     };
     console.log('before request');
+    console.log('Aramex shipment request items:', request.Shipments.Shipment[0].Details.Items.length);
+    console.log('shipping date and time:', request.Shipments.Shipment[0].ShippingDateTime);
     try {
       // const response = await axios.post(url, request, {
       //   headers: { 'Content-Type': 'application/json' },
@@ -1435,30 +1424,29 @@ export default class OrderService {
       //   const msg = shipment.Notifications?.[0]?.Message ?? 'Unknown shipment error';
       //   throw new Error(`Aramex shipment error: ${msg}`);
       // }
-
-      const wsdlUrl = env.ARAMEX.SB_ARAMEX_API_URL;
-
       const client = await soap.createClientAsync(wsdlUrl);
 
-      // client.setEndpoint(
-      //   wsdlUrl
-      // );
-      // https://ws.dev.aramex.net/shippingapi.v2/shipping/service_1_0.svc
+      client.setEndpoint(
+        wsdlUrl
+      );
       const [result] = await client.CreateShipmentsAsync(request);
       console.log({ result });
+      console.log('Create shipment result:', JSON.stringify(result, null, 2));
+      if (result.HasErrors) {
+        const msg = result.Notifications?.[0]?.Message ?? 'Unknown error';
+        throw new Error(`Aramex order creation failed: ${msg}`);
+      }
+
+      const shipmentId = result.Shipments?.ProcessedShipment?.[0]?.ID;
 
       return {
-        shipmentId: ['shipment.ID'],
+        shipmentId,
         // labelUrl: shipment.ShipmentLabel?.LabelURL,
         // reference: shipment.Reference1,
       };
     } catch (error) {
       console.error("Error creating Aramex shipment:", error.message);
-      if (error.response) {
-        console.error("Aramex API error response:", JSON.stringify(error.response.data, null, 2));
-        const apiError = error.response.data?.Notifications?.[0]?.Message || 'Unknown API error';
-        throw new Error(`Could not create Aramex shipment: ${apiError}`);
-      }
+      throw new Error(`Could not create Aramex shipment: ${error.message}`);
     }
 
 
