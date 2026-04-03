@@ -48,6 +48,7 @@ class AddressDto {
     landmarks?: string;
 
     @IsString()
+    @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
