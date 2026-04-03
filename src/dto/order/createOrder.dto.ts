@@ -1,5 +1,5 @@
 import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf, IsBoolean } from "class-validator";
-import { Type, Transform } from "class-transformer";   
+import { Type, Transform, plainToInstance } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
@@ -47,8 +47,11 @@ class AddressDto {
     @IsOptional()
     landmarks?: string;
 
+    @IsOptional()
+    _isQuick?: boolean; // injected by parent transform — do not send from client
+
     @IsString()
-    @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
+    @ValidateIf(o => o._isQuick === true)
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
 }
 
@@ -172,10 +175,18 @@ class ShipmentDto {
 }
 
 export class OrderStop {
-  
+
+  @IsOptional()
+  _isQuick?: boolean; // injected by parent transform — do not send from client
+
   @IsOptional()
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
+  @Transform(({ value, obj }) => {
+    const addr = typeof value === 'string' ? JSON.parse(value) : value;
+    if (addr) addr._isQuick = obj._isQuick === true;
+    return addr;
+  })
   toAddress?: AddressDto
 
   @IsOptional()
@@ -254,7 +265,11 @@ export class CreateOrderDto {
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
-  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
+  @Transform(({ value, obj }) => {
+    const addr = typeof value === 'string' ? JSON.parse(value) : value;
+    if (addr) addr._isQuick = obj.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK;
+    return addr;
+  })
   fromAddress: AddressDto  
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
@@ -340,6 +355,10 @@ export class CreateOrderDto {
 
   @ValidateNested({ each: true })
   @Type(() => OrderStop)
+  @Transform(({ value, obj }) => {
+    if (!Array.isArray(value)) return value;
+    return value.map(stop => plainToInstance(OrderStop, { ...stop, _isQuick: obj.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK }));
+  })
   stops?: OrderStop[];
 
   @IsEnum(OrderType)
