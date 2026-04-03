@@ -2361,4 +2361,43 @@ export default class OrderService {
       await queryRunner.release();
     }
   }
+
+  async updateStopPaymentMethod(orderId: string, stopId: string, driverId: string, newPaymentMethod: PaymentMethod) {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id: orderId, driver: { id: driverId }, stops: { id: stopId } },
+        relations: ["stops"]
+      });
+
+      if (!order) {
+        throw new Error("Order not found or you are not authorized to update payment method for this order.");
+      }
+
+      if (order.status === OrderStatus.COMPLETED || 
+          order.status === OrderStatus.CANCELED
+        ) 
+      {
+        throw new Error(`Order is already ${order.status}. Cannot update payment method.`);
+      }
+
+      const stop = order.stops.find(s => s.id === stopId);
+      if (stop.status === OrderStatus.COMPLETED || stop.status === OrderStatus.CANCELED) {
+        throw new Error(`Stop is already ${stop.status}. Cannot update payment method.`);
+      }
+      if (stop?.paymentMethod === newPaymentMethod) {
+        throw new Error(`Stop already has payment method ${newPaymentMethod}. No update needed.`);
+      }
+      //i can only change payment method from cash to card on delivery and vice versa
+      if ((stop.paymentMethod === PaymentMethod.CASH_ON_DELIVERY && newPaymentMethod !== PaymentMethod.CARD_ON_DELIVERY) ||
+          (stop.paymentMethod === PaymentMethod.CARD_ON_DELIVERY && newPaymentMethod !== PaymentMethod.CASH_ON_DELIVERY)) {
+        throw new Error(`Invalid payment method change from ${stop.paymentMethod} to ${newPaymentMethod}.`);
+      }
+      stop.paymentMethod = newPaymentMethod;
+      await this.orderRepository.save(order);
+      console.log(`Payment method for stop ${stopId} in order ${orderId} updated to ${newPaymentMethod} by driver ${driverId}`);
+    } catch (error) {
+      console.error("Error updating stop payment method:", error.message);
+      throw new Error(`Could not update stop payment method: ${error.message}`);
+    }
+  }
 }

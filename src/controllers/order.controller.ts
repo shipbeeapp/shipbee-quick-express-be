@@ -274,6 +274,12 @@ export class OrderController {
       this.processStopCancellationReturn.bind(this)
     );
 
+    this.router.put(
+      "/orders/:orderId/update-stop-payment-method",
+      authenticationMiddleware,
+      this.updateStopPaymentMethod.bind(this)
+    )
+
     this.router.post(
       "/orders/process-cancellation/:cancelRequestId",
       authenticationMiddleware,
@@ -1078,6 +1084,21 @@ export class OrderController {
     }
     catch (error) {
       console.error("Error in order controller processing stop cancellation or return request:", error.message);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  }
+
+  public async updateStopPaymentMethod(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const { stopId, paymentMethod } = req.body;
+      const driverId = req.driverId;
+
+      await this.orderService.updateStopPaymentMethod(orderId, stopId, driverId, paymentMethod);
+      res.status(200).json({ success: true, message: "Stop payment method updated successfully." });
+    }
+    catch (error) {
+      console.error("Error in order controller updating stop payment method:", error.message);
       res.status(400).json({ success: false, message: error.message });
     }
   }
