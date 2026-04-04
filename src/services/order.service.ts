@@ -56,6 +56,7 @@ import { setIslatestOrderStatus, intraStatusDuration } from "../utils/global.uti
 import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { userType } from "../utils/enums/userType.enum.js";
 import * as soap from 'soap';
+import { Payer } from "../utils/enums/payer.enum.js";
 
 interface AnsarOrderInfo {
   orderNo: number;
@@ -2362,10 +2363,17 @@ export default class OrderService {
     }
   }
 
-  async updateStopPaymentMethod(orderId: string, stopId: string, driverId: string, newPaymentMethod: PaymentMethod) {
+  private isValidPaymentChange(oldMethod: PaymentMethod, newMethod: PaymentMethod) {
+    return (
+      (oldMethod === PaymentMethod.CASH_ON_DELIVERY && newMethod === PaymentMethod.CARD_ON_DELIVERY) ||
+      (oldMethod === PaymentMethod.CARD_ON_DELIVERY && newMethod === PaymentMethod.CASH_ON_DELIVERY)
+    );
+  }
+
+  async updateStopPaymentMethod(orderId: string, driverId: string, newPaymentMethod: PaymentMethod, stopId?: string) {
     try {
       const order = await this.orderRepository.findOne({
-        where: { id: orderId, driver: { id: driverId }, stops: { id: stopId } },
+        where: { id: orderId, driver: { id: driverId } },
         relations: ["stops"]
       });
 
@@ -2380,16 +2388,44 @@ export default class OrderService {
         throw new Error(`Order is already ${order.status}. Cannot update payment method.`);
       }
 
+      //if stopId not provided, then payer is sender and we need to update order payment method and all stops
+      //else we only update the specific stop
+      if (!stopId) {
+        if (order.payer !== Payer.SENDER) {
+          throw new Error(`Payment payer for this order is ${order.payer}. Cannot update order payment method.`);
+        }
+        // Update order payment method and all stops
+        if (order.paymentMethod === newPaymentMethod) {
+          throw new Error(`Order already has payment method ${newPaymentMethod}. No update needed.`);
+        }
+        if (!this.isValidPaymentChange(order.paymentMethod, newPaymentMethod)) {
+          throw new Error(`Invalid payment method change from ${order.paymentMethod} to ${newPaymentMethod}.`);
+        }
+        order.paymentMethod = newPaymentMethod;
+        for (const stop of order.stops) {
+          if (stop.status !== OrderStatus.COMPLETED && stop.status !== OrderStatus.CANCELED) {
+            stop.paymentMethod = newPaymentMethod;
+          }
+        }
+        await this.orderRepository.save(order);
+        console.log(`Payment method for order ${orderId} and all stops updated to ${newPaymentMethod} by driver ${driverId}`);
+        return;
+      }
+      
+      if (order.payer !== Payer.RECEIVER) {
+        throw new Error(`Payment payer for this order is ${order.payer}. Cannot update stop payment method.`);
+      }
       const stop = order.stops.find(s => s.id === stopId);
+      if (!stop) {
+        throw new Error(`Stop with ID ${stopId} not found in order ${orderId}.`);
+      }
       if (stop.status === OrderStatus.COMPLETED || stop.status === OrderStatus.CANCELED) {
         throw new Error(`Stop is already ${stop.status}. Cannot update payment method.`);
       }
-      if (stop?.paymentMethod === newPaymentMethod) {
+      if (stop.paymentMethod === newPaymentMethod) {
         throw new Error(`Stop already has payment method ${newPaymentMethod}. No update needed.`);
       }
-      //i can only change payment method from cash to card on delivery and vice versa
-      if ((stop.paymentMethod === PaymentMethod.CASH_ON_DELIVERY && newPaymentMethod !== PaymentMethod.CARD_ON_DELIVERY) ||
-          (stop.paymentMethod === PaymentMethod.CARD_ON_DELIVERY && newPaymentMethod !== PaymentMethod.CASH_ON_DELIVERY)) {
+      if (!this.isValidPaymentChange(stop.paymentMethod, newPaymentMethod)) {
         throw new Error(`Invalid payment method change from ${stop.paymentMethod} to ${newPaymentMethod}.`);
       }
       stop.paymentMethod = newPaymentMethod;

@@ -1094,7 +1094,7 @@ export class OrderController {
       const { stopId, paymentMethod } = req.body;
       const driverId = req.driverId;
 
-      await this.orderService.updateStopPaymentMethod(orderId, stopId, driverId, paymentMethod);
+      await this.orderService.updateStopPaymentMethod(orderId, driverId, paymentMethod, stopId);
       res.status(200).json({ success: true, message: "Stop payment method updated successfully." });
     }
     catch (error) {
