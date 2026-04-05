@@ -15,8 +15,7 @@ import OrderService from "./services/order.service.js";
 import { TermsAndConditionsController } from "./controllers/terms-and-conditions.controller.js";
 import { PricingController } from "./controllers/pricing.controller.js";
 import { PromoCodeController } from "./controllers/promoCode.controller.js";
-
-
+import { FreightController } from "./controllers/freight.controller.js";
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
   // process.exit(1); // optional: crash the app to avoid unknown state
@@ -28,7 +27,7 @@ process.on('uncaughtException', (err) => {
 });
 
 const app = new App(
-    [
+  [
     new OrderController(),
     new CitiesController(),
     new VehicleController(),
@@ -38,7 +37,9 @@ const app = new App(
     new TermsAndConditionsController(), // Add TermsAndConditionsController
     new PricingController(), // Add PricingController
     new PromoCodeController(), // Add PromoCodeController
-    ],
+    new FreightController(),
+
+  ],
 );
 
 const server = http.createServer(app.app);
@@ -48,15 +49,15 @@ app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
 app.initializeDataSource()
-.then(async () => {
-  console.log("Data Source initialized successfully!");
-  const orderService = Container.get(OrderService);
-  await schedulePendingOrdersOnStartup(orderService);
-  server.listen(env.PORT, () => {
-    console.log(`Server is running on port ${env.PORT}`);
+  .then(async () => {
+    console.log("Data Source initialized successfully!");
+    const orderService = Container.get(OrderService);
+    await schedulePendingOrdersOnStartup(orderService);
+    server.listen(env.PORT, () => {
+      console.log(`Server is running on port ${env.PORT}`);
+    });
+    console.log("Server is listening for requests...");
+  })
+  .catch((err) => {
+    console.error("Failed to initialize app:", err);
   });
-  console.log("Server is listening for requests...");
-})
-.catch((err) => {
-  console.error("Failed to initialize app:", err);
-});
