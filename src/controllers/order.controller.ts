@@ -1043,6 +1043,9 @@ export class OrderController {
   }
   public async getCompletedOrdersByDateRange(req: AuthenticatedRequest, res: Response) {
     try {
+      if (req.email !== env.ADMIN.EMAIL) {
+        return res.status(403).json({ success: false, message: "You are not authorized to view completed orders." });
+      }
       const { startDate, endDate, businessIds, driverIds, isLate, fromStatus, toStatus, thresholdMinutes } = req.body as { startDate?: Date, endDate?: Date, businessIds?: string[], driverIds?: string[], isLate?: boolean, fromStatus?: string, toStatus?: string, thresholdMinutes?: number};
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
