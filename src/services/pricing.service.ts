@@ -302,25 +302,7 @@ export default class PricingService {
                 ProductGroup: isDomestic ? 'DOM' : 'EXP',
                 ProductType: isDomestic ? 'SMP' : 'PPX',
                 PaymentType: 'P', // P for prepaid, R for receiver
-                PaymentOptions: 'Account',
-                // Optional fields can be included if needed
-                CustomsValueAmount: { CurrencyCode: 'QAR', Value: 100 },
-                CashOnDeliveryAmount: { CurrencyCode: 'QAR', Value: 0 },
-                InsuranceAmount: { CurrencyCode: 'QAR', Value: 0 },
-                CashAdditionalAmount: { CurrencyCode: 'QAR', Value: 0 },
-                CollectAmount: { CurrencyCode: 'QAR', Value: 0 },
-                Services: '',
-                Items: {
-                    ShipmentItem: [
-                        {
-                            PackageType: 'Box',
-                            Quantity: 1,
-                            Weight: { Unit: 'KG', Value: 2 },
-                            Comments: 'Handle with care',
-                            Reference: 'Ref001',
-                        },
-                    ],
-                },
+                PaymentOptions: 'Account'
             },
         };
         console.log({ Destination: request.DestinationAddress });
