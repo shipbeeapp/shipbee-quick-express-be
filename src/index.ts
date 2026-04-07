@@ -20,6 +20,7 @@ import { BroadcastMessageController } from "./controllers/broadcastMessage.contr
 import { externalTrackingSocket } from "./socket/external-tracking-socket.js";
 import { UploadController } from "./controllers/upload.controller.js";
 import { TagController } from "./controllers/tag.controller.js";
+import { FreightController } from "./controllers/freight.controller.js";
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
@@ -32,7 +33,7 @@ process.on('uncaughtException', (err) => {
 });
 
 const app = new App(
-    [
+  [
     new OrderController(),
     new CitiesController(),
     new VehicleController(),
@@ -46,6 +47,7 @@ const app = new App(
     new BroadcastMessageController(), // Add BroadcastMessageController
     new UploadController(),
     new TagController(), // Add TagsController
+    new FreightController(), // Add FreightController
     ],
 );
 
