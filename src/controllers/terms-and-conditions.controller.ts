@@ -1,7 +1,7 @@
 import { Router, Response, Request } from "express";
 import { TermsAndConditions } from "../models/terms-and-conditions.model.js";
 import { AppDataSource } from "../config/data-source.js";
-import authenticationMiddleware, { AuthenticatedRequest } from "../middlewares/authentication.middleware.js";
+import {authenticationMiddleware, AuthenticatedRequest } from "../middlewares/authentication.middleware.js";
 import { env } from "../config/environment.js";
 
 

@@ -1,12 +1,22 @@
 import { Service, Container } from "typedi";
 import { User } from "../models/user.model.js";
+import { Order } from "../models/order.model.js";
 import { AppDataSource } from "../config/data-source.js";
 import { toUserResponseDto, UserResponseDto } from "../resource/users/user.resource.js";
+import { BusinessUserDto } from "../dto/user/businessUser.dto.js";
+import bcrypt from "bcrypt";
+import { userType } from "../utils/enums/userType.enum.js";
+import crypto from "crypto";
+import { env } from "../config/environment.js";
+import { sendPasswordResetEmail } from "./email.service.js";
+import { IsNull, Not } from "typeorm";
+import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
+import { In } from "typeorm";
 
 @Service()
 export default class UserService {
   private userRepository = AppDataSource.getRepository(User);
-
+  private orderRepository = AppDataSource.getRepository(Order);
   async findOrCreateUser(data: any, queryRunner?: any): Promise<User> {
     const manager = queryRunner ? queryRunner.manager.getRepository(User) : this.userRepository;
     try {
@@ -18,7 +28,7 @@ export default class UserService {
           .where('user.email = :email', { email: data.email })
           .orWhere('user.phoneNumber = :phoneNumber', { phoneNumber: data.phoneNumber })
           .getOne();
-          console.log("User lookup by email and phoneNumber result:", user);
+        console.log("User lookup by email and phoneNumber result:", user);
       } else if (data.email) {
         user = await manager.findOneBy({ email: data.email });
         console.log("User lookup by email result:", user);
@@ -29,28 +39,28 @@ export default class UserService {
         throw new Error('Either email or phoneNumber must be provided');
       }
       if (!user) {
-          console.log("User not found, creating new user with data:", data);
-          user = manager.create(data);
-          await manager.save(user);
+        console.log("User not found, creating new user with data:", data);
+        user = manager.create(data);
+        await manager.save(user);
       }
       return user;
-  } catch (error) {
-    console.log(error);
-    if (error.code === '23505') {
-      // Duplicate key error: try to fetch the user again
-      console.log("Duplicate key error encountered, fetching existing user");
-      const user =  await manager.findOneBy([
-        { email: data.email },
-        { phoneNumber: data.phoneNumber }
-      ]);
-      console.log("Fetched user after duplicate key error:", user);
-      if (user) {
-        return user;
+    } catch (error) {
+      console.log(error);
+      if (error.code === '23505') {
+        // Duplicate key error: try to fetch the user again
+        console.log("Duplicate key error encountered, fetching existing user");
+        const user = await manager.findOneBy([
+          { email: data.email },
+          { phoneNumber: data.phoneNumber }
+        ]);
+        console.log("Fetched user after duplicate key error:", user);
+        if (user) {
+          return user;
+        }
       }
+      throw new Error(`Error in findOrCreateUser: ${error.message}`);
     }
-    throw new Error(`Error in findOrCreateUser: ${error.message}`);
   }
-}
 
   async saveUser(user: User): Promise<User> {
     try {
@@ -66,6 +76,11 @@ export default class UserService {
       const user = await this.userRepository.findOneBy({ id: userId });
       if (!user) {
         throw new Error(`User with ID ${userId} not found`);
+      }
+      if (userData.password) {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+        userData.password = hashedPassword;
       }
       Object.assign(user, userData);
       return await this.userRepository.save(user);
@@ -84,20 +99,61 @@ export default class UserService {
     }
   }
 
-  async getUsers(): Promise<UserResponseDto[]> {
+  async getUsers(serviceType?: ServiceSubcategoryName, type?: userType): Promise<UserResponseDto[]> {
     try {
-      const users = await this.userRepository.find({order: { createdAt: "DESC" }});
-      return users.map(toUserResponseDto); 
+      let users: User[] = [];
+
+      if (serviceType) {
+        //  Get user IDs from orders that match the service type
+        const orders = await this.orderRepository
+          .createQueryBuilder("order")
+          .innerJoinAndSelect("order.serviceSubcategory", "subcategory")
+          .select("order.createdById", "userId")
+          .where("subcategory.name = :serviceType", { serviceType })
+          .getRawMany();
+        
+        const userIds = orders.map(o => o.userId);
+
+        if (userIds.length === 0) return []; // no users found
+        console.log("user type: ", type)
+        // 2 Fetch users by these IDs
+        users = await this.userRepository.find({
+          where: { id: In(userIds), type: type ? type : undefined }, 
+          order: { createdAt: "DESC" }
+        });
+      } else {
+        // return all users if no filter
+        users = await this.userRepository.find({ where: { type: type ? type : undefined }, order: { createdAt: "DESC" } });
+      }
+
+      return users.map(toUserResponseDto);
+
     } catch (error) {
       console.error("Error fetching users:", error);
       throw error;
     }
   }
 
-  async getUserIdByApiKey(apiKey: string): Promise<string | undefined> {
+
+  async getIntegratedBusiness() {
+    try {
+      const integratedBusinesses = await this.userRepository.find({
+        select: ['id', 'companyName'],
+        where: { apiKey: Not(IsNull()) }
+      })
+      console.log({ integratedBusinesses })
+      return integratedBusinesses;
+    }
+    catch (error) {
+      console.error("Error fetching integrated businesses:", error);
+      throw error;
+    }
+  }
+
+  async getUserIdByApiKey(apiKey: string): Promise<{ userId: string, isSandbox: boolean } | undefined> {
     try {
       const user = await this.userRepository.findOneBy({ apiKey });
-      return user ? user.id : undefined;
+      return user ? { userId: user.id, isSandbox: user.isSandboxUser } : undefined;
     } catch (error) {
       console.error("Error fetching user by API key:", error);
       throw error;
@@ -123,5 +179,104 @@ export default class UserService {
   private generateApiKey(): string {
     // Simple API key generation using random bytes
     return [...Array(30)].map(() => Math.random().toString(36)[2]).join('');
+  }
+
+  async findOrCreateBusinessUser(businessUser: BusinessUserDto, queryRunner?: any): Promise<User> {
+    const manager = queryRunner ? queryRunner.manager.getRepository(User) : this.userRepository;
+    try {
+      let user = await manager.findOneBy({ email: businessUser.email });
+      if (!user) {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(businessUser.password, saltRounds);
+        user = manager.create({
+          name: businessUser.name,
+          email: businessUser.email,
+          type: userType.BUSINESS,
+          companyName: businessUser.companyName,
+          industry: businessUser.industry,
+          numOfDrivers: businessUser.numOfDrivers,
+          numOfVehicles: businessUser.numOfVehicles,
+          password: hashedPassword,
+        });
+        await manager.save(user);
+        return user;
+      }
+      else {
+        console.log("Business user with email already exists:", businessUser.email);
+        throw new Error('Business user with this email already exists');
+      }
+    } catch (error) {
+      console.log(error);
+      throw new Error(`Error in findOrCreateBusinessUser: ${error.message}`);
+    }
+  }
+
+  async getBusinessUserByEmail(email: string): Promise<User | null> {
+    try {
+      return await this.userRepository.findOneBy({ email, type: userType.BUSINESS });
+    } catch (error) {
+      console.error("Error fetching business user by email:", error);
+      throw error;
+    }
+  }
+
+  async findUserByEmailOrPhone(userData: any): Promise<User | null> {
+    try {
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.email = :email', { email: userData.email })
+        .orWhere('user.phoneNumber = :phone', { phone: userData.phoneNumber })
+        .getOne();
+      return user || null;
+    } catch (error) {
+      console.error("Error fetching user by email or phone:", error);
+      throw error;
+    }
+  }
+
+  async forgotPassword(user: User): Promise<void> {
+    try {
+      if (!user.email) {
+        throw new Error("User does not have an email address");
+      }
+      const token = crypto.randomBytes(20).toString('hex');
+      user.resetPasswordToken = token;
+      // user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour from now
+      await this.userRepository.save(user);
+      // Universal link for web / deep link for mobile
+      const resetUrl = `${env.CLIENT_HOST}/reset-password/${token}`;
+      console.log(`Password reset link for user ${user.email}: ${resetUrl}`);
+      // Here, you would typically send the resetUrl via email to the user
+
+      await sendPasswordResetEmail(user.email!, resetUrl);
+      console.log(`Password reset email sent to ${user.email}`);
+    } catch (error) {
+      console.error("Error in forgotPassword:", error);
+      throw error;
+    }
+  }
+
+  async getUserByResetToken(token: string): Promise<User | null> {
+    try {
+      const user = await this.userRepository.findOneBy({ resetPasswordToken: token });
+      return user || null;
+    } catch (error) {
+      console.error("Error fetching user by reset token:", error);
+      throw error;
+    }
+  }
+
+  async resetPassword(user: User, newPassword: string): Promise<void> {
+    try {
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      user.password = hashedPassword;
+      user.resetPasswordToken = null!;
+      // user.resetPasswordExpires = null;
+      await this.userRepository.save(user);
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      throw error;
+    }
   }
 }

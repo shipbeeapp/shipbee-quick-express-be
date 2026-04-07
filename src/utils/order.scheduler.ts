@@ -20,9 +20,21 @@ export function scheduleOrderEmission(order: Order): void {
   const now = new Date();
   console.log(`⏰ Current time is ${now.toISOString()}`);
 
-  if (now >= pickupTime) {
-    // Pickup time already passed, no point emitting
-    console.log(`❌ Pickup time for order ${order.id} already passed, skipping emit.`);
+  const diffMs = now.getTime() - pickupTime.getTime();
+  const orderEmitBuffer  = env.ORDER_EMIT_BUFFER_MINUTES * 60 * 1000; // Convert buffer minutes to milliseconds
+  console.log('diffMs:', diffMs, 'orderEmitBuffer:', orderEmitBuffer);
+  if (diffMs > orderEmitBuffer) {
+    // Pickup time already passed beyond the buffer, no point emitting
+    console.log(`❌ Pickup time for order ${order.id} already passed beyond buffer, skipping emit.`);
+    return;
+  }
+  
+   // ⏱ If pickup is in the past but within buffer → emit immediately
+  if (diffMs >= 0 && diffMs <= orderEmitBuffer) {
+    console.log(
+      `⏱ Pickup was within last ${env.ORDER_EMIT_BUFFER_MINUTES} minutes — emitting order ${order.id} immediately`
+    );
+    emitOrderToDrivers(order);
     return;
   }
 

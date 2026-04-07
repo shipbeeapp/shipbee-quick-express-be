@@ -38,8 +38,8 @@ const transporter = nodemailer.createTransport({
 });
 const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 
-export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation') {
-  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType);
+export async function sendOrderConfirmation(orderDetails: any, totalCost: number, vehicleType: VehicleType, recipientMail: string, userType: string = 'non-admin', emailType: string = 'order-confirmation', stopNumber?: string) {
+  const html = generateOrderHtml(orderDetails, totalCost, vehicleType, userType, emailType, stopNumber);
   console.log("sending order confirmation email to:", recipientMail);
   await transporter.sendMail({
     from: `Shipbee <${env.SMTP.USER}>`,
@@ -97,7 +97,7 @@ export async function sendOtpToUser(phoneNumber: string, otp: string, phoneExten
   }
 }
 
-function formatAddress(address: any): string {
+export function formatAddress(address: any): string {
     if (!address) return '';
   
     const parts = [
@@ -115,8 +115,23 @@ function formatAddress(address: any): string {
     return parts.join(', '); // joins with comma breaks for HTML formatting
   }
 
+  export function formatAddressSingleLine(address: any): string {
+    if (!address) return '';
+  
+    const parts = [
+        address.district && `${address.district}`,
+        address.street && `${address.street}`,
+        address.buildingNumber && `${address.buildingNumber}`,
+        address.floor && `${address.floor}`,
+        address.apartmentNumber && `${address.apartmentNumber}`,
+        address.zone && `${address.zone}`,
+        address.landmarks && `${address.landmarks}`,
+      ].filter(Boolean);
 
-export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string): string {
+    return parts.join(', '); // joins with comma breaks for HTML formatting
+  }
+
+export function generateOrderHtml(order: any, totalCost: number, vehicleType: VehicleType, userType: string, emailType: string, stopNumber?: string): string {
     const templatePath = path.join(process.cwd(), 'private', 'emails', `${emailType}.html`);
     const html = fs.readFileSync(templatePath, 'utf8');
     console.log("order stops:", order.stops);
@@ -134,6 +149,9 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       case OrderStatus.ACTIVE:
         orderStatus = 'started';
         break;
+      case OrderStatus.EN_ROUTE_TO_PICKUP:
+        orderStatus = 'started';
+        break;
       case OrderStatus.COMPLETED:
         orderStatus = 'completed';
         break;
@@ -143,7 +161,14 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
       default:
         orderStatus = 'unknown';
     }
-    const heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
+    let heading = emailType === 'order-confirmation' ? (userType === 'admin' ? `New Request Received – <strong>${category}</strong>` : 'Your Service request has been submitted!') : `Order #${order.orderNo} has been ${orderStatus} by driver ${order.driver?.name}`;
+    if (emailType === 'order-status' && stopNumber) {
+      if (stopNumber === 'pickup') {
+        heading += ` and is going to pickup location.`;
+      } else {
+        heading += ` and is going to stop #${stopNumber}.`;
+      }
+    }
     const replacements = {
       recipient: userType === 'admin' ? 'admin' : `${order.senderName || order.sender?.name}`,
       heading: heading,
@@ -184,14 +209,18 @@ export function generateOrderHtml(order: any, totalCost: number, vehicleType: Ve
         receiverName: stop.receiverName || stop.receiver?.name,
         receiverPhoneNumber: stop.receiverPhoneNumber || stop.receiver?.phoneNumber,
         itemDescription: stop.itemDescription ? JSON.parse(stop.itemDescription).text : '',
-        images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : []
+        images: stop.itemDescription ? (JSON.parse(stop.itemDescription).images || []).map((img: string) => `${env.CLOUDINARY_BASE_URL}${img}`) : [],
+        items: stop.items,
+        totalPrice: stop.totalPrice ? Number(stop.totalPrice).toFixed(2) : null,
+        paymentMethod: stop.paymentMethod,
+        comments: stop.comments ?? null,
+        deliveryFee: stop.deliveryFee ? Number(stop.deliveryFee).toFixed(2) : null
       })),
       vehicleType: vehicleType,
       status: "CONFIRMED",
       paymentMethod: "CASH", // Assuming default payment method is CASH
       shipment: order.shipment
     };
-    console.log("order stops in replacements:", replacements.stops);
     return template(replacements);
   }
 
@@ -270,25 +299,39 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
   } 
 }
 
-export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string) {
+export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string, stopSequence?: number, atPickup: boolean = false) {
   try {
+    let content = '';
+    if (email) content += `<p>`
+    content += `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) `;
+    if (stopSequence) {
+      if (atPickup) {
+        content += `is on his way to stop #${stopSequence} for dropoff with order #${orderNo}.`;
+      }
+      else {
+        content += `has arrived at stop #${stopSequence} for dropoff for order #${orderNo}.`;
+      }
+    }
+    else {
+      content += `has arrived for pickup with order #${orderNo}`;
+    }
     if (email) {
       await transporter.sendMail({
         from: `Shipbee <${env.SMTP.USER}>`,
         to: email,
         subject: `Order #${orderNo}`,
-        html: `<p>Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}) has arrived at your location with order #${orderNo}. </p>`,
+        html: content,
       });
       console.log(`Arrival notification email to ${email}`);
     } 
-    else {
-      await twilioClient.messages.create({
-        body: `Your Shipbee driver, ${driverName} (Phone: ${driverPhoneNumber}), has arrived at your location with order ${orderNo}.`,
-        from: 'ShipBee',
-        to: `+974${phoneNumber}`,
-      });
-      console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
-    }
+    // else if (phoneNumber) {
+    //   await twilioClient.messages.create({
+    //     body: content,
+    //     from: 'ShipBee',
+    //     to: `${phoneNumber}`,
+    //   });
+    //   console.log(`Arrival notification SMS sent to: ${phoneNumber}`);
+    // }
   } catch (error) {
     console.error('Error sending arrival notification SMS:', error);
     throw new Error(`Failed to send arrival notification SMS to ${phoneNumber}: ${error.message}`);
@@ -308,5 +351,22 @@ export async function sendDriverUpdateInfoMail(driverName: string, driverPhoneNu
   } catch (error) {
     console.error('Error sending driver update info email:', error);
     throw new Error(`Failed to send driver update info email to ${env.SMTP.USER}: ${error.message}`);
+  }
+}
+
+export async function sendPasswordResetEmail(recipientEmail: string, resetUrl: string) {
+  try {
+    await transporter.sendMail({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      to: recipientEmail,
+      subject: 'Password Reset Request',
+      html: `<p>You requested a password reset. Click the link below to reset your password:</p>
+             <a href="${resetUrl}">${resetUrl}</a>
+             <p>If you did not request this, please ignore this email.</p>`,
+    });
+    console.log(`Password reset email sent to: ${recipientEmail}`);
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error(`Failed to send password reset email to ${recipientEmail}: ${error.message}`);
   }
 }

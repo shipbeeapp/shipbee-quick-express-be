@@ -5,6 +5,8 @@ dotenv.config();
 export const env = {
   PORT: process.env.PORT || 3000,
   APP_ENV: process.env.APP_ENV || "development",
+  APP_HOST: process.env.APP_HOST || `http://localhost:${process.env.PORT || 3000}`,
+  CLIENT_HOST: process.env.CLIENT_HOST || 'http://localhost:4200',
   DB: {
     HOST: process.env.DB_HOST,
     PORT: Number(process.env.DB_PORT),
@@ -36,6 +38,7 @@ export const env = {
     EMAIL: process.env.ADMIN_EMAIL,
     PASSWORD: process.env.ADMIN_PASSWORD,
   },
+  SESSION_SECRET: process.env.SESSION_SECRET || 'some_secret',
   DRIVER_APP_LINK: process.env.DRIVER_APP_LINK || 'https://drive.google.com/drive/folders/1k4aXRRXQIhe4Rmo9wI7Lg-5eaLtCUi1u',
   GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
   RADIUS_KM_MOTORCYCLE: Number(process.env.RADIUS_KM_MOTORCYCLE) || 5,
@@ -54,6 +57,52 @@ export const env = {
     GOOGLE_CLIENT_SECRET: process.env.OAUTH_GOOGLE_CLIENT_SECRET,
     REFRESH_TOKEN: process.env.OAUTH_REFRESH_TOKEN,
   },
+  SHOPIFY: {
+    CLIENT_ID: process.env.SHOPIFY_CLIENT_ID,
+    SECRET: process.env.SHOPIFY_SECRET,
+    SCOPES: process.env.SHOPIFY_SCOPES,
+  },
+  DHL: {
+    API_KEY: process.env.DHL_API_KEY,
+    API_SECRET: process.env.DHL_API_SECRET,
+    ACCOUNT_NUMBER: process.env.DHL_ACCOUNT_NUMBER,
+    DOMAIN: process.env.DHL_DOMAIN || 'https://api-dhl.com',
+  },
+  GCP_PROJECT_ID: process.env.GCP_PROJECT_ID,
+  GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  FIREBASE_CONFIG_PATH: process.env.FIREBASE_CONFIG_PATH || "/etc/secrets/firebase-account.json",
+  EXPRESS_ADMIN_EMAIL: process.env.EXPRESS_ADMIN_EMAIL || 'ems@shipbee.io',
+  EXTERNAL_TRACKING_SOCKET: {
+    URL: process.env.EXTERNAL_TRACKING_SOCKET_URL,
+    TOKEN: process.env.EXTERNAL_TRACKING_SOCKET_TOKEN
+  },
+  SERVICE_FEE_PERCENTAGE: Number(process.env.SERVICE_FEE_PERCENTAGE) || 10, // Default to 10%
+  FCM_INTERVAL_SECONDS: Number(process.env.FCM_INTERVAL_SECONDS) || 5, // Default to 5 seconds
+  AWS: {
+    REGION: process.env.AWS_REGION || 'us-east-1',
+    BUCKET_NAME: process.env.AWS_BUCKET_NAME || 'codepipeline-us-east-1-66938916e2a7-415a-aa55-dcba2afa8f96',
+    FILENAME: process.env.AWS_FILENAME || 'appcast.xml'
+  },
+  ORDER_EMIT_BUFFER_MINUTES: Number(process.env.ORDER_EMIT_BUFFER_MINUTES) || 2, // Default to 2 minutes
+  ARAMEX: {
+    API_URL: process.env.ARAMEX_API_URL || 'https://ws.aramex.net/shippingapi.v2/shipping/service_1_0.svc?wsdl',
+    USERNAME: process.env.ARAMEX_USERNAME,
+    PASSWORD: process.env.ARAMEX_PASSWORD,
+    ACCOUNT_NUMBER: process.env.ARAMEX_ACCOUNT_NUMBER,
+    ACCOUNT_PIN: process.env.ARAMEX_ACCOUNT_PIN,
+    COUNTRY_CODE: process.env.ARAMEX_COUNTRY_CODE || 'QA',
+    ENTITY: process.env.ARAMEX_ENTITY || 'DOH',
+    RATES_API_URL: process.env.ARAMEX_RATES_API_URL || 'https://ws.aramex.net/ShippingAPI.V2/RateCalculator/Service_1_0.svc?wsdl',
+
+    SB_ARAMEX_USERNAME: process.env.SB_ARAMEX_USERNAME,
+    SB_ARAMEX_PASSWORD: process.env.SB_ARAMEX_PASSWORD,
+    SB_ARAMEX_API_URL: process.env.SB_ARAMEX_API_URL,
+    SB_ARAMEX_ACCOUNT_NUMBER: process.env.SB_ARAMEX_ACCOUNT_NUMBER,
+    SB_ARAMEX_ACCOUNT_PIN: process.env.SB_ARAMEX_ACCOUNT_PIN,
+    SB_ARAMEX_ENTITY: process.env.SB_ARAMEX_ENTITY,
+    SB_ARAMEX_COUNTRY_CODE: process.env.SB_ARAMEX_COUNTRY_CODE || 'GB'
+  },
+  DISCONNECTION_NOTIFICATION_MINUTES: Number(process.env.DISCONNECTION_NOTIFICATION_MINUTES) || 15, // Default to 15 minutes
   SEABAY_APP_KEY: process.env.SEABAY_APP_KEY || 'Amiup54rt4dD478',
   SEABAY_APP_SECRET: process.env.SEABAY_APP_SECRET || 'q4t345688356E#23',
   SEARATES_PLATFORM_ID: process.env.SEARATES_PLATFORM_ID || '40506',

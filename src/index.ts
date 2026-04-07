@@ -15,7 +15,13 @@ import OrderService from "./services/order.service.js";
 import { TermsAndConditionsController } from "./controllers/terms-and-conditions.controller.js";
 import { PricingController } from "./controllers/pricing.controller.js";
 import { PromoCodeController } from "./controllers/promoCode.controller.js";
+import { ShopSettingsController } from "./controllers/shopSettings.controller.js";
+import { BroadcastMessageController } from "./controllers/broadcastMessage.controller.js";
+import { externalTrackingSocket } from "./socket/external-tracking-socket.js";
+import { UploadController } from "./controllers/upload.controller.js";
+import { TagController } from "./controllers/tag.controller.js";
 import { FreightController } from "./controllers/freight.controller.js";
+
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
   // process.exit(1); // optional: crash the app to avoid unknown state
@@ -37,27 +43,33 @@ const app = new App(
     new TermsAndConditionsController(), // Add TermsAndConditionsController
     new PricingController(), // Add PricingController
     new PromoCodeController(), // Add PromoCodeController
-    new FreightController(),
-
-  ],
+    new ShopSettingsController(), // Add ShopSettingsController
+    new BroadcastMessageController(), // Add BroadcastMessageController
+    new UploadController(),
+    new TagController(), // Add TagsController
+    new FreightController(), // Add FreightController
+    ],
 );
 
 const server = http.createServer(app.app);
 initializeSocket(server); // ✅ inject socket here
 
+externalTrackingSocket.connect()
+
 app.app.get('/test', (req: any, res: any): void => {
   res.send('Welcome to the API! 🌟');
 });
 app.initializeDataSource()
-  .then(async () => {
-    console.log("Data Source initialized successfully!");
-    const orderService = Container.get(OrderService);
-    await schedulePendingOrdersOnStartup(orderService);
-    server.listen(env.PORT, () => {
-      console.log(`Server is running on port ${env.PORT}`);
-    });
-    console.log("Server is listening for requests...");
-  })
-  .catch((err) => {
-    console.error("Failed to initialize app:", err);
+.then(async () => {
+  console.log("Data Source initialized successfully!");
+  const orderService = Container.get(OrderService);
+  await schedulePendingOrdersOnStartup(orderService);
+  await orderService.preloadAnsarOrders()
+  server.listen(env.PORT, () => {
+    console.log(`Server is running on port ${env.PORT}`);
   });
+  console.log("Server is listening for requests...");
+})
+.catch((err) => {
+  console.error("Failed to initialize app:", err);
+});

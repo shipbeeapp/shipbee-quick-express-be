@@ -38,7 +38,7 @@ export class Order extends BaseEntity {
   @JoinColumn({ name: "serviceSubcategoryId" })
   serviceSubcategory: ServiceSubcategory;
 
-  @Column({ type: "timestamptz" })
+  @Column({ type: "timestamptz", nullable: true })
   pickUpDate: Date;
 
   // @Column({type: "enum", enum: itemType, nullable: true})
@@ -121,6 +121,19 @@ export class Order extends BaseEntity {
 
   @Column({ type: "enum", enum: OrderType, default: OrderType.SINGLE_STOP })
   type: OrderType; // SINGLE_STOP or MULTI_STOP
+
+  @Column({ type: "text", nullable: true })
+  deletedDriverData: string; // JSON string to store deleted driver info
+
+  @Column({ type: "float", nullable: false })
+  serviceFeePercentage: number;
+
+  // New field to store bank fee percentage at the time of order creation (to be paid by client)
+  @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
+  bankFeePercentage: number;
+  
+  @Column({ type: "text", nullable: true })
+  proofOfPickup: string; // URL to the proof of pickup photo uploaded by the driver
 
   @OneToMany(() => OrderStop, (stop) => stop.order, { cascade: true })
   stops: OrderStop[];

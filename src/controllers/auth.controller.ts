@@ -1,5 +1,6 @@
 import { NextFunction, Response, Router, Request } from 'express';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { env } from '../config/environment.js';
@@ -9,38 +10,285 @@ import bcrypt from 'bcrypt';
 
 import DriverService from '../services/driver.service.js';
 import { DriverDto } from '../dto/driver/driver.dto.js';
-import authenticationMiddleware from '../middlewares/authentication.middleware.js';
+import {authenticationMiddleware} from '../middlewares/authentication.middleware.js';
 import DriverSignupStatus from '../utils/enums/signupStatus.enum.js';
+import { BusinessUserDto } from '../dto/user/businessUser.dto.js';
+import { broadcastNewDriver } from './user.controller.js';
+import crypto from 'crypto';
+import OrderService from '../services/order.service.js';
+import { CreateOrderDto } from '../dto/order/createOrder.dto.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import ShopSettingsService from '../services/shopSettings.service.js';
+import { PaymentMethod } from '../utils/enums/paymentMethod.enum.js';
+import { PaymentStatus } from '../utils/enums/paymentStatus.enum.js';
+import { OrderType } from '../utils/enums/orderType.enum.js';
+import { itemType } from '../utils/enums/itemType.enum.js';
+import { Payer } from '../utils/enums/payer.enum.js';
+import { getDrivingDistanceInKm } from "../utils/google-maps/distance-time.js";
+
+export const oauthStateStore: Record<string, {
+    state: string,
+    shopifyToken?: string,
+    shop?: string
+}> = {};
 
 export class AuthController {
   public router: Router = Router();
   public path = '/auth';
   private userService: UserService = Container.get(UserService)
   private driverService = Container.get(DriverService); // Assuming driverService is also UserService
+  private orderService = Container.get(OrderService);
+  private shopSettingsService = Container.get(ShopSettingsService)
   constructor() {
 
     this.initializeRoutes();
   }
 
+    private authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 15, // limit each IP to 15 auth requests per window
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { success: false, message: 'Too many authentication attempts, please try again later.' },
+    });
+
     private initializeRoutes() {
-        // Define your routes here
-        // Example: this.router.get('/orders', this.getOrders.bind(this));
-        // You can add more routes as needed
-        this.router.post(`${this.path}/sign-up`, this.signup);
-        this.router.post(`${this.path}/send-otp`, this.sendOtp)
-        this.router.post(`${this.path}/verify-otp`, this.verifyOtp);
-        this.router.post(`${this.path}/admin/login`, this.adminLogin);
+        this.router.get(`${this.path}`, this.auth);
+        this.router.get(`${this.path}/callback`, this.authCallback);
+        this.router.post(`/webhooks/orders_create`, this.orderCreateWebhook);
+        this.router.post(`${this.path}/sign-up`, this.authLimiter, this.signup);
+        this.router.post(`${this.path}/login`, this.authLimiter, this.login);
+        this.router.post(`${this.path}/send-otp`, this.authLimiter, this.sendOtp)
+        this.router.post(`${this.path}/verify-otp`, this.authLimiter, this.verifyOtp);
+        this.router.post(`${this.path}/forgot-password`, this.authLimiter, this.forgetPassword);
+        this.router.post(`${this.path}/reset-password`, this.authLimiter, this.resetPassword);
+        this.router.post(`${this.path}/admin/login`, this.authLimiter, this.adminLogin);
         this.router.post(`${this.path}/admin/driver/reset-password`, authenticationMiddleware, this.adminResetPasswordForDriver);
         this.router.post(`${this.path}/driver/signup`, authenticationMiddleware, this.driverSignup);
-        this.router.post(`${this.path}/driver/login`, this.driverLogin);
-        //forget password for driver
-        this.router.post(`${this.path}/driver/forget-password`, this.driverForgetPassword);
-        // verify otp for driver
-        this.router.post(`${this.path}/driver/verify-otp`, this.driverVerifyOtp);
-        // reset password for driver
-        this.router.post(`${this.path}/driver/reset-password`, this.driverResetPassword);
+        this.router.post(`${this.path}/driver/login`, this.authLimiter, this.driverLogin);
+        this.router.post(`${this.path}/driver/forget-password`, this.authLimiter, this.driverForgetPassword);
+        this.router.post(`${this.path}/driver/verify-otp`, this.authLimiter, this.driverVerifyOtp);
+        this.router.post(`${this.path}/driver/reset-password`, this.authLimiter, this.driverResetPassword);
+        this.router.post(`${this.path}/business/sign-up`, this.authLimiter, this.businessSignup);
+        this.router.post(`${this.path}/business/login`, this.authLimiter, this.businessLogin);
+
     }
 
+    private login = async (req, res) => {
+        // This is a placeholder for the actual implementation
+        const { emailOrPhone, password, serviceType } = req.body;
+
+        if (!emailOrPhone || !password) {
+            return res.status(400).json({ success: false, message: 'Email or phone number and password are required.' });
+        }
+        try {
+            const data = {
+                email: emailOrPhone.includes('@') ? emailOrPhone : null,
+                phoneNumber: emailOrPhone.includes('@') ? null : emailOrPhone,
+            }
+            const user = await this.userService.findUserByEmailOrPhone(data);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found.' });
+            }
+            // Compare the provided password with the hashed password in the database
+            const isPasswordValid = await bcrypt.compare(password, user.password || '');
+            if (!isPasswordValid) {
+                return res.status(401).json({ success: false, message: 'Invalid user credentials.' });
+            }
+
+            if (serviceType === ServiceSubcategoryName.PERSONAL_QUICK) {
+                if (!user.hasLoggedInQuick) { 
+                    user.hasLoggedInQuick = true;
+                    await this.userService.saveUser(user);
+                }
+            } else if (serviceType === ServiceSubcategoryName.INTERNATIONAL) {
+                if (!user.hasLoggedInExpress) {
+                    user.hasLoggedInExpress = true;
+                    await this.userService.saveUser(user);
+                }
+            }
+            
+            const userData = {
+                name: user.name,
+                email: user.email,
+                userId: user.id,
+                phoneNumber: user.phoneNumber,
+                isNewUser: user.isNewUser,
+                userType: user.type, // Assuming userType is a field in your User model
+                proceedWithoutPayment: user.proceedWithoutPayment,
+                monthlyBillingEnabled: user.monthlyBillingEnabled,
+                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: user.cardOnDeliveryEnabled,
+            }
+            const myToken = jwt.sign(
+                userData,
+                env.JWT_SECRET,
+            );
+            res.status(200).json({ success: true, token: myToken, userData: userData });
+        } catch (error) {
+            console.error('Error during login:', error);
+            res.status(500).json({ success: false, message: 'Failed to login user.' });
+        }
+    }
+
+    private auth = async (req, res) => {
+        console.log("Starting Shopify OAuth process");
+        const shop = req.query.shop as string;
+        console.log("Shop parameter:", shop);
+        if (!shop) return res.send('Missing shop parameter');
+
+        const state = crypto.randomBytes(8).toString('hex');
+        console.log("Generated state parameter in auth endpoint:", state);
+        oauthStateStore[shop] = { state };
+        console.log("Stored state for shop:", {oauthStateStore});
+        console.log("shopify scopes:", env.SHOPIFY.SCOPES); 
+        const redirectUrl = `https://${shop}/admin/oauth/authorize?client_id=${env.SHOPIFY.CLIENT_ID}&scope=${env.SHOPIFY.SCOPES}&redirect_uri=${env.APP_HOST}/api/auth/callback&state=${state}`;
+
+        res.redirect(redirectUrl);
+    }
+
+
+    private authCallback = async (req, res) => {
+        console.log("Handling Shopify OAuth callback");
+        const { shop, code, state } = req.query;
+        console.log("Callback query parameters:", { shop, code, state });
+
+        console.log({oauthStateStore});
+        const storedState = oauthStateStore[shop as string].state;
+        if (state !== storedState) {
+          return res.status(403).send('Request origin cannot be verified');
+        }
+        console.log("State parameter verified successfully");
+        // Exchange code for access token
+        const tokenResp = await axios.post(`https://${shop}/admin/oauth/access_token`, {
+          client_id: env.SHOPIFY.CLIENT_ID,
+          client_secret: env.SHOPIFY.SECRET,
+          code
+        });
+
+        console.log("Received access token response from Shopify:", tokenResp.data);
+    
+        const accessToken = tokenResp.data.access_token;
+        // req.session.shopifyToken = accessToken;
+        // req.session.shop = shop;
+
+        oauthStateStore[shop as string].shopifyToken = accessToken;
+        // Register webhook after OAuth
+        try {
+            await this.registerWebhooks(shop, accessToken);
+        } catch (error) {
+            console.error("Error registering webhooks:", error);
+            console.error("error details:", JSON.stringify(error.response?.data?.errors) || error.message);
+        }
+        console.log("Shopify OAuth process completed successfully for shop:", shop, " redirecting to /welcome");
+        res.redirect(`/welcome?shop=${shop}`) // redirect merchant to App URL
+    }
+
+    private async registerWebhooks(shop, accessToken) {
+        console.log("Registering webhooks for shop:", shop, "with access token:", accessToken);
+        const webhookUrl = `https://${shop}/admin/api/2025-10/webhooks.json`;
+        const address = `${env.APP_HOST}/api/webhooks/orders_create`;
+
+        // Step 1: Fetch existing webhooks
+        const existingResp = await axios.get(webhookUrl, {
+            headers: { 'X-Shopify-Access-Token': accessToken }
+        });
+
+        const existingWebhooks = existingResp.data.webhooks || [];
+        const alreadyExists = existingWebhooks.some(
+            (w: any) => w.topic === 'orders/create' && w.address === address
+        );
+
+        if (alreadyExists) {
+            console.log("Webhook for orders/create already exists. Skipping creation.");
+            return;
+        }
+
+        // Step 2: Create
+
+        await axios.post(webhookUrl, {
+          webhook: {
+            topic: 'orders/create',
+            address: `${env.APP_HOST}/api/webhooks/orders_create`,
+            format: 'json'
+          }
+        }, { headers: { 'X-Shopify-Access-Token': accessToken } });
+        console.log("Webhook registration completed for shop:", shop);
+    }
+
+
+    private orderCreateWebhook = async (req, res) => {
+        console.log("Received order create webhook:", req.body);
+        console.log("rawbody:", req.rawBody);
+        const hmacHeader = req.headers['x-shopify-hmac-sha256'] as string;
+        console.log("HMAC header from webhook:", hmacHeader);
+        const digest = crypto.createHmac('sha256', env.SHOPIFY.SECRET!)
+          .update(req.rawBody)
+          .digest('base64');
+        console.log("Calculated HMAC digest:", digest);
+        if (digest !== hmacHeader) return res.status(401).send('Unauthorized');
+        console.log("Webhook HMAC verification successful");
+        // ✅ Respond immediately to prevent Shopify retrying
+        res.status(200).send('OK');
+        const order = req.body;
+        console.log("Processing order: ", {order});
+        const shop = req.headers['x-shopify-shop-domain'] as string;
+        console.log("Processing creating order from shop:", shop, " Order ID:", order.id);
+        const shopSettings = await this.shopSettingsService.getSettings(shop);
+        const {distanceMeters} = await getDrivingDistanceInKm(
+          `${shopSettings.latitude},${shopSettings.longitude}`,
+          `${order.shipping_address.latitude},${order.shipping_address.longitude}`
+        );
+        console.log(`Calculated driving distance: ${distanceMeters} km`);
+
+        // Map Shopify order to your /api/orders payload
+        const orderPayload: CreateOrderDto = {
+          serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+          fromAddress: {
+            country: order.shipping_address.country,
+            city: order.shipping_address.city,
+            landmarks: shopSettings.pickupAddress,
+            buildingNumber: '',
+            floor: null,
+            apartmentNumber: '',
+            zone: '',
+            coordinates: `${shopSettings.latitude},${shopSettings.longitude}`
+            },
+          pickUpDate: new Date(new Date(order.created_at).getTime() + 15 * 60 * 1000).toUTCString(),
+          distance: distanceMeters || 0,
+          senderName: shopSettings.senderName,
+          senderPhoneNumber: shopSettings.senderPhoneNumber,
+          senderEmail: shopSettings.senderEmail || '',
+          vehicleType: shopSettings.vehicleType,
+          paymentMethod: PaymentMethod.CASH_ON_DELIVERY,
+          paymentStatus: PaymentStatus.PENDING,
+          payer: Payer.RECEIVER,
+          type: OrderType.SINGLE_STOP,
+          stops: [{
+            toAddress: {
+              country: order.shipping_address.country,
+              city: order.shipping_address.city,
+              buildingNumber: order.shipping_address.address1,
+              floor: null,
+              apartmentNumber: order.shipping_address.address2,
+                zone: order.shipping_address.province,
+                landmarks: order.shipping_address.company || order.shipping_address.name,
+                coordinates: `${order.shipping_address.latitude},${order.shipping_address.longitude}`   
+            },
+            itemType: shopSettings.itemType as itemType,
+            receiverEmail: order.shipping_address.email,
+            receiverName: order.shipping_address.name,
+            receiverPhoneNumber: order.shipping_address.phone,
+            sequence: 1,
+            distance: 0
+            }
+         ]
+        }
+
+        console.log("Mapped order payload:", orderPayload);
+        await this.orderService.createOrder(orderPayload);
+        console.log("Order created successfully in the system for Shopify order ID:", order.id);
+    }
     private signup = async (req, res) => {
         // This is a placeholder for the actual implementation
         // You would typically handle user signup logic here
@@ -69,7 +317,11 @@ export class AuthController {
                 userId: user.id,
                 phoneNumber: user.phoneNumber,
                 isNewUser: user.isNewUser,
-                userType: user.type  
+                userType: user.type,
+                proceedWithoutPayment: user.proceedWithoutPayment,
+                monthlyBillingEnabled: user.monthlyBillingEnabled,
+                showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: user.cardOnDeliveryEnabled  
             }
             const myToken = jwt.sign(
                 userData,
@@ -98,12 +350,14 @@ export class AuthController {
                 }
                 console.log("data: ", data);
                 const user = await this.userService.findOrCreateUser(data);
-                user.otp = otp; // Save the OTP to the user model
-                await this.userService.saveUser(user); // Save the user with the OTP
-                console.log("otp: ", otp);
-                const phoneExtension = '+974'
-                await sendOtp(emailOrPhone, otp, phoneExtension);
-                return res.status(200).json({ success: true, message: 'OTP sent successfully.' });
+                if (user.isNewUser) {
+                    user.otp = otp; // Save the OTP to the user model
+                    await this.userService.saveUser(user); // Save the user with the OTP
+                    console.log("otp: ", otp);
+                    const phoneExtension = '+974'
+                    await sendOtp(emailOrPhone, otp, phoneExtension);
+                }
+                return res.status(200).json({ success: true, message: 'OTP sent successfully.', isNewUser: user.isNewUser });
             } catch (error) {
                 console.error('Error sending OTP:', error);
                 return res.status(500).json({ success: false, message: 'Failed to send OTP.' });
@@ -112,7 +366,7 @@ export class AuthController {
     }
 
     private verifyOtp = async (req, res) => {
-        const { emailOrPhone, otp } = req.body;
+        const { emailOrPhone, otp, serviceType } = req.body;
         // Here you would typically verify the OTP against your database or cache
         // For this example, we'll just return a success message
         if (!emailOrPhone || !otp) {
@@ -132,13 +386,30 @@ export class AuthController {
         if (user.otp !== otp) {
             return res.status(400).json({ success: false, message: 'Invalid OTP.' });
         }
+        if (serviceType && serviceType === ServiceSubcategoryName.INTERNATIONAL){
+            if (!user.hasLoggedInExpress) {
+                user.hasLoggedInExpress = true;
+                await this.userService.saveUser(user);
+            }
+        }
+        if (serviceType && serviceType === ServiceSubcategoryName.PERSONAL_QUICK){
+            if (!user.hasLoggedInQuick) {
+                user.hasLoggedInQuick = true;
+                await this.userService.saveUser(user);
+            }
+        }
+
         const userData = { 
             email: user.email,
             name: user.name,
             userId: user.id,
             phoneNumber: user.phoneNumber,
             isNewUser: user.isNewUser,
-            userType: user.type // Assuming userType is a field in your User model  
+            userType: user.type, // Assuming userType is a field in your User model  
+            proceedWithoutPayment: user.proceedWithoutPayment,
+            monthlyBillingEnabled: user.monthlyBillingEnabled,
+            showGoodsAndDeliveryValues: user.showGoodsAndDeliveryValues,
+            cardOnDeliveryEnabled: user.cardOnDeliveryEnabled
         }
         const myToken = jwt.sign(
             userData,
@@ -185,6 +456,7 @@ export class AuthController {
                 vehicleModel: driverDto.vehicleModel // Assuming vehicleModel is part of the driverDto
             }
             await sendDriverData(driverDto.phoneNumber, plainPassword);
+            broadcastNewDriver(driver.id, driver.name);
             return res.status(200).json({ success: true, message: "Driver invited successfully",  driverData});
         } catch (error) {
             console.error('Error during driver signup:', error);
@@ -217,8 +489,8 @@ export class AuthController {
                 vehicleNumber: driver.vehicle?.number,
                 vehicleColor: driver.vehicle?.color,
                 vehicleProductionYear: driver.vehicle?.productionYear,
-                infoApprovalStatus: driver.vehicle?.infoApprovalStatus,
-                infoRejectionReason: driver.vehicle?.infoRejectionReason,
+                infoApprovalStatus: driver.vehicleInfoApprovalStatus,
+                infoRejectionReason: driver.vehicleInfoRejectionReason,
                 qid: driver.qid,
                 qidFront: driver.qidFront ? `${env.CLOUDINARY_BASE_URL}${driver.qidFront}` : null,
                 qidBack: driver.qidBack ? `${env.CLOUDINARY_BASE_URL}${driver.qidBack}` : null,
@@ -355,4 +627,107 @@ export class AuthController {
                 return res.status(500).json({ success: false, message: 'Error admin resetting password.' });
             }
         }
+    
+    private businessSignup = async (req, res) => {
+        try {
+            const businessUserDto: BusinessUserDto = req.body;
+            const businessUser = await this.userService.findOrCreateBusinessUser(businessUserDto);
+            const businessUserData = {
+                id: businessUser.id,
+                name: businessUser.name,
+                email: businessUser.email,
+                companyName: businessUser.companyName,
+                industry: businessUser.industry,
+                numOfDrivers: businessUser.numOfDrivers,
+                numOfVehicles: businessUser.numOfVehicles,
+            }
+            return res.status(200).json({ success: true, message: 'Business user signed up successfully.', businessUserData });
+
+        } catch (error) {
+            console.error('Error during business signup:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to sign up business user.' });
+        }
+    }
+
+    private businessLogin = async (req, res) => {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required.' });
+        }
+        try {
+            const businessUser = await this.userService.getBusinessUserByEmail(email);
+            if (!businessUser) {
+                return res.status(404).json({ success: false, message: 'Business user not found.' });
+            }
+            const isPasswordValid = await bcrypt.compare(password, businessUser.password);
+
+            if (!isPasswordValid) {
+                return res.status(401).json({ success: false, message: 'Invalid business user credentials.' });
+            }
+            const businessUserData = {
+                id: businessUser.id,
+                name: businessUser.name,
+                email: businessUser.email,
+                type: businessUser.type,
+                companyName: businessUser.companyName,
+                industry: businessUser.industry,
+                numOfDrivers: businessUser.numOfDrivers,
+                numOfVehicles: businessUser.numOfVehicles,
+                proceedWithoutPayment: businessUser.proceedWithoutPayment,
+                monthlyBillingEnabled: businessUser.monthlyBillingEnabled,
+                showGoodsAndDeliveryValues: businessUser.showGoodsAndDeliveryValues,
+                cardOnDeliveryEnabled: businessUser.cardOnDeliveryEnabled,
+            }
+            const token = jwt.sign(businessUserData, env.JWT_SECRET);
+            return res.status(200).json({ success: true, token, businessUserData });
+        } catch (error) {
+            console.error('Error during business login:', error);
+            return res.status(500).json({ success: false, message: 'Failed to log in business user.' });
+        }
+    }
+    
+    private forgetPassword = async (req, res) => {
+        const { emailOrPhone } = req.body;
+        if (!emailOrPhone) {
+            return res.status(400).json({ success: false, message: 'Email or phone number is required.' });
+        }
+        try {
+            const data = {
+                email: emailOrPhone.includes('@') ? emailOrPhone : null,
+                phoneNumber: emailOrPhone.includes('@') ? null : emailOrPhone,
+            }
+            const user = await this.userService.findUserByEmailOrPhone(data);
+            if (!user) {
+                // return res.status(404).json({ success: false, message: 'User not found.' });
+                return res.status(200).json({ success: true, message: 'If the user exists, an reset password has been sent to the provided contact.' });
+            }
+
+            await this.userService.forgotPassword(user);
+            return res.status(200).json({ success: true, message: 'If the user exists, an reset password has been sent to the provided contact.' });
+        } catch (error) {
+            console.error('Error during forget password:', error);
+            return res.status(500).json({ success: false, message: 'Failed to process forget password request.' });
+        }
+    }
+
+    private resetPassword = async (req, res) => {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+        }
+
+        try {
+            const user = await this.userService.getUserByResetToken(token);
+            if (!user) {
+                return res.status(400).json({ success: false, message: 'Invalid or expired token.' });
+            }
+            await this.userService.resetPassword(user, newPassword);
+            return res.status(200).json({ success: true, message: 'Password has been reset successfully.' });
+        }
+        catch (error) {
+            console.error('Error during reset password:', error);
+            return res.status(500).json({ success: false, message: 'Failed to reset password.' });
+        }
+    }
 }

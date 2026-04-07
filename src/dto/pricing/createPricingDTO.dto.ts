@@ -49,4 +49,7 @@ export class CreatePricingDTO {
     @IsOptional()
     isCurrent: boolean; // To mark if this pricing is current or outdated
 
+    @IsOptional()
+    userId: string
+
 }

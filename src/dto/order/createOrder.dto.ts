@@ -1,5 +1,5 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf } from "class-validator";
-import { Type, Transform } from "class-transformer";   
+import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf, IsBoolean } from "class-validator";
+import { Type, Transform, plainToInstance } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
 import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
@@ -21,27 +21,96 @@ class AddressDto {
 
     @IsString()
     @IsOptional()
-    buildingNumber: string;
-
-    @IsOptional()
-    @Transform(({ value }) => (value ? Number(value) : null))
-    floor: number;
+    district?: string;
 
     @IsString()
     @IsOptional()
-    apartmentNumber: string;
+    street?: string;
 
     @IsString()
     @IsOptional()
-    zone: string;
+    buildingNumber?: string;
 
     @IsString()
     @IsOptional()
-    landmarks: string;
+    floor?: string;
 
     @IsString()
     @IsOptional()
+    apartmentNumber?: string;
+
+    @IsString()
+    @IsOptional()
+    zone?: string;
+
+    @IsString()
+    @IsOptional()
+    landmarks?: string;
+
+    @IsOptional()
+    _isQuick?: boolean; // injected by parent transform — do not send from client
+
+    @IsString()
+    @ValidateIf(o => o._isQuick === true)
     coordinates: string; // Optional field for storing coordinates as a string (e.g., "lat,long")
+}
+
+class QuantityDto {
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  value: number;
+
+  @IsOptional()
+  @IsString()
+  unitOfMeasurement: string;
+}
+
+class WeightDto {
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  netValue: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  grossValue: number;
+}
+
+class LineItemDto {
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  number: number;
+  
+  @IsOptional()
+  @IsString()
+  description: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  price: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => QuantityDto)
+  quantity: QuantityDto;
+
+  @IsOptional()
+  @IsString()
+  manufacturerCountry: string;
+
+  @IsString()
+  @IsOptional()
+  packageType: string;
+  
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WeightDto)
+  weight: WeightDto;
+
 }
 
 class ShipmentDto {
@@ -61,6 +130,10 @@ class ShipmentDto {
     @Type(() => Number)
     height: number; // height in cm
 
+    @IsString()
+    @IsOptional()
+    shippingCompany?: string; // e.g., 'DHL', 'Qatar Post'
+
     @IsNumber()
     @Type(() => Number)
     itemCount: number; // number of items
@@ -69,13 +142,51 @@ class ShipmentDto {
     @Type(() => Number)
     totalValue: number; // total value in USD
 
+    @IsBoolean()
+    @IsOptional()
+    @Transform(({ value }) => (value === 'true' || value === true))
+    pickupRequested?: boolean; // whether pickup is requested
+
+    @IsString()
+    @IsOptional()
+    description: string; // description of the shipment
+
+    @IsString()
+    @IsOptional()
+    invoiceNumber: string; // invoice number
+
+    @IsDateString()
+    @IsOptional()
+    invoiceDate: string; // invoice date
+
+    @IsString()
+    @IsOptional()
+    plannedShippingDateAndTime: string; // allow "GMT+01:00" format
+
+    @IsString()
+    @IsOptional()
+    incoterm?: string; // Incoterm for international shipments
+
+    @ValidateNested({ each: true })
+    @Type(() => LineItemDto)
+    @IsOptional()
+    lineItems?: LineItemDto[];
+
 }
 
 export class OrderStop {
-  
+
+  @IsOptional()
+  _isQuick?: boolean; // injected by parent transform — do not send from client
+
   @IsOptional()
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
+  @Transform(({ value, obj }) => {
+    const addr = typeof value === 'string' ? JSON.parse(value) : value;
+    if (addr) addr._isQuick = obj._isQuick === true;
+    return addr;
+  })
   toAddress?: AddressDto
 
   @IsOptional()
@@ -83,15 +194,12 @@ export class OrderStop {
   itemDescription?: string;
 
   @IsEnum(itemType)
-  @IsOptional()
   itemType: itemType;
 
   @IsString()
-  @IsOptional()
   receiverName: string;
 
   @IsString()
-  @IsOptional()
   receiverPhoneNumber: string;
 
   @IsEmail()
@@ -107,6 +215,36 @@ export class OrderStop {
   // @Type(() => Number)
   @Transform(({ value }) => (value ? Number(value) : value))
   distance: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  lifters?: number;
+
+  @IsOptional()
+  @IsString()
+  clientStopId?: string;
+
+  @IsOptional()
+  items?: any;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  totalPrice?: number;
+
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  comments?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => (value ? Number(value) : value))
+  deliveryFee?: number;
 }
 
 export class CreateOrderDto {
@@ -120,59 +258,68 @@ export class CreateOrderDto {
   // @IsOptional()
   // type: furnitureRequests;
 
-  // @IsEnum(itemType)
-  // @IsOptional()
-  // itemType: itemType;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsOptional()
+  @IsEnum(itemType)
+  itemType?: itemType;
 
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
+  @Transform(({ value, obj }) => {
+    const addr = typeof value === 'string' ? JSON.parse(value) : value;
+    if (addr) addr._isQuick = obj.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK;
+    return addr;
+  })
   fromAddress: AddressDto  
 
-  // @IsOptional()
-  // @ValidateNested() // ✅ Ensure validation of nested object
-  // @Type(() => AddressDto)
-  // toAddress?: AddressDto
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @ValidateNested() // ✅ Ensure validation of nested object
+  @Type(() => AddressDto)
+  toAddress?: AddressDto
 
   // @IsOptional()
   // @IsString()
   // itemDescription?: string;
 
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsDateString()
   pickUpDate: string;
 
-  @IsOptional()
-  @IsNumber()
-  @Transform(({ value }) => (value ? Number(value) : value))
-  lifters?: number;
+  // @IsOptional()
+  // @IsNumber()
+  // @Transform(({ value }) => (value ? Number(value) : value))
+  // lifters?: number;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @Transform(({ value }) => (value ? Number(value) : value))
   @IsNumber()
+  @IsOptional()
   distance: number;
 
   @IsString()
-  @IsOptional()
   senderName: string;
 
   @IsString()
-  @IsOptional()
   senderPhoneNumber: string;
 
   @IsEmail()
   @IsOptional()
   senderEmail: string;
 
-  // @IsString()
-  // @IsOptional()
-  // receiverName: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsString()
+  @IsOptional()
+  receiverName?: string;
 
-  // @IsString()
-  // @IsOptional()
-  // receiverPhoneNumber: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsOptional()
+  @IsString()
+  receiverPhoneNumber?: string;
 
-  // @IsEmail()
-  // @IsOptional()
-  // receiverEmail: string;
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
+  @IsOptional()
+  @IsEmail()
+  receiverEmail?: string;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsEnum(VehicleType)
@@ -195,16 +342,32 @@ export class CreateOrderDto {
   @IsNumber()
   orderNo?: number;
 
+  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
   @IsEnum(Payer)
   @IsOptional()
+  @Transform(({ obj, value }) => {
+    if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+      return Payer.SENDER;      // force SENDER for international shipments
+    }
+    return value;
+    })
   payer: Payer;
 
-  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => OrderStop)
+  @Transform(({ value, obj }) => {
+    if (!Array.isArray(value)) return value;
+    return value.map(stop => plainToInstance(OrderStop, { ...stop, _isQuick: obj.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK }));
+  })
   stops?: OrderStop[];
 
   @IsEnum(OrderType)
   @IsOptional()
+  @Transform(({ obj, value }) => {
+    if (obj.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL) {
+      return OrderType.SINGLE_STOP;      // force SINGLE_STOP for international shipments
+    }
+    return value;
+    })
   type?: OrderType;
 }

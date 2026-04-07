@@ -7,9 +7,9 @@ import { Not } from "typeorm";
 import { Between } from "typeorm";
 import { Order } from "../models/order.model.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
-import { calculateActiveHoursToday } from "../socket/socket.js";
+import { calculateActiveHoursToday, emitOrderCancellationUpdate, getCurrentLocationOfDriver } from "../socket/socket.js";
 import { emitOrderToDrivers, emitOrderToDriver } from "../socket/socket.js";
-import { resetNotifiedDrivers } from "../utils/notification-tracker.js";
+import { resetNotifiedDrivers, markDriverNotified, getNotifiedDriversForOrder } from "../utils/notification-tracker.js";
 import OrderStatusHistoryService from "./orderStatusHistory.service.js";
 import { sendDriverUpdateInfoMail, sendOrderConfirmation, sendOtp } from "../services/email.service.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
@@ -22,6 +22,9 @@ import { DriverResource } from "../resource/drivers/driver.resource.js";
 import { generatePhotoLink } from "../utils/global.utils.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
+import { BroadcastMessageService } from "./broadcastMessage.service.js";
+import { PaymentMethod } from "../utils/enums/paymentMethod.enum.js";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 const otpCache = new Map<string, string>(); // In-memory cache for OTPs
 
@@ -31,6 +34,7 @@ export default class DriverService {
     private vehicleRepository = AppDataSource.getRepository(Vehicle);
     private orderRepository = AppDataSource.getRepository(Order); // Assuming you have an Order model
     private orderStatusHistoryService = Container.get(OrderStatusHistoryService);
+    private broadcastMessageService = Container.get(BroadcastMessageService);
 
     async findOrCreateDriver(data: any, queryRunner?: any): Promise<any> {
         try {
@@ -103,6 +107,7 @@ export default class DriverService {
                     vehicle: vehicle,
                     email: data.email,
                     businessType: data.businessType,
+                    businessDocsApprovalStatus: data.type === DriverType.BUSINESS ? ApprovalStatus.PENDING : null
                 });
                 driver = await manager.save(newDriver);
               }
@@ -166,6 +171,7 @@ export default class DriverService {
                 }
               }
             await queryRunner.commitTransaction();
+            await this.broadcastMessageService.assignDriverToActiveMessages(driver.id);
             return {driver, vehicleType: vehicle?.type};
         } catch (error) {
             console.error("Error in findOrCreateDriver:", error);
@@ -188,17 +194,25 @@ export default class DriverService {
             throw error;
         }
     }
-    constructDriverQuery() {
+    baseDriverQuery() {
         return this.driverRepository.createQueryBuilder("driver")
-                .leftJoinAndSelect("driver.vehicle", "vehicle")
-                .leftJoin("driver.orders", "order")
-                .leftJoinAndSelect("driver.businessOwner", "businessOwner")
+                .leftJoin("driver.vehicle", "vehicle")
+                .leftJoin("driver.businessOwner", "businessOwner")
                 .select([
                     "driver.id",
+                    "driver.income",
+                    "driver.cashIncome",
+                    "driver.driverNo",
+                    "driver.onlineIncome",
+                    "driver.cashBalance",
+                    "driver.incomeLastResolvedAt",
+                    "driver.cashBalanceLastResolvedAt",
                     "driver.name",
                     "driver.phoneNumber",
+                    "driver.hasCardOnDelivery",
                     "driver.status",
-                    "driver.password",
+                    "driver.lastKnownLocation",
+                    "driver.lastOnlineAt",
                     "driver.updatedAt",
                     "driver.signUpStatus",
                     "driver.dateOfBirth",
@@ -224,6 +238,10 @@ export default class DriverService {
                     "driver.qidRejectionReason",
                     "driver.licenseApprovalStatus",
                     "driver.licenseRejectionReason",
+                    "driver.businessDocsApprovalStatus",
+                    "driver.businessDocsRejectionReason",
+                    "driver.vehicleInfoApprovalStatus",
+                    "driver.vehicleInfoRejectionReason",
                     "businessOwner.id",
                     "businessOwner.name",
                     "businessOwner.phoneNumber",
@@ -246,17 +264,15 @@ export default class DriverService {
                     "vehicle.rightPhoto",
                     "vehicle.registrationFront",
                     "vehicle.registrationBack",
-                    "vehicle.infoApprovalStatus",
-                    "vehicle.infoRejectionReason"
                 ])
     }
 
     async findDriverById(driverId: string, type?: string): Promise<Driver | null> {
         try {
-            if (type) return await this.constructDriverQuery()
+            if (type) return await this.baseDriverQuery()
                     .where("driver.id = :driverId", { driverId })
                     .getOne();
-            else return await this.constructDriverQuery()
+            else return await this.baseDriverQuery()
                     .where("driver.id = :driverId", { driverId })
                     .getRawOne();
         } catch (error) {
@@ -274,7 +290,7 @@ export default class DriverService {
         }
     }
 
-    async updateDriver(driverId: string, driverData: UpdateDriverDto) {
+    async updateDriver(driverId: string, driverData: any) {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -292,9 +308,19 @@ export default class DriverService {
                 throw new Error(`Driver with ID ${driverId} not found`);
             }
             // Update vehicle if vehicleType is provided and driver has a vehicle
-            if (driverData.vehicleType && driver.vehicle) {
+            if (driver.vehicle) {
                 console.log("Updating vehicle type for driver:", driverId, "with: ", driver.vehicle.type, "to", driverData.vehicleType);
-                driver.vehicle.type = driverData.vehicleType;
+                driver.vehicle.type = driverData.vehicleType ? driverData.vehicleType : driver.vehicle.type;
+                driver.vehicle.number = driverData.vehicleNumber ? driverData.vehicleNumber : driver.vehicle.number;
+                driver.vehicle.model = driverData.vehicleModel ? driverData.vehicleModel : driver.vehicle.model;
+                driver.vehicle.color = driverData.vehicleColor ? driverData.vehicleColor : driver.vehicle.color;
+                driver.vehicle.productionYear = driverData.vehicleProductionYear ? driverData.vehicleProductionYear : driver.vehicle.productionYear;
+                driver.vehicle.registrationFront = driverData.vehicleRegistrationFront ? driverData.vehicleRegistrationFront : driver.vehicle.registrationFront;
+                driver.vehicle.registrationBack = driverData.vehicleRegistrationBack ? driverData.vehicleRegistrationBack : driver.vehicle.registrationBack;
+                driver.vehicle.frontPhoto = driverData.vehicleFront ? driverData.vehicleFront : driver.vehicle.frontPhoto;
+                driver.vehicle.backPhoto = driverData.vehicleBack ? driverData.vehicleBack : driver.vehicle.backPhoto;
+                driver.vehicle.leftPhoto = driverData.vehicleLeft ? driverData.vehicleLeft : driver.vehicle.leftPhoto;
+                driver.vehicle.rightPhoto = driverData.vehicleRight ? driverData.vehicleRight : driver.vehicle.rightPhoto;
                 console.log("Vehicle type before saving:", driver.vehicle);
                 await vehicleRepository.save(driver.vehicle);
                 console.log("Vehicle type updated successfully");
@@ -311,12 +337,26 @@ export default class DriverService {
             }
           
             // Remove vehicleType from driverData to avoid assigning it directly
-            const { vehicleType, ...rest } = driverData;
+            const { vehicleType, 
+                vehicleNumber, 
+                vehicleModel,
+                vehicleColor,
+                vehicleProductionYear,
+                vehicleRegistrationFront,
+                vehicleRegistrationBack,
+                vehicleFront,
+                vehicleBack,
+                vehicleLeft,
+                vehicleRight,
+                ...rest } = driverData;
         
             // Update driver fields
             Object.assign(driver, rest);
         
-            await driverRepository.save(driver);
+            await driverRepository.update(
+                {id: driverId},
+                rest
+            )
             await queryRunner.commitTransaction();
         } catch (error) {
             await queryRunner.rollbackTransaction();
@@ -326,10 +366,42 @@ export default class DriverService {
             await queryRunner.release();
         }
     }
-    async findAllDrivers(): Promise<any> {
+    async findAllDrivers(isDisconnected?: boolean | null): Promise<any> {
         try {
-            const result = await this.constructDriverQuery()
-            .addSelect("COUNT(order.id)", "orderCount")
+            const result = await this.baseDriverQuery()
+            .leftJoin("driver.orders", "orders")
+            .leftJoin("driver.driverTags", "driverTags")
+            .leftJoin("driverTags.tag", "tags") 
+            .addSelect("COUNT(DISTINCT orders.id)", "orderCount")
+            .addSelect("SUM(CASE WHEN orders.status = 'Completed' THEN distance ELSE 0 END)", "numberOfKms")
+            .addSelect(`
+                COALESCE(
+                    jsonb_agg(
+                        DISTINCT jsonb_build_object(
+                            'id', orders.id,
+                            'orderNo', orders."orderNo",
+                            'status', orders.status,
+                            'distance', orders.distance,
+                            'totalCost', orders."totalCost",
+                            'startedAt', orders."startedAt",
+                            'completedAt', orders."completedAt"
+                        )
+                    ) FILTER (WHERE orders.id IS NOT NULL),
+                    '[]'
+                )
+            `, "orders")
+            .addSelect(`
+                COALESCE(
+                    jsonb_agg(
+                        DISTINCT jsonb_build_object(
+                            'id', tags.id,
+                            'name', tags.name
+                        )
+                    ) FILTER (WHERE tags.id IS NOT NULL),
+                    '[]'
+                )
+            `, "tags") 
+            .where(isDisconnected !== undefined ? "driver.isDisconnected = :isDisconnected" : "1=1", { isDisconnected })
             .groupBy("driver.id")
             .addGroupBy("vehicle.id")
             .addGroupBy("businessOwner.id")
@@ -344,80 +416,64 @@ export default class DriverService {
 
     async getDriverIncome(driverId: string): Promise<any> {
         try {
-            // Qatar is UTC+3
-            const offsetHours = 3;
-                    
-            // Get current UTC time
-            const now = new Date();
-                    
-            // Start of today in Qatar time
-            const startOfToday = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                0 - offsetHours, // shift UTC midnight to Qatar midnight
-                0,
-                0,
-                0
-              )
-            );
-            
-            // End of today in Qatar time
-            const endOfToday = new Date(
-              Date.UTC(
-                now.getUTCFullYear(),
-                now.getUTCMonth(),
-                now.getUTCDate(),
-                23 - offsetHours, // shift UTC to Qatar
-                59,
-                59,
-                999
-              )
-            );
-            // 1. Query today's completed orders for income
-            const todayOrders = await this.orderRepository.find({
-                where: {
-                    driver: { id: driverId },
-                    status: OrderStatus.COMPLETED,
-                    completedAt: Between(startOfToday, endOfToday)
-                },
-                select: ["id", "totalCost", "completedAt"]
-            });
-
-            const totalIncome = todayOrders.reduce(
-                (sum, order) => sum + Number(order.totalCost || 0),
-                0
-            );
-            // 2. Query all completed orders for list
             const allOrders = await this.orderRepository.find({
                 where: {
                     driver: { id: driverId },
                     status: OrderStatus.COMPLETED
                 },
-                select: ["id", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
+                select: ["id", "orderNo", "pickUpDate", "totalCost", "completedAt", "paymentMethod"],
+                relations: ["stops"],
                 order: { completedAt: "DESC" }
             });
-            const orders = allOrders.map(order => ({
-                id: order.id,
-                date: order.completedAt.toLocaleString("en-US", {
-                    timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
-                    day: "numeric",
-                    month: "numeric",
-                    year: "numeric"
-                }),
-                time: order.completedAt.toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                    timeZone: "Asia/Qatar"
-                }),
-                driverShare: Number(order.totalCost) || 0,
-                paymentMethod: order.paymentMethod
-            }));
+            const driver = await this.findDriverById(driverId, "get-income")
+            const orders = allOrders.map(order => {
+
+                // Sum totalPrice from cash stops (if any)
+                const totalStopsPrice =
+                    order.stops
+                        ?.filter((s: any) =>
+                            (s.paymentMethod ?? order.paymentMethod) === PaymentMethod.CASH_ON_DELIVERY &&
+                            s.status !== OrderStatus.CANCELED &&
+                            !s.isReturned
+                        )
+                        .reduce((sum, s: any) => sum + (Number(s.totalPrice) || 0) + (Number(s.deliveryFee) || 0), 0) || 0;
+            
+                const cashValueOfGoods =
+                  totalStopsPrice > 0 ? totalStopsPrice : 0;
+                
+                const paymentMethods = new Set<string>();
+                if (order.paymentMethod) paymentMethods.add(order.paymentMethod);
+                order.stops?.forEach((stop: any) => {
+                  if (stop.paymentMethod) paymentMethods.add(stop.paymentMethod);
+                });
+                return {
+                    id: order.id,
+                    orderNo: order.orderNo,
+                    date: order.completedAt.toLocaleString("en-US", {
+                        timeZone: "Asia/Qatar", // ideally use driver.timezone from DB
+                        day: "numeric",
+                        month: "numeric",
+                        year: "numeric"
+                    }),
+                    time: order.completedAt.toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Qatar"
+                    }),
+                    driverShare: Number(order.totalCost) || 0,
+                    cashValueOfGoods,
+                    paymentMethod: Array.from(paymentMethods)
+                }
+            });
 
             return {
-                totalIncome,
+                income: Number(driver.income) || 0,
+                cashIncome: Number(driver.cashIncome) || 0,
+                onlineIncome: Number(driver.onlineIncome) || 0,
+                cashBalance: Number(driver.cashBalance) || 0,
+                incomeLastResolvedAt: driver.incomeLastResolvedAt,
+                cashBalanceLastResolvedAt: driver.cashBalanceLastResolvedAt,
                 orders
             };
         } catch (error) {
@@ -617,10 +673,10 @@ export default class DriverService {
             if (order.driver.id !== driverId) {
                 throw new Error(`Order with ID ${orderId} is not assigned to driver ${driverId}`);
             }
-            await this.orderRepository.update(orderId, { status: OrderStatus.CANCELED, driver: null });
+            await this.orderRepository.update(orderId, { status: OrderStatus.PENDING, driver: null });
             // Add to order status history
-            order.status = OrderStatus.CANCELED; // update status for history record
-            await this.orderStatusHistoryService.createOrderStatusHistory(order, cancellationReason);
+            order.status = OrderStatus.PENDING; // update status for history record
+            await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason });
             console.log(`Order ${orderId} cancelled successfully for driver ${driverId}`);
             sendOrderConfirmation(order, order.totalCost, order.vehicleType, env.SMTP.USER, 'admin', 'order-status').catch((err) => {
               console.error("Error sending email to admin:", err);
@@ -685,35 +741,48 @@ export default class DriverService {
 
     async getNearestActiveDrivers(
         vehicleType: VehicleType,
-        pickUpCoordinates: string
-    ): Promise<any[]> {
+        pickUpCoordinates: string,
+        hasCardOnDelivery: boolean
+    ): Promise<{
+        matchingDrivers: any[];
+        nonMatchingDrivers: any[]
+    }> {
         try {
-          const onlineDrivers = getOnlineDrivers();
-        
-          // Convert map to array and filter by vehicle type first
-          const candidates = Array.from(onlineDrivers.entries())
-            .filter(([_, driver]) => driver.vehicleType === vehicleType);
+          const filterOptions: any = {
+            status: DriverStatus.ACTIVE,
+            signUpStatus: DriverSignupStatus.APPROVED
+          };
+          
+          if (hasCardOnDelivery) {
+            filterOptions.hasCardOnDelivery = true;
+          }
+          const onlineDrivers = await this.driverRepository.find
+          ({
+            where: filterOptions,
+            relations: ["vehicle"]
+          })
+          console.log("length of driver array:" , onlineDrivers.length)
         
           // Run all lookups + distance calculations in parallel
-          const driverPromises = candidates.map(async ([driverId, driver]) => {
-            const driverDetails = await this.driverRepository.findOne({
-              where: { id: driverId }
-            });
-        
-            if (!driverDetails) return null;
-            if (driverDetails.status !== DriverStatus.ACTIVE) return null;
-        
-            const { distanceMeters, durationMinutes } = await getDrivingDistanceInKm(
-              driver.currentLocation,
-              pickUpCoordinates
-            );
+          const driverPromises = onlineDrivers.map(async (driver) => {
+            const driverCurrentLocation = getCurrentLocationOfDriver(driver.id)
+            let distanceMeters;
+            let durationMinutes;
+            if (driverCurrentLocation) {
+                const distanceResults = await getDrivingDistanceInKm(
+                  driverCurrentLocation,
+                  pickUpCoordinates
+                );
+                distanceMeters = distanceResults.distanceMeters
+                durationMinutes = distanceResults.durationMinutes
+            }
         
             return {
-              id: driverId,
-              name: driverDetails.name,
-              phoneNumber: driverDetails.phoneNumber,
-              currentLocation: driver.currentLocation,
-              vehicleType: driver.vehicleType,
+              id: driver.id,
+              name: driver.name,
+              phoneNumber: driver.phoneNumber,
+              currentLocation: driverCurrentLocation,
+              vehicleType: driver.vehicle.type,
               distanceMeters,
               durationMinutes
             };
@@ -722,13 +791,26 @@ export default class DriverService {
           // Wait for all promises to finish
           const results = await Promise.all(driverPromises);
       
-          // Filter out any null results
-          const filteredDrivers = results.filter(Boolean);
       
           // Sort by distance (nearest first)
-          filteredDrivers.sort((a, b) => a.distanceMeters - b.distanceMeters);
-          console.log("Nearest active drivers:", filteredDrivers);
-          return filteredDrivers;
+          // Split drivers by vehicle type
+          const matchingDrivers = results.filter(
+            (driver) => driver.vehicleType === vehicleType
+          );
+      
+          const nonMatchingDrivers = results.filter(
+            (driver) => driver.vehicleType !== vehicleType
+          );
+          // Sort each group by distance (nearest first)
+          const sortByDistance = (a, b) =>
+            (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);
+      
+          matchingDrivers.sort(sortByDistance);
+          nonMatchingDrivers.sort(sortByDistance);
+      
+          console.log("Matching drivers:", matchingDrivers);
+          console.log("Non-matching drivers:", nonMatchingDrivers);
+          return { matchingDrivers, nonMatchingDrivers };
         } catch (error) {
           console.error("Error fetching nearest active drivers:", error);
           throw error;
@@ -748,13 +830,18 @@ export default class DriverService {
         if (!order) {
             throw new Error(`Order with ID ${orderId} not found`);
         }
-        if (order.driver) {
-            throw new Error(`Order with ID ${orderId} is already assigned to a driver`);
-        }
-        if (order.status !== OrderStatus.PENDING) {
+        if (order.status === OrderStatus.COMPLETED || order.status === OrderStatus.CANCELED) {
             throw new Error(`Order with ID ${orderId} has status ${order.status} and cannot be assigned`);
         }
-        await emitOrderToDriver(driverId, order);
+        if (order.driver) {
+            console.log(`Reassigning order ${orderId} from driver ${order.driver.id} to driver ${driverId}`);
+            await emitOrderCancellationUpdate(order.driver.id, order.id, CancelRequestStatus.APPROVED)
+            order.status = OrderStatus.PENDING;
+            await this.orderStatusHistoryService.createOrderStatusHistory({ order, cancellationReason: `ORDER_REASSIGNED` });
+            order.driver = null;
+            await this.orderRepository.save(order);
+        }
+        await emitOrderToDriver(driverId, order, driver.fcmToken);
     }
     catch (error) {
         console.error("Error assigning driver to order:", error);
@@ -827,7 +914,7 @@ export default class DriverService {
           Total: invitedDrivers.length,
           Active: Number(rawCounts.find(r => r.status === DriverStatus.ACTIVE)?.count || 0),
           Offline: Number(rawCounts.find(r => r.status === DriverStatus.OFFLINE)?.count || 0),
-          OnDelivery: Number(rawCounts.find(r => r.status === DriverStatus.ON_DUTY)?.count || 0),
+          OnDelivery: Number(rawCounts.find(r => r.status === DriverStatus.BUSY)?.count || 0),
         };
 
         return {
@@ -840,10 +927,10 @@ export default class DriverService {
     }
   }
 
+  //approvedWithoutVehicle flag used so that admin can approve a driver even if he hasnt entered his vehicle details yet
   async updateDriverSignUpStatus(driverId: string) {
     const driver = await this.driverRepository.findOne({
       where: { id: driverId },
-      relations: ["vehicle"],
     });
 
     if (!driver) throw new Error("Driver not found");
@@ -852,13 +939,15 @@ export default class DriverService {
     const allApproved =
       driver.qidApprovalStatus === ApprovalStatus.APPROVED &&
       driver.licenseApprovalStatus === ApprovalStatus.APPROVED &&
-      driver.vehicle?.infoApprovalStatus === ApprovalStatus.APPROVED;
+      driver.vehicleInfoApprovalStatus === ApprovalStatus.APPROVED;
 
     const anyRejected =
       driver.qidApprovalStatus === ApprovalStatus.REJECTED ||
       driver.licenseApprovalStatus === ApprovalStatus.REJECTED ||
-      driver.vehicle?.infoApprovalStatus === ApprovalStatus.REJECTED;
-
+      driver.vehicleInfoApprovalStatus === ApprovalStatus.REJECTED
+    
+    console.log("any Rejected:" , anyRejected)
+    console.log("all approved: ", allApproved)
     if (anyRejected) {
       driver.signUpStatus = DriverSignupStatus.REJECTED;
     } else if (allApproved) {
@@ -901,22 +990,29 @@ export default class DriverService {
   
   async approveVehicleInfo(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
     const driver = await this.driverRepository.findOne({
-      where: { id: driverId },
-      relations: ["vehicle"],
+      where: { id: driverId }
     });
 
     if (!driver) {
       throw new Error(`Driver with ID ${driverId} not found`);
     }
-    if (!driver.vehicle) {
-      throw new Error(`Driver with ID ${driverId} has no vehicle assigned`);
+
+    driver.vehicleInfoApprovalStatus = status;
+    driver.vehicleInfoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    await this.driverRepository.save(driver);
+    await this.updateDriverSignUpStatus(driverId);
+  }
+
+  async approveBusinessDocs(driverId: string, status: ApprovalStatus, reason: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
     }
 
-    driver.vehicle.infoApprovalStatus = status;
-    driver.vehicle.infoRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
-    await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
-
-    await this.updateDriverSignUpStatus(driverId);
+    driver.businessDocsApprovalStatus = status;
+    driver.businessDocsRejectionReason = status === ApprovalStatus.REJECTED ? reason : null;
+    driver.signUpStatus = status === ApprovalStatus.APPROVED ? DriverSignupStatus.APPROVED : DriverSignupStatus.REJECTED;
+    await this.driverRepository.save(driver);
   }
 
   async editQid(driverId: string, qidData: any): Promise<void> {
@@ -983,8 +1079,8 @@ export default class DriverService {
     driver.vehicle.productionYear = vehicleData.productionYear;
 
     // Reset approval status to pending on edit
-    driver.vehicle.infoApprovalStatus = ApprovalStatus.PENDING;
-    driver.vehicle.infoRejectionReason = null;
+    driver.vehicleInfoApprovalStatus = ApprovalStatus.PENDING;
+    driver.vehicleInfoRejectionReason = null;
 
     await this.driverRepository.manager.getRepository(Vehicle).save(driver.vehicle);
     await this.updateDriverSignUpStatus(driverId);
@@ -993,4 +1089,363 @@ export default class DriverService {
         console.error("Error sending driver vehicle info update email:", err);
     });
   }
+
+  async editBusinessDocs(driverId: string, businessDocsData: any): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+      throw new Error(`Driver with ID ${driverId} not found`);
+    }
+
+    driver.crPhoto = businessDocsData.crPhoto;
+    driver.taxId = businessDocsData.taxId;
+
+    // Reset approval status to pending on edit
+    driver.businessDocsApprovalStatus = ApprovalStatus.PENDING;
+    driver.businessDocsRejectionReason = null;
+    driver.signUpStatus = DriverSignupStatus.PENDING;
+
+    await this.driverRepository.save(driver);
+    
+    await sendDriverUpdateInfoMail(driver.name, driver.phoneNumber, 'Business Documents').catch((err) => {
+        console.error("Error sending driver business documents update email:", err);
+    });
+  }
+
+
+  async activateDeactivateDriver(driverId: string, deactivate: string): Promise<void> {
+    const driver = await this.driverRepository.findOneBy({ id: driverId });
+    if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    console.log("Deactivate value:", deactivate, "type:", typeof deactivate);
+    if (deactivate) { 
+        driver.signUpStatus = DriverSignupStatus.DEACTIVATED;
+        console.log(`Driver with ID ${driverId} deactivated`);
+    }
+    else driver.signUpStatus = DriverSignupStatus.APPROVED;
+    await this.driverRepository.save(driver);
+    }
+
+  async deleteDriver(driverId: string): Promise<void> {
+    const driver = await this.driverRepository.findOne({ where: { id: driverId }, relations: ["orders", "vehicle"] });
+    if (!driver) {
+        throw new Error(`Driver with ID ${driverId} not found`);
+    }
+    if (driver.orders && driver.orders.length > 0) {
+        for (const order of driver.orders) {
+            order.driver = null;
+            order.deletedDriverData = JSON.stringify({
+                name: driver.name,
+                phoneNumber: driver.phoneNumber,
+                vehicleType: driver.vehicle?.type,
+                vehicleNumber: driver.vehicle?.number,
+                vehicleModel: driver.vehicle?.model
+            });
+            await this.orderRepository.save(order);
+        }
+    }   
+    if (driver.vehicle) await this.vehicleRepository.remove(driver.vehicle);
+    await this.driverRepository.remove(driver);
+    }
+
+    async getAllOnlineDrivers(): Promise<any[]> {
+        try {
+            const onlineDriversMap = getOnlineDrivers();
+            const onlineDrivers: any[] = [];
+            for (const [driverId, driverData] of onlineDriversMap.entries()) {
+                const driver = await this.driverRepository.findOneBy({ id: driverId });
+                if (driver) {
+                    onlineDrivers.push({
+                        id: driver.id,
+                        name: driver.name,
+                        phoneNumber: driver.phoneNumber,
+                        currentLocation: driverData.currentLocation,
+                        vehicleType: driverData.vehicleType,
+                        status: driver.status
+                    });
+                }
+            }
+            return onlineDrivers;
+        }
+        catch (error) {
+            console.error("Error fetching all online drivers:", error);
+            throw error;
+        }
+    }
+    
+    async isDriverConnected(driverId: string): Promise<boolean> {
+        try {
+            const onlineDriversMap = getOnlineDrivers();
+            const driver = onlineDriversMap.get(driverId);
+            console.log("Driver connection status for ID", driverId, ":", driver);
+            const isConnected = (driver && driver?.socketId) ? true : false;
+            console.log("isConnected:", isConnected);
+            return isConnected;
+        }
+        catch (error) {
+            console.error("Error checking if driver is connected:", error);
+            throw error;
+        }
+    }
+
+    async markDriverAsNotified(driverId: string, orderId: string): Promise<void> {
+        try {
+            markDriverNotified(orderId, driverId);
+            const notifiedDrivers = getNotifiedDriversForOrder(orderId);
+            console.log(`Driver ${driverId} marked as notified for order ${orderId}. Notified drivers:`, notifiedDrivers);
+        } catch (error) {
+            console.error("Error marking driver as notified:", error);
+            throw error;
+        }
+    }
+
+    async switchDriverType(driverId: string, businessOwnerId: string) {
+        try {
+            const driver = await this.driverRepository.findOne({
+                where: {id: driverId},
+                relations: ["businessOwner"]
+            })
+
+            if (driver.type === DriverType.BUSINESS) {
+                console.error(`Cannot switch a business`)
+                throw new Error(`Cannot switch a business`)
+            }
+
+            // if he is already under a business
+            if (driver.businessOwner) {
+                //switch to another business
+                if (businessOwnerId) {
+                    driver.businessOwner.id = businessOwnerId;
+                }
+                //make him a freelance driver (no business owner)
+                else {
+                    console.log("driver has a business and will be freelance")
+                    driver.businessOwner = null;
+                }
+            }
+            // he is a freelance driver
+            else {
+                if (!businessOwnerId) throw new Error(`Driver is already freelance`)
+                //switch driver to be under a business
+                driver.businessOwner = {id: businessOwnerId} as any;
+            }
+
+            await this.saveDriver(driver)
+        } catch (err) {
+            console.error(`Error switching driver type: ${err.message}`)
+            throw new Error(`Error switching driver type: ${err.message}`)
+        }
+    }
+
+    async updateDriverStatus(driverId: string, status: DriverStatus, queryRunner?: any) {
+        try {
+            let driver: Driver;
+            const manager = queryRunner ? queryRunner.manager : this.driverRepository;
+
+            // Find the driver
+            if (queryRunner) {
+                driver = await manager.findOne(Driver, { where: { id: driverId } });
+            } else {
+                driver = await manager.findOne({ where: { id: driverId } });
+            }
+        
+            if (!driver) {
+              throw new Error(`Couldn't find driver to update status`);
+            }
+        
+            driver.status = status;
+            await manager.save(driver);
+        } catch (err) {
+            console.error(`Error updating driver status: ${err.message}`)
+            throw new Error(`Error updating driver status: ${err.message}`)
+        }
+    }
+
+    async getAllDriverBusinesses() {
+        try {
+            const driverBusinesses = await this.driverRepository.find({
+                where: {type: DriverType.BUSINESS}
+            })
+
+            return driverBusinesses.map((driverBusiness) => ({
+                id: driverBusiness.id,
+                name: driverBusiness.name,
+                phoneNumber: driverBusiness.phoneNumber,
+                businessName: driverBusiness.businessName
+            }))
+
+        } catch (err) {
+            console.error(`Error getting driver businesses: ${err.message}`)
+            throw new Error(`Error getting driver businesses: ${err.message}`)
+        }
+    }
+
+    async updateDriverIncomeAndCashBalance(driverId: string, order: Order, queryRunner?: any) {
+        try {
+            const driverRepository = queryRunner
+                ? queryRunner.manager.getRepository(Driver)
+                : this.driverRepository;
+            const driver = await driverRepository.findOne({
+                where: { id: driverId }, 
+                relations: ["businessOwner"]
+            })
+            if (!driver) {
+              console.error("driver not found")
+              throw new Error("Driver not found");
+            }
+            console.log("order totalCost:", order.totalCost)
+            console.log("driver current income:" , driver.income)
+            driver.income = Number(driver.income || 0) + Number(order.totalCost || 0); 
+            driver.historicalIncome = Number(driver.historicalIncome || 0) + Number(order.totalCost || 0);
+            console.log("new driver income: ", driver.income)
+            const stops = order.stops || [];
+
+            const cashStops = stops.filter(
+                s => (s.paymentMethod ?? order.paymentMethod) === PaymentMethod.CASH_ON_DELIVERY
+                    && s.status !== OrderStatus.CANCELED
+                    && !s.isReturned
+            );
+
+            const hasAnyTotalPrice = stops.some(
+              s => s.totalPrice !== null && s.totalPrice !== undefined
+            );
+
+            console.log("has any total price:", hasAnyTotalPrice)
+        
+            const cashStopsTotal = cashStops.reduce(
+              (sum, s) => sum + (Number(s.totalPrice) || 0) + (Number(s.deliveryFee) || 0),
+              0
+            );
+
+            // 2️⃣ DRIVER HAS BUSINESS OWNER
+            // then only add to the cash balance in case of cash orders
+            // and never subtract from it in any case (business need)
+            console.log("current cash balance: ", driver.cashBalance)
+            if (driver.businessOwner) {
+              console.log("order has a business owner")
+              if (hasAnyTotalPrice) {
+                console.log("order has total price on at least one stop so updating cash balance")
+                driver.cashBalance = 
+                    Number(driver.cashBalance) + cashStopsTotal
+                driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
+              }
+              else {
+                console.log("order is via website so no total price on any stop")
+                if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                    driver.cashIncome = Number(driver.cashIncome || 0) + Number(order.totalCost) || 0;
+                }
+                else{
+                  driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
+                }
+              }
+            }
+
+            // 3️⃣ DRIVER DOES NOT HAVE BUSINESS OWNER
+            else {
+                // const allCash = cashStops.length === stops.length;
+                // const allCard = cardStops.length === stops.length;
+                // const mixed = cashStops.length > 0 && cardStops.length > 0; 
+                // 🔹 NO totalPrice ON ANY STOP (means order made via website)
+                // check if order payment method is 
+                if (!hasAnyTotalPrice) {
+                  console.log("order is made via website so no total price")
+                  //revisit this later if a payment would be made per stop when ordering from site
+                  if (order.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                    driver.cashIncome =
+                      Number(driver.cashIncome || 0) + Number(order.totalCost) || 0;
+                  } else {
+                    driver.onlineIncome =
+                      Number(driver.onlineIncome || 0) + Number(order.totalCost) || 0;
+                  }
+                }
+                else {
+                  console.log("order is made by a client")
+                  driver.cashBalance = Number(driver.cashBalance || 0) + cashStopsTotal;
+                  driver.onlineIncome = Number(driver.onlineIncome || 0) + Number(order.totalCost || 0);
+                }
+            }
+            console.log("new driver cash balance: ", driver.cashBalance)
+            await driverRepository.save(driver);
+        } catch (err) {
+            console.error(`Error getting updating driver income: ${err.message}`)
+            throw new Error(`Error getting updating driver income: ${err.message}`)
+        }
+    }
+
+    async resolveCashBalance(driverId: string, amount: number): Promise<void> {
+        try {
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            console.log("Resolving cash balance for driver", driverId, "with amount", amount)
+            if (amount < 0) {
+                throw new Error(`Amount to resolve cannot be negative`);
+            }
+            if (amount > driver.cashBalance) {
+                throw new Error(`Amount to resolve cannot be greater than current cash balance`);
+            }
+            driver.cashBalance = driver.cashBalance - amount;
+            console.log(`Driver ${driverId} cash balance resolved by ${amount}.`);
+            driver.cashBalanceLastResolvedAt = new Date();
+            await this.driverRepository.save(driver);
+        }
+        catch (error) {
+            console.error("Error resolving driver cash balance:", error);
+            throw error;
+        }
+    }
+
+    async resolveDeliveryFees(driverId: string, amount: number, type: string): Promise<void> {
+        try {
+            // ✅ Validate amount first
+            if (!Number.isFinite(Number(amount))) {
+                throw new Error('Amount must be a valid number');
+            }
+            const driver = await this.driverRepository.findOneBy({ id: driverId });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found`);
+            }
+            console.log(`Resolving delivery fees for driver ${driverId} with amount ${amount} and type ${type}`)
+            if (Number(amount) < 0) {
+                throw new Error(`Amount to resolve cannot be negative`);
+            }
+            if (type === "ONLINE") {
+                if (Number(amount) > Number(driver.onlineIncome)) {
+                    console.error(`Amount to resolve cannot be greater than current online income for driver ${driverId}`);
+                    throw new Error(`Amount to resolve cannot be greater than current online income`);
+                }
+                driver.onlineIncome = Number(driver.onlineIncome) - Number(amount);
+            } else {
+                if (Number(amount) > Number(driver.cashIncome)) {
+                    console.error(`Amount to resolve cannot be greater than current cash income for driver ${driverId}`);
+                    throw new Error(`Amount to resolve cannot be greater than current cash income`);
+                }
+                driver.cashIncome = Number(driver.cashIncome) - Number(amount);
+            }
+            driver.income = Number(driver.income) - Number(amount);
+            driver.incomeLastResolvedAt = new Date();
+            await this.driverRepository.save(driver);
+        }
+        catch (error) {
+            console.error("Error resolving driver delivery fees balance:", error);
+            throw error;
+        }
+    }
+
+    async getDriverIncomeForBusiness(driverId: string, businessOwnerId: string) {
+        try {
+            const driver = await this.driverRepository.findOne({
+                where: { id: driverId, businessOwner: { id: businessOwnerId } }
+            });
+            if (!driver) {
+                throw new Error(`Driver with ID ${driverId} not found or not linked to business owner ${businessOwnerId}`);
+            }
+            const income = this.getDriverIncome(driverId);
+            return income;
+        } catch (error) {
+            console.error("Error fetching driver income for business owner:", error);
+            throw error;
+        }
+    }
 }

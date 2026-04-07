@@ -10,6 +10,12 @@ export class UserResponseDto {
     updatedAt: Date;
     companyName: string;
     type: userType;
+    hasLoggedInQuick?: boolean;
+    hasLoggedInExpress?: boolean;
+    monthlyBillingEnabled?: boolean;
+    bankFeePercentage?: number;
+    showGoodsAndDeliveryValues?: boolean;
+    cardOnDeliveryEnabled?: boolean;
 }
 
 export function toUserResponseDto(user: User): UserResponseDto {
@@ -22,5 +28,11 @@ export function toUserResponseDto(user: User): UserResponseDto {
     userResponseDto.updatedAt = user.updatedAt;
     userResponseDto.companyName = user.companyName;
     userResponseDto.type = user.type;
+    userResponseDto.hasLoggedInQuick = user.hasLoggedInQuick;
+    userResponseDto.hasLoggedInExpress = user.hasLoggedInExpress;
+    userResponseDto.monthlyBillingEnabled = user.monthlyBillingEnabled;
+    userResponseDto.bankFeePercentage = user.bankFeePercentage ? Number(user.bankFeePercentage) : 0;
+    userResponseDto.showGoodsAndDeliveryValues = user.showGoodsAndDeliveryValues;
+    userResponseDto.cardOnDeliveryEnabled = user.cardOnDeliveryEnabled;
     return userResponseDto;
 }

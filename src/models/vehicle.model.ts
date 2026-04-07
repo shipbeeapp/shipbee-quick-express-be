@@ -46,11 +46,6 @@ export class Vehicle extends BaseEntity {
     @OneToOne(() => Driver, (driver: any) => driver.vehicle)
     driver: any; // Relation to the driver who owns this vehicle
 
-    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
-    infoApprovalStatus: ApprovalStatus;
-
-    @Column({ type: "text", nullable: true })
-    infoRejectionReason: string;
 }
 
 import { Driver } from "./driver.model.js";

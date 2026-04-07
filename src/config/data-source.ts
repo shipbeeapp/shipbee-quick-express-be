@@ -64,9 +64,62 @@ import {AddApprovalColumnsForDriverAndVehicle1761729766887} from "../migrations/
 import {AddIsViewedAndViewedAtInOrder1761827413501} from "../migrations/1761827413501-AddIsViewedAndViewedAtInOrder.js";
 import {AddMoreFieldsInDriver1762085640369} from "../migrations/1762085640369-AddMoreFieldsInDriver.js";
 import {AddMoreFieldsInDriver1762117406201} from "../migrations/1762117406201-AddMoreFieldsInDriver.js";
+import {AddMoreFieldsForEcommerce1762772511358} from "../migrations/1762772511358-AddMoreFieldsForEcommerce.js";
 import {AddMultiOrderFeature1762079321388} from "../migrations/1762079321388-AddMultiOrderFeature.js";
 import {AddApiKeyInUser1762947817693} from "../migrations/1762947817693-AddApiKeyInUser.js";
 import { OrderStop } from "../models/orderStops.model.js";
+import {DropOrderStopsAndPopulateAgain1762991292803} from "../migrations/1762991292803-DropOrderStopsAndPopulateAgain.js";
+import { ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193 } from "../migrations/1763215698193-ModifyDriverSignUpStatusEnumToIncludeDeactivated.js";
+import {ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272} from "../migrations/1763543196272-ModifyOrderStatusEnumToIncludeEnRoutePickup.js";
+import { AddBusinessDocsApprovalAndReason1763817948893 } from "../migrations/1763817948893-AddBusinessDocsApprovalAndReason.js";
+import {AddShopSettingsTable1763899376760}  from "../migrations/1763899376760-AddShopSettingsTable.js";
+import { ShopSettings } from "../models/shopSettings.model.js";
+import { AddSenderNameInShopSettings1763904870962 } from "../migrations/1763904870962-AddSenderNameInShopSettings.js";
+import { AddBroadcastMessageAndDriverBroadcast1764238643026 } from '../migrations/1764238643026-AddBroadcastMessageAndDriverBroadcast.js';
+import { DriverBroadcastMessage } from '../models/driverBroadcastMessage.model.js';
+import { BroadcastMessage } from '../models/broadcastMessage.model.js';
+import {AddShippingCompanyInShipment1764847815381} from "../migrations/1764847815381-AddShippingCompanyInShipment.js";
+import {MakeAllUsersNew1765029363063} from "../migrations/1765029363063-MakeAllUsersNew.js";
+import {AddFcmTokenInDrivers1765366534790} from "../migrations/1765366534790-AddFcmTokenInDrivers.js";
+import { AddLiftersInOrderStop1765883228517 } from "../migrations/1765883228517-AddLiftersInOrderStop.js";
+import {MakeVehicleTypeInOrderCorrect1765884622888} from "../migrations/1765884622888-MakeVehicleTypeInOrderCorrect.js";
+import { AddResetFields1766495848820 } from '../migrations/1766495848820-AddResetFields.js';
+import {AddExtraFieldsForStops1766610543221} from "../migrations/1766610543221-AddExtraFieldsForStops.js";
+import {AddCommentsInStops1767086905430} from "../migrations/1767086905430-AddCommentsInStops.js";
+import { AddIsSandboxInUser1767088062249 } from '../migrations/1767088062249-AddIsSandboxInUser.js';
+import { AddFieldsInShipment1767103859531 } from "../migrations/1767103859531-AddFieldsInShipment.js";
+import { AddDeliveryFeeInStop1767108713906 } from '../migrations/1767108713906-AddDeliveryFeeInStop.js';
+import { MakePickUpDateNullable1767260830156 } from '../migrations/1767260830156-MakePickUpDateNullable.js';
+import {AddLoggedInFieldsInUser1767619399914} from "../migrations/1767619399914-AddLoggedInFieldsInUser.js";
+import {AddVehicleApprovalInDriverTable1768251957627} from "../migrations/1768251957627-AddVehicleApprovalInDriverTable.js"
+import { ModifyDriverStatusOnDutyToBusy1768296334869 } from "../migrations/1768296334869-ModifyDriverStatusOnDutyToBusy.js";
+import {AddDefaultDriverStatus1768297449812} from "../migrations/1768297449812-AddDefaultDriverStatus.js"
+import {AddCardOnDeliveryOption1768989836638} from "../migrations/1768989836638-AddCardOnDeliveryOption.js"
+import {AddUserPricingTable1769079453736} from "../migrations/1769079453736-AddUserPricingTable.js"
+import { UserPricing } from "../models/userPricing.model.js";
+import {AddDriverIncomeAndCashBalance1769467331980} from "../migrations/1769467331980-AddDriverIncomeAndCashBalance.js"
+import { AddDriverCashAndOnlineIncome1769678429853 } from "../migrations/1769678429853-AddDriverCashAndOnlineIncome.js";
+import { AddMaxOrderTimePerBusiness1769696374021 } from "../migrations/1769696374021-AddMaxOrderTimePerBusiness.js";
+import { AddShipbeeServiceFeePercentageInOrder1769785724664 } from "../migrations/1769785724664-AddShipbeeServiceFeePercentageInOrder.js";
+import { AddHistoricalIncome1770059204107 } from '../migrations/1770059204107-AddHistoricalIncome.js';
+import {AddProceedWithoutPaymentInUser1770563510535} from "../migrations/1770563510535-AddProceedWithoutPaymentInUser.js"; // Import the migration for adding proceedWithoutPayment in User
+import {AddDisconnectedDriverStatus1770719913115} from "../migrations/1770719913115-AddDisconnectedDriverStatus.js"; // Import the migration for adding Disconnected status in DriverStatus enum
+import { AddNewEnumInStatus1770726819376 } from "../migrations/1770726819376-AddNewEnumInStatus.js";
+import { AddIsDisconnectedColumn1771064017511 } from "../migrations/1771064017511-AddIsDisconnectedColumn.js";
+import { Tag } from "../models/tag.model.js";
+import { DriverTag } from "../models/driverTag.model.js";
+import {AddDriverTags1771078966854} from "../migrations/1771078966854-AddDriverTags.js";
+import { AddMonthlyBill1771365542054 } from "../migrations/1771365542054-AddMonthlyBill.js";
+import { AddAnotherOrderStatus1771685981514 } from "../migrations/1771685981514-AddAnotherOrderStatus.js";
+import {MakeIncomesDecimal1771754729406} from "../migrations/1771754729406-MakeIncomesDecimal.js";
+import { AddExtensionsToPhoneNumbers1772095940609 } from "../migrations/1772095940609-AddExtensionsToPhoneNumbers.js";
+import {MakeFloorStringInAddress1772284155567} from "../migrations/1772284155567-MakeFloorStringInAddress.js"; // Import the migration for making floor a string in Address
+import {AddEventTypeInOrderStatusHistory1772564281435} from "../migrations/1772564281435-AddEventTypeInOrderStatusHistory.js"; // Import the migration for adding event type in OrderStatusHistory
+import { AddBankFeePercentageInUserAndOrder1772978362076 } from "../migrations/1772978362076-AddBankFeePercentageInUserPricing.js";
+import { AddFlagForGoodsAndDeliveryView1773050413585 } from "../migrations/1773050413585-AddFlagForGoodsAndDeliveryView.js";
+import { AddOrderEventTypesAndRequestStatus1773406453482 } from "../migrations/1773406453482-AddOrderEventTypesAndRequestStatus.js";
+import {AddIncomeAndCashBalanceLastResolvedAt1773540629338} from "../migrations/1773540629338-AddIncomeAndCashBalanceLastResolvedAt.js"; // Import the migration for adding incomeLastResolvedAt and cashBalanceLastResolvedAt in Driver
+import {AddCardOnDeliveryEnabledForUser1773866017933} from "../migrations/1773866017933-AddCardOnDeliveryEnabledForUser.js"; // Import the migration for adding cardOnDeliveryEnabled in User
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -94,6 +147,12 @@ export const AppDataSource = new DataSource({
     Pricing, // ✅ Add Pricing entity
     OrderCancellationRequest, // ✅ Add OrderCancellationRequest entity
     OrderStop, // ✅ Add OrderStop entity
+    ShopSettings, // ✅ Add ShopSettings entity
+    BroadcastMessage,
+    DriverBroadcastMessage,
+    UserPricing,
+    Tag,
+    DriverTag,
   ],
   migrations: [
     InitialMigration1739286971657,
@@ -144,10 +203,58 @@ export const AppDataSource = new DataSource({
     AddIsViewedAndViewedAtInOrder1761827413501,
     AddMoreFieldsInDriver1762085640369,
     AddMoreFieldsInDriver1762117406201,
+    AddMoreFieldsForEcommerce1762772511358,
     AddMultiOrderFeature1762079321388,
     AddApiKeyInUser1762947817693,
+    DropOrderStopsAndPopulateAgain1762991292803,
+    ModifyDriverSignUpStatusEnumToIncludeDeactivated1763215698193,
+    ModifyOrderStatusEnumToIncludeEnRoutePickup1763543196272,
+    AddBusinessDocsApprovalAndReason1763817948893,
+    AddShopSettingsTable1763899376760,
+    AddSenderNameInShopSettings1763904870962,
+    AddBroadcastMessageAndDriverBroadcast1764238643026,
+    AddShippingCompanyInShipment1764847815381,
+    MakeAllUsersNew1765029363063,
+    AddFcmTokenInDrivers1765366534790,
+    AddLiftersInOrderStop1765883228517,
+    MakeVehicleTypeInOrderCorrect1765884622888,
+    AddResetFields1766495848820,
+    AddExtraFieldsForStops1766610543221,
+    AddCommentsInStops1767086905430,
+    AddIsSandboxInUser1767088062249,
+    AddFieldsInShipment1767103859531,
+    AddDeliveryFeeInStop1767108713906,
+    MakePickUpDateNullable1767260830156,
+    AddLoggedInFieldsInUser1767619399914,
+    AddVehicleApprovalInDriverTable1768251957627,
+    ModifyDriverStatusOnDutyToBusy1768296334869,
+    AddDefaultDriverStatus1768297449812,
+    AddCardOnDeliveryOption1768989836638,
+    AddUserPricingTable1769079453736,
+    AddDriverIncomeAndCashBalance1769467331980,
+    AddDriverCashAndOnlineIncome1769678429853,
+    AddMaxOrderTimePerBusiness1769696374021,
+    AddShipbeeServiceFeePercentageInOrder1769785724664,
+    AddHistoricalIncome1770059204107,
+    AddProceedWithoutPaymentInUser1770563510535,
+    AddDisconnectedDriverStatus1770719913115,
+    AddNewEnumInStatus1770726819376,
+    AddIsDisconnectedColumn1771064017511,
+    AddDriverTags1771078966854,
+    AddMonthlyBill1771365542054,
+    AddAnotherOrderStatus1771685981514,
+    MakeIncomesDecimal1771754729406,
+    AddExtensionsToPhoneNumbers1772095940609,
+    MakeFloorStringInAddress1772284155567,
+    AddEventTypeInOrderStatusHistory1772564281435,
+    AddBankFeePercentageInUserAndOrder1772978362076,
+    AddFlagForGoodsAndDeliveryView1773050413585,
+    AddOrderEventTypesAndRequestStatus1773406453482,
+    AddIncomeAndCashBalanceLastResolvedAt1773540629338,
+    AddCardOnDeliveryEnabledForUser1773866017933,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!
   logging: false,
+  schema: "public",
 });

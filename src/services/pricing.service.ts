@@ -5,14 +5,62 @@ import { GetPricingDTO } from "../dto/pricing/getPricingDTO.dto.js";
 import { ServiceSubcategoryName } from "../utils/enums/serviceSubcategory.enum.js";
 import { LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
 import { env } from "../config/environment.js";
-    
+import { getCountryIsoCode } from "../utils/dhl.utils.js";
+import axios from "axios";
+import { VehicleType } from "../utils/enums/vehicleType.enum.js";
+import { UserPricing } from "../models/userPricing.model.js";
+import { User } from "../models/user.model.js";
+import * as soap from 'soap';
+
 @Service()
 export default class PricingService {
     private pricingRepository = AppDataSource.getRepository(Pricing);
+    private userPricingRepository = AppDataSource.getRepository(UserPricing)
+    private userRepository = AppDataSource.getRepository(User);
+
+    async getUserPricing(id: string) {
+        try {
+            const userPricing = await this.userPricingRepository.findOne({
+                where: { id }
+            });
+            return userPricing;
+        } catch (error) {
+            console.error('Error fetching user pricing:', error);
+            throw new Error('Error fetching user pricing: ' + error.message);
+        }
+    }
+
+    async getUserPricings(userId: string) {
+        try {
+            const user = await this.userRepository.findOneBy({ id: userId });
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return this.userPricingRepository.find({
+                where: { user: { id: userId }, isCurrent: true },
+                order: { createdAt: "DESC" }
+            });
+        } catch (error) {
+            console.error('Error fetching user pricings:', error);
+            throw new Error('Error fetching user pricings: ' + error.message);
+        }
+    }
 
     async createPricing(pricingData: Partial<Pricing>[], queryRunner?: any) {
         try {
             const manager = queryRunner ? queryRunner.manager.getRepository(Pricing) : this.pricingRepository;
+            const newPricing = manager.create(pricingData);
+            await manager.save(newPricing);
+            return newPricing;
+        } catch (error) {
+            console.error('Error creating pricing:', error);
+            throw new Error('Error creating pricing: ' + error.message);
+        }
+    }
+
+    async createUserPricing(pricingData: Partial<UserPricing>[], queryRunner?: any) {
+        try {
+            const manager = queryRunner ? queryRunner.manager.getRepository(UserPricing) : this.userPricingRepository;
             const newPricing = manager.create(pricingData);
             await manager.save(newPricing);
             return newPricing;
@@ -44,71 +92,386 @@ export default class PricingService {
         }
     }
 
+    async updateUserPricing(id: string, pricingData: Partial<UserPricing>) {
+        try {
+            const existingPricing = await this.userPricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('User pricing not found');
+            }
+
+            existingPricing.isCurrent = false;
+            await this.userPricingRepository.save(existingPricing);
+
+            // Create new pricing row with new data and isCurrent true
+            //remove id from existing pricing if it exists to avoid conflicts with the new row
+            delete existingPricing.id;
+            const newPricing = this.userPricingRepository.create({
+                ...existingPricing,
+                ...pricingData,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isCurrent: true
+            });
+            console.log("new pricing to be saved: ", JSON.stringify(newPricing, null, 2))
+            return await this.userPricingRepository.save(newPricing);
+        } catch (error) {
+            console.error('Error updating user pricing:', error);
+            throw new Error('Error updating user pricing: ' + error.message);
+        }
+    }
+
+    getPersonalQuickWhere(getPricingDto: GetPricingDTO) {
+        return [
+            {
+                serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                vehicleType: getPricingDto.vehicleType,
+                minDistance: LessThanOrEqual(getPricingDto.distance),
+                maxDistance: MoreThan(getPricingDto.distance),
+                isCurrent: true,
+            },
+            {
+                serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                vehicleType: getPricingDto.vehicleType,
+                minDistance: LessThanOrEqual(getPricingDto.distance),
+                maxDistance: null,
+                isCurrent: true,
+            },
+        ];
+    }
+
+    async getClientPersonalQuickPricing(getPricingDto: GetPricingDTO) {
+        if (!getPricingDto.userId) return null;
+
+        return this.userPricingRepository.findOne({
+            where: this.getPersonalQuickWhere(getPricingDto).map(where => ({
+                ...where,
+                userId: getPricingDto.userId,
+            })),
+            order: { maxDistance: "DESC" },
+        });
+    }
+
+
     async calculatePricing(getPricingDTO: GetPricingDTO) {
-        try {    
+        try {
             if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.PERSONAL_QUICK) {
-                const currentPricing = await this.pricingRepository.findOne({
-                    where: [
-                    {
-                        serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-                        vehicleType: getPricingDTO.vehicleType,
-                        minDistance: LessThanOrEqual(getPricingDTO.distance),
-                        maxDistance: MoreThan(getPricingDTO.distance),
-                        isCurrent: true
-                    },
-                    {
-                      serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
-                      vehicleType: getPricingDTO.vehicleType,
-                      minDistance: LessThanOrEqual(getPricingDTO.distance),
-                      maxDistance: null, // open-ended
-                      isCurrent: true,
-                    },
-                    
-                ],
-                order: { maxDistance: "DESC" } // Prefer exact matches over open-ended
+                const basePricing = await this.pricingRepository.findOne({
+                    where: this.getPersonalQuickWhere(getPricingDTO),
+                    order: { maxDistance: "DESC" } // Prefer exact matches over open-ended
                 });
-                console.log(currentPricing);
-                if (!currentPricing) {
+                console.log(basePricing);
+                if (!basePricing) {
                     throw new Error('No pricing found for the given criteria');
                 }
+                const clientPricing = await this.getClientPersonalQuickPricing(getPricingDTO);
+                console.log("client pricing: ", JSON.stringify(clientPricing, null, 2))
+                const currentPricing = clientPricing ?? basePricing
                 if (getPricingDTO.distance <= Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) {
-                  return {
-                    totalCost: Number(currentPricing.baseCost) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
-                  } 
+                    return {
+                        totalCost: Number(currentPricing.baseCost) + Number(getPricingDTO.distance) * Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    }
                 }
-            
+
                 return {
                     totalCost: (
-                  Number(currentPricing.baseCost) +
-                  (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
-                    Number(currentPricing.additionalPerKm) + (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
-                )};
-            } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
-                const currentPricing = await this.pricingRepository.findOne({
-                    where: {
-                        serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
-                        fromCountry: getPricingDTO.fromCountry,
-                        toCountry: getPricingDTO.toCountry,
-                        maxWeight: MoreThanOrEqual(getPricingDTO.weight),
-                        isCurrent: true
-                    },
-                    order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
-                });
-                if (!currentPricing) {
-                    throw new Error('No pricing found for the given criteria');
-                }
-                const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
-                return {
-                    totalCost: Number(cost.toFixed(1)),
-                    estimatedDeliveryDays: currentPricing.transitTime
+                        Number(currentPricing.baseCost) +
+                        (getPricingDTO.distance - Number(currentPricing.thresholdDistance ?? currentPricing.maxDistance)) *
+                        Number(currentPricing.additionalPerKm) +
+                        (getPricingDTO.lifters ? getPricingDTO.lifters * Number(env.PER_LIFTER_COST) : 0)
+                    )
                 };
+            } else if (getPricingDTO.serviceSubcategory == ServiceSubcategoryName.INTERNATIONAL) {
+                if (getPricingDTO.shippingCompany === 'DHL') {
+                    const params = {
+                        accountNumber: env.DHL.ACCOUNT_NUMBER,
+                        originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+                        originCityName: getPricingDTO.fromCity,
+                        destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+                        destinationCityName: getPricingDTO.toCity,
+                        weight: getPricingDTO.weight,
+                        length: getPricingDTO.length,
+                        width: getPricingDTO.width,
+                        height: getPricingDTO.height,
+                        plannedShippingDate: getPricingDTO.plannedShippingDate,
+                        isCustomsDeclarable: true,
+                        unitOfMeasurement: "metric",
+                    };
+                    console.log('shipping date: ', getPricingDTO.plannedShippingDate);
+
+                    const auth = {
+                        username: env.DHL.API_KEY,
+                        password: env.DHL.API_SECRET,
+                    }
+                    const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
+                    const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
+                    console.log('DHL pricing:', cost);
+                    return {
+                        totalCost: Number(cost),
+                        estimatedDeliveryDays: response.data.products[0].deliveryCapabilities.totalTransitDays
+                    };
+                } else if (getPricingDTO.shippingCompany === 'Aramex') {
+                    const aramexPricing = await this.getAramexPricing(getPricingDTO);
+                    if(!aramexPricing.totalCost) {
+                        throw new Error(`Aramex error: ${aramexPricing.message}`);
+                    }
+                    return aramexPricing;
+                }
+                else {
+                    const currentPricing = await this.pricingRepository.findOne({
+                        where: {
+                            serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                            fromCountry: getPricingDTO.fromCountry,
+                            toCountry: getPricingDTO.toCountry,
+                            maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                            isCurrent: true
+                        },
+                        order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
+                    });
+                    if (!currentPricing) {
+                        throw new Error('No pricing found for the given criteria');
+                    }
+                    const cost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+                    return {
+                        totalCost: Number(cost.toFixed(1)),
+                        estimatedDeliveryDays: currentPricing.transitTime
+                    };
+                }
             }
             else {
-                throw new Error('Unsupported service subcategory'); 
+                throw new Error('Unsupported service subcategory');
             }
         } catch (error) {
             console.error('Error fetching current pricing:', error);
-            throw new Error(`Error fetching current pricing: ${error.message}`);
+            console.error(error.response?.data?.message);
+            throw new Error(`Error fetching current pricing: ${error.message} ${error.response?.data?.detail || ''}`.trim());
         }
- }   
+    }
+
+    public async getAramexPricing(getPricingDTO: GetPricingDTO) {
+        const wsdlUrl = env.ARAMEX.RATES_API_URL;
+        console.log('Using Aramex WSDL URL:', wsdlUrl);
+
+        const client = await soap.createClientAsync(wsdlUrl);
+        const isDomestic = getCountryIsoCode(getPricingDTO.fromCountry) === getCountryIsoCode(getPricingDTO.toCountry);
+        const request = {
+            ClientInfo: {
+                UserName: env.ARAMEX.USERNAME,
+                Password: env.ARAMEX.PASSWORD,
+                Version: 'v1.0',
+                AccountNumber: env.ARAMEX.ACCOUNT_NUMBER,
+                AccountPin: env.ARAMEX.ACCOUNT_PIN,
+                AccountEntity: env.ARAMEX.ENTITY,
+                AccountCountryCode: env.ARAMEX.COUNTRY_CODE,
+            },
+            OriginAddress: {
+                Line1: 'Some street or area',
+                Line2: '',        // if not used, empty string
+                Line3: '',        // if not used, empty string
+                City: getPricingDTO.fromCity,
+                StateOrProvinceCode: '', // optional
+                PostCode: '',           // optional
+                CountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+            },
+            DestinationAddress: {
+                Line1: 'Some street or area',
+                Line2: '',        // if not used, empty string
+                Line3: '',        // if not used, empty string
+                City: getPricingDTO.toCity,
+                StateOrProvinceCode: '', // optional
+                PostCode: '',           // optional
+                CountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+            },
+            ShipmentDetails: {
+                Dimensions: {
+                    Length: getPricingDTO.length,
+                    Width: getPricingDTO.width,
+                    Height: getPricingDTO.height,
+                    Unit: 'CM',
+                },
+                ActualWeight: {
+                    Unit: 'KG',
+                    Value: getPricingDTO.weight,
+                },
+                ChargeableWeight: {
+                    Unit: 'KG',
+                    Value: getPricingDTO.weight,
+                },
+                DescriptionOfGoods: 'Documents',
+                GoodsOriginCountry: getCountryIsoCode(getPricingDTO.fromCountry),
+                NumberOfPieces: 1,
+                ProductGroup: isDomestic ? 'DOM' : 'EXP',
+                ProductType: isDomestic ? 'SMP' : 'PPX',
+                PaymentType: 'P', // P for prepaid, R for receiver
+                PaymentOptions: 'Account'
+            },
+        };
+        console.log({ Destination: request.DestinationAddress });
+        console.log({ original: request.OriginAddress });
+
+
+        const [result] = await client.CalculateRateAsync(request);
+        console.log('Rate response:', result);
+        console.log('Notification:', JSON.stringify(result.Notifications, null, 2));
+        if (result.HasErrors) {
+            const errorMessages = result.Notifications?.Notification?.map((n: any) => n.Message).join('; ') || 'Unknown error';
+            return {
+                carrier: 'Aramex',
+                totalCost: null,
+                message: errorMessages
+            };
+
+        }
+        else {
+            return {
+                carrier: 'Aramex',
+                totalCost: Number(result.TotalAmount.Value),
+                currency: result.TotalAmount.CurrencyCode,
+                estimatedDeliveryDays: result.DeliveryTime
+            };
+        }
+    }
+
+    async getAllExpressPricings(getPricingDTO: GetPricingDTO) {
+        try {
+            const pricingList = [];
+            // DHL Pricing
+            const params = {
+                accountNumber: env.DHL.ACCOUNT_NUMBER,
+                originCountryCode: getCountryIsoCode(getPricingDTO.fromCountry),
+                originCityName: getPricingDTO.fromCity,
+                destinationCountryCode: getCountryIsoCode(getPricingDTO.toCountry),
+                destinationCityName: getPricingDTO.toCity,
+                weight: getPricingDTO.weight,
+                length: getPricingDTO.length,
+                width: getPricingDTO.width,
+                height: getPricingDTO.height,
+                plannedShippingDate: getPricingDTO.plannedShippingDate,
+                isCustomsDeclarable: true,
+                unitOfMeasurement: "metric",
+            };
+            console.log('shipping date: ', getPricingDTO.plannedShippingDate)
+            const auth = {
+                username: env.DHL.API_KEY,
+                password: env.DHL.API_SECRET,
+            }
+            const response = await axios.get(env.DHL.DOMAIN + "/rates", { params, auth });
+            // console.log('DHL response data:', response.data.products);
+            const cost = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").totalPrice.find((price: any) => price.currencyType === "BILLC")?.price;
+            const estimatedDeliveryDays = response.data.products.find((product: any) => product.productName === "EXPRESS WORLDWIDE").deliveryCapabilities.totalTransitDays;
+            console.log('DHL pricing:', cost, " estimated days: ", estimatedDeliveryDays);
+            pricingList.push({
+                carrier: 'DHL',
+                totalCost: Number(cost),
+                estimatedDeliveryDays
+            });
+
+            //Qatar Post
+            const currentPricing = await this.pricingRepository.findOne({
+                where: {
+                    serviceSubcategory: ServiceSubcategoryName.INTERNATIONAL,
+                    fromCountry: getPricingDTO.fromCountry,
+                    toCountry: getPricingDTO.toCountry,
+                    maxWeight: MoreThanOrEqual(getPricingDTO.weight),
+                    isCurrent: true
+                },
+                order: { maxWeight: "ASC" } // Prefer exact matches over open-ended
+            });
+            if (!currentPricing) {
+                console.error(`No pricing Found for given criteria...from ${getPricingDTO.fromCountry} to ${getPricingDTO.toCountry} `)
+            }
+            else {
+                const qpCost = Number(currentPricing.firstKgCost) + (getPricingDTO.weight - 1) * Number(currentPricing.additionalKgCost);
+                pricingList.push({
+                    carrier: 'Qatar Post',
+                    totalCost: Number(qpCost.toFixed(1)),
+                    estimatedDeliveryDays: currentPricing.transitTime
+                });
+            }
+
+            //aramex
+            const aramexPricing = await this.getAramexPricing(getPricingDTO);
+            pricingList.push(aramexPricing);
+            return pricingList;
+        } catch (error) {
+            console.error('Error fetching Express pricing:', error);
+            throw new Error(`Error fetching Express pricing: ${error.message}`);
+        }
+    }
+
+    async getCurrentShipbeePricings(serviceType: ServiceSubcategoryName = ServiceSubcategoryName.PERSONAL_QUICK) {
+        try {
+            const pricings = await this.pricingRepository.find({
+                where: {
+                    serviceSubcategory: serviceType,
+                    isCurrent: true
+                }
+            });
+            return pricings;
+        } catch (error) {
+            console.error('Error fetching current Shipbee pricings:', error);
+            throw new Error('Error fetching current Shipbee pricings: ' + error.message);
+        }
+    }
+
+    async getAllQuickPricings(distance: number, lifters: number) {
+        const vehicleNames = Object.values(VehicleType).filter(type => type != VehicleType.GARBAGE_REMOVAL_TRUCK);
+        console.log("vehicle names")
+        console.log(vehicleNames)
+        const pricings = (await Promise.all(
+            vehicleNames.map(async (vehicleName) => {
+                try {
+                    console.log(vehicleName)
+                    console.log("distance: ", distance)
+                    console.log("lifters: ", lifters)
+                    if (distance > 15 && vehicleName == VehicleType.MOTORCYCLE) {
+                        console.warn('Max for motorcycle is 15km')
+                    }
+                    else {
+                        const pricing = await this.calculatePricing({
+                            vehicleType: vehicleName,
+                            serviceSubcategory: ServiceSubcategoryName.PERSONAL_QUICK,
+                            distance,
+                            lifters
+                        });
+
+                        return {
+                            vehicleType: vehicleName,
+                            totalCost: pricing.totalCost
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`No pricing found for ${vehicleName}: ${err.message}`);
+                }
+            }
+            )
+        )
+        ).filter(Boolean);
+        return pricings;
+    }
+
+    async deletePricing(id: string) {
+        try {
+            const existingPricing = await this.pricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('Pricing not found');
+            }
+            await this.pricingRepository.delete({ id });
+        } catch (error) {
+            console.error('Error deleting pricing:', error);
+            throw new Error('Error deleting pricing: ' + error.message);
+        }
+    }
+
+    async deleteUserPricing(id: string) {
+        try {
+            const existingPricing = await this.userPricingRepository.findOneBy({ id });
+            if (!existingPricing) {
+                throw new Error('User pricing not found');
+            }
+            await this.userPricingRepository.delete({ id });
+        } catch (error) {
+            console.error('Error deleting user pricing:', error);
+            throw new Error('Error deleting user pricing: ' + error.message);
+        }
+    }
 }

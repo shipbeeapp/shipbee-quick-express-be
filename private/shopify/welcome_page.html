@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delivery App – Store Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 12px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    #map {
+      height: 300px;
+      width: 100%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .phone-wrapper {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .phone-wrapper input {
+      flex: 1;
+      margin-top: 15px;      /* remove extra top margin */
+    }
+
+    .phone-prefix {
+      padding: 10px 14px;
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .phone-input {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body 
+  data-latitude="<%= latitude %>"
+  data-longitude="<%= longitude %>"
+>
+
+  <h1>Delivery Service App Settings</h1>
+
+  <form method="POST" action="/api/shop-settings/save">
+    <input type="hidden" name="shop" value="<%= shop %>" />
+
+    <!-- Sender Name -->
+    <label>Sender Name</label>
+    <input type="text" name="senderName" value="<%= senderName %>" placeholder="Enter sender name" />
+
+    <!-- Phone Number -->
+    <label>Phone Number</label>
+    <div class="phone-wrapper">
+      <span class="phone-prefix">+974</span>
+      <input type="text" name="phone" value="<%= phone %>" placeholder="5xxxxxxx" class="phone-input" />
+    </div>
+
+    <!-- Pickup Address -->
+    <label>Pickup Address (Text)</label>
+    <input type="text" name="pickupAddress" value="<%= pickupAddress %>" placeholder="Street, Building, Area..." />
+
+    <!-- Item Type -->
+    <label>Item Type</label>
+    <select name="itemType">
+      <% itemTypes.forEach(type => { %>
+        <option value="<%= type %>"><%= type %></option>
+      <% }) %>
+    </select>
+
+    <!-- Vehicle Type -->
+    <label>Vehicle Type</label>
+    <select name="vehicleType">
+      <% vehicleTypes.forEach(type => { %>
+        <option value="<%= type %>"><%= type %></option>
+      <% }) %>
+    </select>
+
+    <!-- Map Picker -->
+    <label>Select Pickup Location on Map</label>
+    <div id="map"></div>
+    <input type="hidden" id="latitude" name="latitude" value="<%= latitude %>" />
+    <input type="hidden" id="longitude" name="longitude" value="<%= longitude %>" />
+
+    <button type="submit">
+      <%= isNew ? "Save Settings" : "Update Settings" %>
+    </button>
+  </form>
+
+  <!-- Leaflet Map Logic -->
+  <script>
+    const body = document.body;
+    const initialLat = parseFloat(body.dataset.latitude) || 25.2854;
+    const initialLng = parseFloat(body.dataset.longitude) || 51.5310;
+
+    const map = L.map("map").setView([initialLat, initialLng], 11);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+    }).addTo(map);
+
+    let marker = L.marker([initialLat, initialLng]).addTo(map);
+
+    map.on("click", function (e) {
+      const { lat, lng } = e.latlng;
+
+      document.getElementById("latitude").value = lat;
+      document.getElementById("longitude").value = lng;
+
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
-import authenticationMiddleware, { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
+import { authenticationMiddleware, AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import { CreatePricingDTO } from '../dto/pricing/createPricingDTO.dto.js';
 import { env } from '../config/environment.js';
 import { GetPricingDTO } from '../dto/pricing/getPricingDTO.dto.js';
 import PricingService from '../services/pricing.service.js';
 import { Container } from 'typedi';
 import validateDto from '../middlewares/validation.middleware.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
 
 export class PricingController {
     public path = '/pricing';
@@ -20,11 +21,146 @@ export class PricingController {
   private initializeRoutes() {
     // this.router.get(this.path, this.getTermsAndConditions.bind(this));
     this.router.post(this.path, authenticationMiddleware, this.createPricing.bind(this));
+    this.router.get(this.path, authenticationMiddleware, this.getShipbeePricings.bind(this));
     //update pricing
     this.router.put(`${this.path}/:id`, authenticationMiddleware, this.updatePricing.bind(this));
+    this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deletePricing.bind(this));
     //get current pricing
     this.router.get(`${this.path}/calculate`, validateDto(GetPricingDTO), this.calculatePricing.bind(this));
+    /**
+     * @swagger
+     * /api/pricing/quick:
+     *   get:
+     *     summary: Get quick pricing
+     *     description: |
+     *       Retrieves pricing for all available vehicles for a quick delivery based on `distance` and optional `lifters`. 
+     *       Vehicles like Motorcycle have a max distance limit (e.g., 15 km).
+     *     tags:
+     *       - Pricing
+     *     parameters:
+     *       - in: query
+     *         name: distance
+     *         schema:
+     *           type: number
+     *           example: 10
+     *         required: true
+     *         description: Distance in kilometers
+     *       - in: query
+     *         name: lifters
+     *         schema:
+     *           type: number
+     *           example: 0
+     *         required: false
+     *         description: Number of lifters
+     *     responses:
+     *       200:
+     *         description: Quick pricing calculated successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: true
+     *                 pricing:
+     *                   type: array
+     *                   items:
+     *                     type: object
+     *                     properties:
+     *                       vehicleType:
+     *                         type: string
+     *                         example: "Sedan Car"
+     *                       totalCost:
+     *                         type: number
+     *                         example: 120
+     *       400:
+     *         description: Missing required parameter or invalid request
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Distance is required"
+     *       500:
+     *         description: Error calculating pricing
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   example: false
+     *                 message:
+     *                   type: string
+     *                   example: "Error fetching quick pricing"
+     */
+
+    this.router.get(`${this.path}/quick`, this.getQuickPricing.bind(this))
+    this.router.get(`/user-pricing`, authenticationMiddleware, this.getUserPricings.bind(this))
+    this.router.post(`/user-pricing`, authenticationMiddleware, this.createUserPricing.bind(this))
+    this.router.put(`/user-pricing/:id`, authenticationMiddleware, this.updateUserPricing.bind(this))
+    this.router.get(`/user-pricing/:id`, authenticationMiddleware, this.getUserPricing.bind(this))
+    this.router.delete(`/user-pricing/:id`, authenticationMiddleware, this.deleteUserPricing.bind(this))
   }
+
+    private async getShipbeePricings(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const {serviceType} = req.query;
+            const shipbeePricings = await this.pricingService.getCurrentShipbeePricings(serviceType as ServiceSubcategoryName);
+            res.status(200).json(shipbeePricings);
+        } catch (error) {
+            console.error('Error fetching Shipbee pricing:', error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    private async getUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+            const userPricing = await this.pricingService.getUserPricing(id);
+            if (!userPricing) {
+                return res.status(404).json({ error: 'User pricing not found' });
+            }
+            res.status(200).json(userPricing);
+        }
+        catch (error) {
+            console.error('Error fetching user pricing:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
+    private async getUserPricings(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const {userId} = req.query
+            if (!userId) {
+                return res.status(400).json({ error: 'userId query parameter is required' });
+            }
+            const userPricings = await this.pricingService.getUserPricings(userId as string);
+            res.status(200).json(userPricings);
+        }  catch (error) {
+            console.error('Error fetching user pricings:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
 
     private async createPricing(req: AuthenticatedRequest, res: Response) {
         if (req.email != env.ADMIN.EMAIL) {
@@ -40,6 +176,22 @@ export class PricingController {
             res.status(500).json({ error: 'Internal server error' });
         }
     }
+
+    private async createUserPricing(req: AuthenticatedRequest, res: Response) {
+        if (req.email != env.ADMIN.EMAIL) {
+            return res.status(403).json({ error: 'Unauthorized access' });
+        }
+        const pricingData: CreatePricingDTO[] = Array.isArray(req.body) ? req.body : [req.body];
+
+        try {
+            const newPricing = await this.pricingService.createUserPricing(pricingData);
+            res.status(201).json(newPricing);
+        } catch (error) {
+            console.error('Error creating pricing:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+
 
     private async updatePricing(req: AuthenticatedRequest, res: Response) {
         try {
@@ -61,11 +213,76 @@ export class PricingController {
     private async calculatePricing(req: Request, res: Response) {
         try {
             const getPricingDTO = req.query as any;
-            const currentPricing = await this.pricingService.calculatePricing(getPricingDTO)
+            const currentPricing = await this.pricingService.getAllExpressPricings(getPricingDTO)
             res.status(200).json(currentPricing);
         } catch (error) {
             console.error('Error fetching current pricing:', error);
             res.status(400).json({ error: `${error.message}` });
+        }
+    }
+
+    private async getQuickPricing(req: Request, res: Response) {
+        try {
+            const {distance, lifters} = req.query
+            if (!distance) {
+                return res.status(400).json({success: false, message: "Distance is required"})
+            }
+            console.log("distance in req.body: ", distance, " lifters in req.body: ", lifters)
+            const quickPricings = await this.pricingService.getAllQuickPricings(Number(distance), Number(lifters));
+            res.status(200).json({success: true, pricing: quickPricings})
+        }
+        catch (err) {
+            console.error(err.message)
+            throw new Error(`Error fetching quick pricing: ${err.message}`)
+        }
+    }
+
+    private async updateUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+            const pricingData: CreatePricingDTO = req.body;
+
+            const updatedPricing = await this.pricingService.updateUserPricing(id, pricingData);
+            res.status(200).json({ success: true, data: updatedPricing });
+        } catch (error) {
+            console.error('Error updating user pricing:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    private async deletePricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+
+            await this.pricingService.deletePricing(id);
+            res.status(200).json({ success: true, message: 'Pricing deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting pricing:', error);
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    private async deleteUserPricing(req: AuthenticatedRequest, res: Response) {
+        try {
+            if (req.email != env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, error: 'Unauthorized access' });
+            }
+
+            const { id } = req.params;
+
+            await this.pricingService.deleteUserPricing(id);
+            res.status(200).json({ success: true, message: 'User pricing deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting user pricing:', error);
+            res.status(500).json({ success: false, error: error.message });
         }
     }
 }

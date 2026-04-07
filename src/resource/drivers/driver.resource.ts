@@ -7,8 +7,18 @@ export class DriverResource {
         return {
             id: driver.driver_id,
             name: driver.driver_name,
+            hasCardOnDelivery: driver.driver_hasCardOnDelivery,
             phoneNumber: driver.driver_phoneNumber,
             status: driver.driver_status,
+            lastKnownLocation: driver.driver_lastKnownLocation,
+            lastOnlineAt: driver.driver_lastOnlineAt,
+            driverNo: driver.driver_driverNo,
+            income: Number(driver.driver_income),
+            cashIncome: Number(driver.driver_cashIncome),
+            onlineIncome: Number(driver.driver_onlineIncome),
+            cashBalance: Number(driver.driver_cashBalance),
+            incomeLastResolvedAt: driver.driver_incomeLastResolvedAt,
+            cashBalanceLastResolvedAt: driver.driver_cashBalanceLastResolvedAt,
             signUpStatus: driver.driver_signUpStatus,
             lastActiveAt: driver.driver_updatedAt,
             dateOfBirth: driver.driver_dateOfBirth,
@@ -35,6 +45,8 @@ export class DriverResource {
             qidRejectionReason: driver.driver_qidRejectionReason,
             licenseApprovalStatus: driver.driver_licenseApprovalStatus,
             licenseRejectionReason: driver.driver_licenseRejectionReason,
+            businessDocsApprovalStatus: driver.driver_businessDocsApprovalStatus,
+            businessDocsRejectionReason: driver.driver_businessDocsRejectionReason,
             vehicle: {
                 type: driver.vehicle_type,
                 model: driver.vehicle_model,
@@ -47,10 +59,13 @@ export class DriverResource {
                 rightPhoto: generatePhotoLink(driver.vehicle_rightPhoto),
                 registrationFront: generatePhotoLink(driver.vehicle_registrationFront),
                 registrationBack: generatePhotoLink(driver.vehicle_registrationBack),
-                infoApprovalStatus: driver.vehicle_infoApprovalStatus,
-                infoRejectionReason: driver.vehicle_infoRejectionReason,
+                infoApprovalStatus: driver.driver_vehicleInfoApprovalStatus,
+                infoRejectionReason: driver.driver_vehicleInfoRejectionReason,
             },
             ordersCount: Number(driver.orderCount),
+            numberOfKms: Number(driver.numberOfKms),
+            orders: driver.orders ? driver.orders : [],
+            tags: driver.tags ? driver.tags : []
         };
     }
 
@@ -77,18 +92,18 @@ static mapDriverResponse = (driver: any) => {
 
   return {
     ...rest,
-    qidFront: rest.qidFront ? generatePhotoLink(rest.qidFront) : null,
-    qidBack: rest.qidBack ? generatePhotoLink(rest.qidBack) : null,
-    licenseFront: rest.licenseFront ? generatePhotoLink(rest.licenseFront) : null,
-    licenseBack: rest.licenseBack ? generatePhotoLink(rest.licenseBack) : null,
-    profilePicture: rest.profilePicture ? generatePhotoLink(rest.profilePicture) : null,
+    qidFront: generatePhotoLink(rest.qidFront),
+    qidBack: generatePhotoLink(rest.qidBack),
+    licenseFront: generatePhotoLink(rest.licenseFront),
+    licenseBack: generatePhotoLink(rest.licenseBack),
+    profilePicture: generatePhotoLink(rest.profilePicture),
     vehicle: rest.vehicle
       ? {
           ...rest.vehicle,
-          frontPhoto: rest.vehicle.frontPhoto ? generatePhotoLink(rest.vehicle.frontPhoto) : null,
-          backPhoto: rest.vehicle.backPhoto ? generatePhotoLink(rest.vehicle.backPhoto) : null,
-          leftPhoto: rest.vehicle.leftPhoto ? generatePhotoLink(rest.vehicle.leftPhoto) : null,
-          rightPhoto: rest.vehicle.rightPhoto ? generatePhotoLink(rest.vehicle.rightPhoto) : null,
+          frontPhoto: generatePhotoLink(rest.vehicle.frontPhoto),
+          backPhoto:  generatePhotoLink(rest.vehicle.backPhoto),
+          leftPhoto: generatePhotoLink(rest.vehicle.leftPhoto),
+          rightPhoto: generatePhotoLink(rest.vehicle.rightPhoto),
         }
       : null,
   };

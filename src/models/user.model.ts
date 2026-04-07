@@ -15,6 +15,18 @@ export class User extends BaseEntity {
   @Column({ nullable: true, unique: true, type: "text" })
   phoneNumber: string;
 
+  @Column({ type: "text", nullable: true })
+  password: string;
+
+  @Column({ type: "text", nullable: true })
+  industry: string;
+
+  @Column({ type: "text", nullable: true })
+  numOfDrivers: string;
+
+  @Column({ type: "text", nullable: true })
+  numOfVehicles: string;
+
   @Column({ unique: true, type: "text", nullable: true })
   email: string;
 
@@ -32,6 +44,39 @@ export class User extends BaseEntity {
 
   @Column({ type: "text", nullable: true, unique: true })
   apiKey?: string;
+
+  @Column({ type: "boolean", nullable: true, default: true })
+  isSandboxUser: boolean;
+
+  @Column({ type: "text", nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  resetPasswordExpires: Date;
+
+  @Column({ type: "boolean", nullable: true })
+  hasLoggedInQuick: boolean;
+
+  @Column({ type: "boolean", nullable: true })
+  hasLoggedInExpress: boolean;
+
+  @Column({type: "float", nullable: true})
+  maxOrderDuration: number;
+
+  @Column({ type: "boolean", nullable: true, default: false })
+  proceedWithoutPayment: boolean;
+
+  @Column({ type: "boolean", nullable: true, default: false })
+  monthlyBillingEnabled: boolean;
+  
+  @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
+  bankFeePercentage: number;
+
+  @Column({ type: "boolean", nullable: true, default: false })
+  showGoodsAndDeliveryValues: boolean;
+
+  @Column({ type: "boolean", nullable: true, default: false })
+  cardOnDeliveryEnabled: boolean;
 
   // 👇 New: orders where the user is the sender
   @OneToMany(() => Order, (order) => order.sender)

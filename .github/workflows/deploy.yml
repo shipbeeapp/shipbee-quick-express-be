@@ -1,0 +1,97 @@
+name: Deploy Backend to ECS
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 🔹 Decide environment based on branch
+      - name: Set environment variables
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "ENV=production" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "SERVICE_NAME=shipbee-task-def-service-a0b0xli9" >> $GITHUB_ENV
+            echo "TASK_DEF_NAME=shipbee-task-def-4" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=shipbee-container-2" >> $GITHUB_ENV
+          else
+            echo "ENV=staging" >> $GITHUB_ENV
+            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
+            echo "SERVICE_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+            echo "TASK_DEF_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=shipbee-backend-staging" >> $GITHUB_ENV
+          fi
+
+      # 🔹 Build & push image
+      - name: Build, tag, and push Docker image
+        run: |
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:${{ env.IMAGE_TAG }}
+          docker build -t shipbee-backend .
+          docker tag shipbee-backend:latest $IMAGE_URI
+          docker push $IMAGE_URI
+
+      # 🔹 Deploy to ECS
+      - name: Deploy to ECS
+        run: |
+          CLUSTER_NAME=shipbee-cluster
+          IMAGE_URI=453929088129.dkr.ecr.us-east-1.amazonaws.com/shipbee-backend-app:${{ env.IMAGE_TAG }}
+
+          CURRENT_TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition ${{ env.TASK_DEF_NAME }} \
+            --query "taskDefinition" \
+            --output json)
+
+          CLEAN_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq 'del(
+            .status,
+            .revision,
+            .taskDefinitionArn,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )')
+
+          UPDATED_TASK_DEF=$(echo "$CLEAN_TASK_DEF" | jq \
+            --arg IMAGE "$IMAGE_URI" \
+            --arg CONTAINER "${{ env.CONTAINER_NAME }}" '
+            .containerDefinitions |= map(
+              if .name == $CONTAINER
+              then .image = $IMAGE
+              else .
+              end
+            )
+          ')
+
+          echo "$UPDATED_TASK_DEF" > new-task-def.json
+
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
+
+          aws ecs update-service \
+            --cluster $CLUSTER_NAME \
+            --service ${{ env.SERVICE_NAME }} \
+            --task-definition $NEW_TASK_DEF_ARN \
+            --force-new-deployment
+
+          echo "✅ Deployed backend to $ENV successfully"

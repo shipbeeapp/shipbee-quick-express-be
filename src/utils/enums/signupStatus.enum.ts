@@ -1,7 +1,9 @@
 enum DriverSignupStatus {
     PENDING = 'PENDING',
     APPROVED = 'APPROVED',
-    REJECTED = 'REJECTED'
+    REJECTED = 'REJECTED',
+    DEACTIVATED = "DEACTIVATED"
+
 }
 
 export default DriverSignupStatus;

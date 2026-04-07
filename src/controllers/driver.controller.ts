@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import {Container} from 'typedi';
 import DriverService from '../services/driver.service.js';
-import authenticationMiddleware from '../middlewares/authentication.middleware.js';
+import {authenticationMiddleware} from '../middlewares/authentication.middleware.js';
 import { AuthenticatedRequest } from '../middlewares/authentication.middleware.js';
 import {env} from '../config/environment.js';
 import { UpdateDriverDto } from '../dto/driver/updateDriver.dto.js';
@@ -15,8 +15,10 @@ import { sendDriverSignUpMail } from '../services/email.service.js';
 import validationMiddleware from '../middlewares/validation.middleware.js';
 import bcrypt from 'bcrypt';
 import { VehicleType } from '../utils/enums/vehicleType.enum.js';
-import { Driver } from '../models/driver.model.js';
 import { DriverType } from '../utils/enums/driverType.enum.js';
+import { broadcastNewDriver } from './user.controller.js';
+import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
+import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
 
 export class DriverController {
     public router: Router = Router();
@@ -43,12 +45,18 @@ export class DriverController {
               },
             });
         const upload = multer({ storage });
-        this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
-        this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
-        this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
+        this.router.get(`${this.path}/active-order`, authenticationMiddleware, this.getCurrentActiveOrderForDriver.bind(this))
         this.router.get(`${this.path}/performance`, authenticationMiddleware, this.getDriverPerformance.bind(this));
-        this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
+        this.router.get(`${this.path}/income`, authenticationMiddleware, this.getDriverIncome.bind(this));
         this.router.get(`${this.path}/orders`, authenticationMiddleware, this.getDriverOrders.bind(this));
+        this.router.get(`${this.path}/invited-drivers`, authenticationMiddleware, this.getInvitedDriversByBusinessOwner.bind(this));
+        this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
+        this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
+        this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
+        this.router.get(`${this.path}/all-online-drivers`, authenticationMiddleware, this.getAllOnlineDrivers.bind(this));
+        this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
+        this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
+        this.router.get(`${this.path}`, authenticationMiddleware, this.getDrivers.bind(this));
         this.router.post(`${this.path}/signup`,
             upload.fields([
               { name: "qidFront", maxCount: 1 },
@@ -68,32 +76,30 @@ export class DriverController {
             ]),
             validationMiddleware(DriverDto),
             this.signupDriver.bind(this));
+        
+        this.router.get(`${this.path}/:id/is-connected`, this.isDriverConnected.bind(this));
+        this.router.get(`${this.path}/:id/income`, authenticationMiddleware, this.getDriverIncomeForBusiness.bind(this));
+        this.router.get(`${this.path}/:id/orders-summary`, authenticationMiddleware, this.getOrdersSummary.bind(this));
+        this.router.post(`${this.path}/:id/mark-notified`, authenticationMiddleware, this.markDriverNotified.bind(this));
+        this.router.put(`${this.path}/:id`, authenticationMiddleware, upload.single('profilePic'), this.updateDriver.bind(this));
+        
         this.router.put(`${this.path}/:id/approve-reject`, authenticationMiddleware, this.approveOrRejectDriver.bind(this));
-        this.router.get(`${this.path}/invited-drivers`, authenticationMiddleware, this.getInvitedDriversByBusinessOwner.bind(this));
-        this.router.post(`${this.path}/send-otp`, this.sendOtp.bind(this));
-        this.router.post(`${this.path}/verify-otp`, this.verifyOtp.bind(this));
-        this.router.get(`${this.path}/nearest-active`, authenticationMiddleware, this.getNearestActiveDrivers.bind(this));
-        this.router.post(`${this.path}/assign`, authenticationMiddleware, this.assignDriverToOrder.bind(this));
-        this.router.post(`${this.path}/invite-by-business`, authenticationMiddleware, this.inviteDriverByBusinessOwner.bind(this));
         this.router.get(`${this.path}/:id`, authenticationMiddleware, this.getDriver.bind(this)); // For testing via browser
-        this.router.put(`/admin${this.path}/:id/approve-qid`, authenticationMiddleware, this.approveQid.bind(this));
-        this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
-        this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
         this.router.put(`${this.path}/:id/edit-qid`, 
             authenticationMiddleware, 
             upload.fields([
-              { name: "qidFront", maxCount: 1 },
-              { name: "qidBack", maxCount: 1 },
+                { name: "qidFront", maxCount: 1 },
+                { name: "qidBack", maxCount: 1 },
             ]),
             this.editQid.bind(this));
-        this.router.put(`${this.path}/:id/edit-license`,
-            authenticationMiddleware,
-            upload.fields([
-              { name: "driverLicenseFront", maxCount: 1 },
-                { name: "driverLicenseBack", maxCount: 1 },
-            ]),
+            this.router.put(`${this.path}/:id/edit-license`,
+                authenticationMiddleware,
+                upload.fields([
+                    { name: "driverLicenseFront", maxCount: 1 },
+                    { name: "driverLicenseBack", maxCount: 1 },
+                ]),
             this.editLicense.bind(this));
-        this.router.put(`${this.path}/:id/edit-vehicle-info`,
+            this.router.put(`${this.path}/:id/edit-vehicle-info`,
             authenticationMiddleware,
             upload.fields([
                 { name: "vehicleRegistrationFront", maxCount: 1 },
@@ -104,6 +110,46 @@ export class DriverController {
                 { name: "vehicleBack", maxCount: 1 },
             ]),
             this.editVehicleInfo.bind(this));
+                    
+            this.router.put(`${this.path}/:id/edit-business-docs`, 
+                authenticationMiddleware, 
+                upload.fields([
+                    { name: "crPhoto", maxCount: 1 },
+                    { name: "taxId", maxCount: 1 },
+                ]),
+                this.editBusinessDocs.bind(this));
+                        
+        this.router.put(`${this.path}/:id/activate-deactivate`, authenticationMiddleware, this.activateDeactivateDriver.bind(this));
+        this.router.delete(`${this.path}/:id`, authenticationMiddleware, this.deleteDriver.bind(this));
+        
+        this.router.post(`${this.path}/:orderId/cancel`, authenticationMiddleware, this.cancelOrder.bind(this));
+
+        this.router.put(`/admin${this.path}/:id/approve-qid`, authenticationMiddleware, this.approveQid.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-license`, authenticationMiddleware, this.approveLicense.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-vehicle-info`, authenticationMiddleware, this.approveVehicleInfo.bind(this));
+        this.router.put(`/admin${this.path}/:id/approve-business-docs`, authenticationMiddleware, this.approveBusinessDocs.bind(this));
+        this.router.put(`/admin${this.path}/:id/resolve-cash-balance`, authenticationMiddleware, this.resolveCashBalance.bind(this));
+        this.router.put(`/admin${this.path}/:id/resolve-delivery-fees`, authenticationMiddleware, this.resolveDeliveryFees.bind(this));
+        this.router.put(`/admin${this.path}/:id/switch-type`, authenticationMiddleware, this.switchDriverType.bind(this));
+        this.router.put(`/admin${this.path}/:id`, authenticationMiddleware, 
+            upload.fields([
+              { name: "qidFront", maxCount: 1 },
+              { name: "qidBack", maxCount: 1 },
+              { name: "driverLicenseFront", maxCount: 1 },
+              { name: "driverLicenseBack", maxCount: 1 },
+              { name: "vehicleRegistrationFront", maxCount: 1 },
+              { name: "vehicleRegistrationBack", maxCount: 1 },
+              { name: "profilePicture", maxCount: 1 },
+              { name: "vehicleLeft", maxCount: 1 },
+              { name: "vehicleRight", maxCount: 1 },
+              { name: "vehicleFront", maxCount: 1 },
+              { name: "vehicleBack", maxCount: 1 },
+              { name: "crPhoto", maxCount: 1 },
+              { name: "taxId", maxCount: 1 },
+              { name: "companyLogo", maxCount: 1 },
+            ]),
+            this.adminUpdateDriver.bind(this))
+        this.router.get(`/admin${this.path}/businesses`, authenticationMiddleware, this.getDriverBusinesses.bind(this))
     }
 
     private updateDriver = async (req: AuthenticatedRequest, res: Response) => {
@@ -127,12 +173,41 @@ export class DriverController {
         }
     }
 
+    private isDriverConnected = async (req: Request, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            const isConnected = await this.driverService.isDriverConnected(paramDriverId);
+            res.status(200).json({ success: true, driverId: paramDriverId, isConnected });
+        } catch (error) {
+            console.error("Error checking driver connection status:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private markDriverNotified = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const paramDriverId = req.params.id;
+            const {orderId} = req.query;
+            // Validate that the driver ID matches the authenticated user's ID
+            if (req.driverId !== paramDriverId) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            await this.driverService.markDriverAsNotified(paramDriverId, String(orderId));
+            res.status(200).json({ success: true, message: "Driver marked as notified for the order." });
+        } catch (error) {
+            console.error("Error marking driver as notified:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
     private getDrivers = async (req: AuthenticatedRequest, res: Response) => {
         try {
             if (req.email !== env.ADMIN.EMAIL) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-            const drivers = await this.driverService.findAllDrivers();
+            const isDisconnected = req.query.isDisconnected === 'true' ? true : req.query.isDisconnected === 'false' ? false : undefined;
+            const drivers = await this.driverService.findAllDrivers(isDisconnected);
             res.status(200).json({ success: true, data: DriverResource.toResponseArray(drivers) });
         } catch (error) {
             console.error("Error fetching drivers:", error.message);
@@ -207,8 +282,8 @@ export class DriverController {
     private signupDriver = async (req: Request, res: Response) => {
         try {
             const driverData: DriverDto  = req.body;
-            if (!driverData.phoneNumber || !driverData.name) {
-                return res.status(400).json({ success: false, message: 'Email, phone number and name are required.' });
+            if (!driverData.phoneNumber) {
+                return res.status(400).json({ success: false, message: 'phone number is required.' });
             }
             if (req.files) {
                 const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -237,7 +312,8 @@ export class DriverController {
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(driverData.password, saltRounds);
             driverData.password = hashedPassword;
-            await this.driverService.findOrCreateDriver(driverData);
+            const {driver} = await this.driverService.findOrCreateDriver(driverData);
+            broadcastNewDriver(driver.id, driver.name);
             await sendDriverSignUpMail(driverData.name, driverData.phoneNumber);
             res.status(201).json({ success: true, message: 'Driver signed up successfully' });
         }
@@ -336,8 +412,12 @@ export class DriverController {
             if (req.email !== env.ADMIN.EMAIL) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-            const { vehicleType, pickUpCoordinates } = req.query;
-            const drivers = await this.driverService.getNearestActiveDrivers(vehicleType as VehicleType, pickUpCoordinates as string);
+            const { vehicleType, pickUpCoordinates, hasCardOnDelivery} = req.query;
+            const hasCardOnDeliveryBool =
+            typeof hasCardOnDelivery === 'string'
+              ? hasCardOnDelivery === 'true'
+              : Boolean(hasCardOnDelivery);
+            const drivers = await this.driverService.getNearestActiveDrivers(vehicleType as VehicleType, pickUpCoordinates as string, hasCardOnDeliveryBool);
             res.status(200).json({ success: true, data: drivers });
         }
         catch (error) {
@@ -445,6 +525,22 @@ export class DriverController {
         }
     }
 
+    private approveBusinessDocs = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            const { status, reason } = req.body; // status = APPROVED | REJECTED
+            await this.driverService.approveBusinessDocs(driverId, status, reason);
+            res.status(200).json({ success: true, message: `Driver business documents ${status.toLowerCase()} successfully.` });
+        }
+        catch (error) {
+            console.error("Error approving/rejecting driver business documents:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
     private editQid = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const driverId = req.params.id;
@@ -455,10 +551,16 @@ export class DriverController {
             const qidData: any = {};
             if (req.files) {
                 const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-                qidData.qidFront = files['qidFront'] ? files['qidFront'][0].path.split("/upload/")[1] : undefined;
-                qidData.qidBack = files['qidBack'] ? files['qidBack'][0].path.split("/upload/")[1] : undefined;
+                if (files['qidFront']) {
+                    qidData.qidFront = files['qidFront'][0].path.split("/upload/")[1];
+                }
+                if (files['qidBack']) {
+                    qidData.qidBack = files['qidBack'][0].path.split("/upload/")[1];
+                }
             }
-            qidData.qid = qid
+            if (qid) {
+                qidData.qid = qid;
+            }
             await this.driverService.editQid(driverId, qidData);
             res.status(200).json({ success: true, message: "Driver QID updated successfully." });
         }
@@ -478,10 +580,16 @@ export class DriverController {
             const licenseData: any = {};
             if (req.files) {
                 const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-                licenseData.licenseFront = files['driverLicenseFront'] ? files['driverLicenseFront'][0].path.split("/upload/")[1] : undefined;
-                licenseData.licenseBack = files['driverLicenseBack'] ? files['driverLicenseBack'][0].path.split("/upload/")[1] : undefined;
+                if (files['driverLicenseFront']) {
+                    licenseData.licenseFront = files['driverLicenseFront'][0].path.split("/upload/")[1];
+                }
+                if (files['driverLicenseBack']) {
+                    licenseData.licenseBack = files['driverLicenseBack'][0].path.split("/upload/")[1];
+                }
             }
-            licenseData.licenseExpirationDate = licenseExpirationDate;
+            if (licenseExpirationDate) {
+                licenseData.licenseExpirationDate = licenseExpirationDate;
+            }
             await this.driverService.editLicense(driverId, licenseData);
             res.status(200).json({ success: true, message: "Driver license updated successfully." });
         }
@@ -502,24 +610,263 @@ export class DriverController {
 
             if (req.files) {
                 const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-                vehicleData.registrationFront = files['vehicleRegistrationFront'] ? files['vehicleRegistrationFront'][0].path.split("/upload/")[1] : undefined;
-                vehicleData.registrationBack = files['vehicleRegistrationBack'] ? files['vehicleRegistrationBack'][0].path.split("/upload/")[1] : undefined;
-                vehicleData.leftPhoto = files['vehicleLeft'] ? files['vehicleLeft'][0].path.split("/upload/")[1] : undefined;
-                vehicleData.rightPhoto = files['vehicleRight'] ? files['vehicleRight'][0].path.split("/upload/")[1] : undefined;
-                vehicleData.frontPhoto = files['vehicleFront'] ? files['vehicleFront'][0].path.split("/upload/")[1] : undefined;
-                vehicleData.backPhoto = files['vehicleBack'] ? files['vehicleBack'][0].path.split("/upload/")[1] : undefined;
+                if (files['vehicleRegistrationFront']) {
+                    vehicleData.registrationFront = files['vehicleRegistrationFront'][0].path.split("/upload/")[1];
+                }
+                if (files['vehicleRegistrationBack']) {
+                    vehicleData.registrationBack = files['vehicleRegistrationBack'][0].path.split("/upload/")[1];
+                }
+                if (files['vehicleLeft']) {
+                    vehicleData.leftPhoto = files['vehicleLeft'][0].path.split("/upload/")[1];
+                }
+                if (files['vehicleRight']) {
+                    vehicleData.rightPhoto = files['vehicleRight'][0].path.split("/upload/")[1];
+                }
+                if (files['vehicleFront']) {
+                    vehicleData.frontPhoto = files['vehicleFront'][0].path.split("/upload/")[1];
+                }
+                if (files['vehicleBack']) {
+                    vehicleData.backPhoto = files['vehicleBack'][0].path.split("/upload/")[1];
+                }
             }
 
-            vehicleData.brand = brand;
-            vehicleData.model = model;
-            vehicleData.color = color;
-            vehicleData.productionYear = productionYear;
+            if (brand) vehicleData.brand = brand;
+            if (model) vehicleData.model = model;
+            if (color)vehicleData.color = color;
+            if (productionYear) vehicleData.productionYear = productionYear;
 
             await this.driverService.editVehicleInfo(driverId, vehicleData);
             res.status(200).json({ success: true, message: "Driver vehicle info updated successfully." });
         }
         catch (error) {
             console.error("Error updating driver vehicle info:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private editBusinessDocs = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.params.id;
+            if (req.driverId !== driverId) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const businessDocsData: any = {};
+            if (req.files) {
+                const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+                if (files['crPhoto']) {
+                    businessDocsData.crPhoto = files['crPhoto'][0].path.split("/upload/")[1];
+                }
+                if (files['taxId']) {
+                    businessDocsData.taxId = files['taxId'][0].path.split("/upload/")[1];
+                }
+            }
+
+            await this.driverService.editBusinessDocs(driverId, businessDocsData);
+            res.status(200).json({ success: true, message: "Driver business documents updated successfully." });
+        }
+        catch (error) {
+            console.error("Error updating driver business documents:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private activateDeactivateDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.params.id;
+            const deactivate = req.body.deactivate; // boolean to indicate activate or deactivate
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            await this.driverService.activateDeactivateDriver(driverId, deactivate);
+            res.status(200).json({ success: true, message: `Driver ${deactivate ? "deactivated": "activated"} successfully.` });
+        }
+        catch (error) {
+            console.error("Error deactivating driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private deleteDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.params.id;
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            await this.driverService.deleteDriver(driverId);
+            res.status(200).json({ success: true, message: "Driver deleted successfully." });
+        }
+        catch (error) {
+            console.error("Error deleting driver:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getAllOnlineDrivers = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            const drivers = await this.driverService.getAllOnlineDrivers();
+            res.status(200).json({ success: true, data: drivers });
+        }       
+        catch (error) {
+            console.error("Error fetching all online drivers:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private adminUpdateDriver =  async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+             const driverId = req.params.id;
+             const driverData = req.body;
+
+             if (req.files) {
+                const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+                console.log("Files received during driver update via admin:", files);
+                driverData.qidFront = files['qidFront'] ? files['qidFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.qidBack = files['qidBack'] ? files['qidBack'][0].path.split("/upload/")[1] : undefined;
+                
+                driverData.licenseFront = files['driverLicenseFront'] ? files['driverLicenseFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.licenseBack = files['driverLicenseBack'] ? files['driverLicenseBack'][0].path.split("/upload/")[1] : undefined;
+                
+                driverData.registrationFront = files['vehicleRegistrationFront'] ? files['vehicleRegistrationFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.registrationBack = files['vehicleRegistrationBack'] ? files['vehicleRegistrationBack'][0].path.split("/upload/")[1] : undefined;
+                driverData.profilePicture = files['profilePicture'] ? files['profilePicture'][0].path.split("/upload/")[1] : undefined;
+                  // Vehicle photos
+                
+                driverData.leftPhoto = files['vehicleLeft'] ? files['vehicleLeft'][0].path.split("/upload/")[1] : undefined;
+                driverData.rightPhoto = files['vehicleRight'] ? files['vehicleRight'][0].path.split("/upload/")[1] : undefined;
+                driverData.frontPhoto = files['vehicleFront'] ? files['vehicleFront'][0].path.split("/upload/")[1] : undefined;
+                driverData.backPhoto = files['vehicleBack'] ? files['vehicleBack'][0].path.split("/upload/")[1] : undefined;
+
+                driverData.crPhoto = files['crPhoto'] ? files['crPhoto'][0].path.split("/upload/")[1] : undefined;
+                driverData.taxId = files['taxId'] ? files['taxId'][0].path.split("/upload/")[1] : undefined;
+                driverData.companyLogo = files['companyLogo'] ? files['companyLogo'][0].path.split("/upload/")[1] : undefined;
+                console.log("Processed driver data with file paths:", driverData);
+             }
+
+            await this.driverService.updateDriver(driverId, driverData)
+            res.status(200).json({ success: true, message: "Driver Data updated successfully"});
+        }       
+        catch (error) {
+            console.error("Error fetching all online drivers:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private switchDriverType = async (req: AuthenticatedRequest, res: Response) => {
+         try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+             const driverId = req.params.id;
+             const {businessOwnerId}  = req.query as {businessOwnerId: string};
+
+            await this.driverService.switchDriverType(driverId, businessOwnerId)
+            res.status(200).json({ success: true, message: "Driver type switched successfully"});
+        }       
+        catch (error) {
+            console.error("Error switching driver type:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getDriverBusinesses = async (req: AuthenticatedRequest, res: Response) => {
+         try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+
+            const driverBusinesses = await this.driverService.getAllDriverBusinesses()
+            res.status(200).json({ success: true, data: driverBusinesses});
+        }       
+        catch (error) {
+            console.error("Error getting driver businesses:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getCurrentActiveOrderForDriver = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const driverId = req.driverId;
+            const activeOrder = await this.orderService.getCurrentActiveOrder(driverId);
+            res.status(200).json({success: true, data: activeOrder})
+        } catch (error) {
+            console.error("Error getting current active order:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private resolveCashBalance = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            const {amount} = req.body;
+            await this.driverService.resolveCashBalance(driverId, amount ?? 0);
+            res.status(200).json({ success: true, message: "Driver cash balance resolved successfully." });
+        } catch (error) {
+            console.error("Error resolving driver cash balance:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private resolveDeliveryFees = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            const {amount, type} = req.body;
+            await this.driverService.resolveDeliveryFees(driverId, amount ?? 0, type);
+            res.status(200).json({ success: true, message: "Driver delivery fees resolved successfully." });
+        } catch (error) {
+            console.error("Error resolving driver delivery fees:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    private getDriverIncomeForBusiness = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            const businessOwnerId = req.driverId;
+            const { id } = req.params;
+            if (!businessOwnerId) {
+                return res.status(400).json({ success: false, message: "Business owner ID is required." });
+            }
+            console.log("Fetching income for driver:", id, "belonging to business owner:", businessOwnerId);
+            const income = await this.driverService.getDriverIncomeForBusiness(id, businessOwnerId);
+            if (!income) {
+                return res.status(404).json({ success: false, message: "No income" });
+            }
+            res.status(200).json({ success: true, data: income });
+        } catch (error) {
+            console.error("Error fetching driver income for business:", error.message);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }   
+    
+    private getOrdersSummary = async (req: AuthenticatedRequest, res: Response) => {
+        try {
+            if (req.email !== env.ADMIN.EMAIL) {
+                return res.status(403).json({ success: false, message: "Unauthorized access" });
+            }
+            const driverId = req.params.id;
+            const serviceType = req.query.serviceType as ServiceSubcategoryName
+            const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+            const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+            const userId = req.query.userId as string;
+            
+            const ordersSummary = await this.orderService.getOrdersSummary(driverId, serviceType, userId, startDate, endDate);
+            res.status(200).json({ success: true, data: ordersSummary });
+        } catch (error) {
+            console.error("Error fetching orders summary:", error.message);
             res.status(500).json({ success: false, message: error.message });
         }
     }

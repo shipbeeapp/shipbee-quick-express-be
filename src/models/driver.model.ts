@@ -5,6 +5,7 @@ import { Order } from "./order.model.js";
 import DriverSignupStatus from "../utils/enums/signupStatus.enum.js";
 import { DriverType } from "../utils/enums/driverType.enum.js";
 import { ApprovalStatus } from "../utils/enums/approvalStatus.enum.js";
+import { DriverBroadcastMessage } from "./driverBroadcastMessage.model.js";
 
 @Entity("drivers")
 export class Driver extends BaseEntity {
@@ -122,9 +123,67 @@ export class Driver extends BaseEntity {
     
     @Column({ type: "text", nullable: true })
     licenseRejectionReason: string;
+
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    businessDocsApprovalStatus: ApprovalStatus;
+    
+    @Column({ type: "text", nullable: true })
+    businessDocsRejectionReason: string;
+
+    @Column({ type: "text", nullable: true })
+    fcmToken: string;
+
+    @Column({ type: "enum", enum: ApprovalStatus, default: ApprovalStatus.PENDING })
+    vehicleInfoApprovalStatus: ApprovalStatus;
+
+    @Column({ type: "text", nullable: true })
+    vehicleInfoRejectionReason: string;
+    
+    @OneToMany(() => DriverBroadcastMessage, (driverBroadcastMessage) => driverBroadcastMessage.driver)
+    broadcastMessages: DriverBroadcastMessage[];
+
+    @Column({type: "boolean", default: false})
+    hasCardOnDelivery: boolean
+
+    @Column({type: "decimal", default: 0})
+    historicalIncome: number
+
+    @Column({type: "decimal", default: 0})
+    income: number
+
+    @Column({type: "decimal", default: 0})
+    cashIncome: number
+
+    @Column({type: "decimal", default: 0})
+    onlineIncome: number
+    
+    @Column({type: "decimal", default: 0})
+    cashBalance: number
+
+    @Column({type: "boolean", default: false})
+    isDisconnected: boolean
+
+    @Column({type: "text", nullable: true})
+    lastKnownLocation: string; // could be an address or "lat,lng"
+
+    @Column({type: "timestamptz", nullable: true})
+    lastOnlineAt: Date;
+
+    @Column({type: "timestamptz", nullable: true})
+    incomeLastResolvedAt: Date;
+
+    @Column({type: "timestamptz", nullable: true})
+    cashBalanceLastResolvedAt: Date;
+
+    @Column({ type: 'int', nullable: true, unique: true, default: () => "nextval('driver_no_seq')", })
+    driverNo: number;
+
+    @OneToMany(() => DriverTag, (driverTag) => driverTag.driver)
+    driverTags: DriverTag[];
 }
 
 import { Vehicle } from "./vehicle.model.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
 import { DriverStatus } from "../utils/enums/driverStatus.enum.js";import { OrderCancellationRequest } from "./orderCancellationRequest.model.js";
+import { DriverTag } from "./driverTag.model.js";
 

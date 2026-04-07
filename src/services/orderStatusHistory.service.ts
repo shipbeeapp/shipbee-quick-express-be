@@ -2,30 +2,110 @@ import { Service } from "typedi";
 import { Order } from "../models/order.model.js";
 import { OrderStatusHistory } from "../models/orderStatusHistory.model.js";
 import { AppDataSource } from "../config/data-source.js";
+import { OrderEventType } from "../utils/enums/orderEventType.enum.js";
+import { In, IsNull, Not } from "typeorm";
+import { CancelRequestStatus } from "../utils/enums/cancelRequestStatus.enum.js";
 
 
 @Service()
 export default class OrderStatusHistoryService {
     private orderStatusHistoryRepository = AppDataSource.getRepository(OrderStatusHistory);
 
-    async createOrderStatusHistory(order: Order, cancellationReason: string = null, queryRunner?: any){
-        try {
-            const manager = queryRunner ? queryRunner.manager.getRepository(OrderStatusHistory) : this.orderStatusHistoryRepository;
-            //check if order with status already exists
-            // const existingHistory = await manager.findOne({
-            //     where: { order: { id: order.id }, status: order.status },
-            // });
-            // console.log("Checking for existing order status history:", existingHistory);
-            // if (existingHistory) {
-            //     console.log("Order status history already exists for this order and status.");
-            //     return;
-            // }
-            console.log("Creating new order status history for order:", order.id, "with status:", order.status);
-            const orderStatusHistory = manager.create({ order, status: order.status, driver: order.driver, cancellationReason: cancellationReason});
-            await manager.save(orderStatusHistory);
-        } catch (error) {
-            console.log(error);
-            throw new Error(`Error creating order status history: ${error.message}`);
+    async createOrderStatusHistory(options: {
+      order: Order,
+      cancellationReason?: string,
+      queryRunner?: any,
+      stopId?: string,
+      triggeredByAdmin?: boolean,
+      hasArrived?: boolean,
+      returnedStartedAt?: Date,
+      returnedCompletedAt?: Date,
+      event?: OrderEventType,
+      requestStatus?: CancelRequestStatus
+    }) {
+      try {
+        const orderStatusHistory = new OrderStatusHistory();
+        orderStatusHistory.order = options.order;
+        orderStatusHistory.status = options.order.status;
+        orderStatusHistory.event = options.event ?? null;
+        orderStatusHistory.driver = options.order.driver ?? null;
+        orderStatusHistory.cancellationReason = options.cancellationReason ?? null;
+        orderStatusHistory.orderStop = options.stopId ? { id: options.stopId } as any : null;
+        orderStatusHistory.triggeredByAdmin = options.triggeredByAdmin ?? false;
+        orderStatusHistory.hasArrived = options.hasArrived ?? false;
+        orderStatusHistory.returnedStartedAt = options.returnedStartedAt ?? null;
+        orderStatusHistory.returnedCompletedAt = options.returnedCompletedAt ?? null;
+        orderStatusHistory.requestStatus = options.requestStatus ?? null;
+
+        if (options.queryRunner) {
+          return await options.queryRunner.manager.save(OrderStatusHistory, orderStatusHistory);
+        } else {
+          return await this.orderStatusHistoryRepository.save(orderStatusHistory);
         }
+      } catch (error) {
+        console.log(error);
+        throw new Error(`Error creating order status history: ${error.message}`);
+      }
+    }
+
+    async updateOrderStatusHistory(options: {
+      order: Order,
+      cancellationReason?: string,
+      queryRunner?: any,
+      stopId?: string,
+      triggeredByAdmin?: boolean,
+      hasArrived?: boolean,
+      returnedStartedAt?: Date,
+      returnedCompletedAt?: Date,
+      event?: OrderEventType
+    }) {
+      try {
+        const orderStatusHistory = await this.orderStatusHistoryRepository.findOne({
+            where: {
+                order: { id: options.order.id },
+                orderStop: options.stopId ? { id: options.stopId } as any : null,
+                returnedStartedAt: Not(IsNull()),
+            }
+        });
+        if (!orderStatusHistory) {
+          throw new Error(`Order status history not found for order ID ${options.order.id}`);
+        }
+        
+        orderStatusHistory.returnedCompletedAt = options.returnedCompletedAt ?? orderStatusHistory.returnedCompletedAt;
+
+        if (options.queryRunner) {
+          await options.queryRunner.manager.save(OrderStatusHistory, orderStatusHistory);
+        } else {
+          await this.orderStatusHistoryRepository.save(orderStatusHistory);
+        }
+      } catch (error) {
+        console.log(error);
+        throw new Error(`Error updating order status history: ${error.message}`);
+      }
+    }
+
+    async findExistingCancelReturnRequest(options: {
+      orderId: string,
+      stopId: string,
+      driverId: string,
+      eventType: OrderEventType[],
+      requestStatus?: CancelRequestStatus
+    }): Promise<OrderStatusHistory | null> {
+      try {
+        const existingRequest = await this.orderStatusHistoryRepository.findOne({
+          where: {
+            order: { id: options.orderId },
+            orderStop: { id: options.stopId },  
+            driver: { id: options.driverId },
+            event: In(options.eventType),
+            requestStatus: options.requestStatus ?? CancelRequestStatus.PENDING
+          }
+        });
+        return existingRequest;
+      }
+      catch (error) {
+        console.log(error.message);
+        throw new Error(`Error finding existing cancel/return request: ${error.message}`);
+      }
     }
 }
