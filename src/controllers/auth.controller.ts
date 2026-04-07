@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import UserService from '../services/user.service.js';
 import {Container} from 'typedi';
 import { env } from '../config/environment.js';
-import { sendOtp, sendDriverData } from '../services/email.service.js';
+import { sendOtp, sendDriverData, sendUserSignUpMail } from '../services/email.service.js';
 import axios from 'axios';
 import bcrypt from 'bcrypt';
 
@@ -328,6 +328,8 @@ export class AuthController {
                 env.JWT_SECRET,
             );
 
+            await sendUserSignUpMail(user.email, user.name, user.type, user.phoneNumber);
+
             res.status(200).json({ success: true, token: myToken, userData: userData });
         } catch (error) {
             console.error('Error during signup:', error);
@@ -415,6 +417,9 @@ export class AuthController {
             userData,
             env.JWT_SECRET,
         );
+        
+        await sendUserSignUpMail(user.name, user.email, user.type, user.phoneNumber);
+
         return res.status(200).json({ success: true, message: 'OTP verified successfully.', token: myToken, userData: userData});
     }
 

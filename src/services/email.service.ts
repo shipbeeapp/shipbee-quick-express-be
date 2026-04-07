@@ -299,6 +299,29 @@ export async function sendDriverSignUpMail(driverName: string, driverPhoneNumber
   } 
 }
 
+export async function sendUserSignUpMail(userName: string, userEmail: string, userType: string, userPhoneNumber: string) {
+  try {
+    const parts = ['User'];
+    if (userName) parts.push(userName);
+    if (userEmail) parts.push(`with email: ${userEmail}`);
+    if (userPhoneNumber) parts.push(`and phone number: ${userPhoneNumber}`);
+    if (userType) parts.push(`and type: ${userType}`);
+    parts.push('has just signed up');
+    const body = parts.join(' ');
+
+    await transporter.sendMail({
+      from: `Shipbee <${env.SMTP.USER}>`,
+      to: env.SMTP.USER, // Admin email from environment variables
+      subject: 'New User Sign-Up Request',
+      html: `<p style="font-size: 24px;">${body}</p>`,
+    });
+    console.log(`User sign-up email sent to: ${env.SMTP.USER}`);
+  }
+    catch (error) {
+      console.error('Error sending user sign-up email:', error);
+    }
+  }
+
 export async function sendArrivalNotification(phoneNumber: string, email: string, orderNo: number, driverName: string, driverPhoneNumber: string, stopSequence?: number, atPickup: boolean = false) {
   try {
     let content = '';
