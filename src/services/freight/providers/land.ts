@@ -1,63 +1,78 @@
 import axios from 'axios';
-import { getSeaRatesToken } from '../utils.js';
+import { geocodeLocation, getSeaRatesToken } from '../utils.js';
 import { env } from '../../../config/environment.js';
 
 // SeaRates FTL and LTL provider logic
 export async function getSeaRatesLandRates(body: any, type: 'FTL' | 'LTL') {
   try {
     const token = await getSeaRatesToken(env);
-    const query = `query Rates($input: RatesInput!) {
-      rates(
-        shippingType: ${type}
-        truckType: ${type}
-        coordinatesFrom: $input.coordinatesFrom
-        coordinatesTo: $input.coordinatesTo
-        date: $input.date
-        weight: $input.weight
-        volume: $input.volume
-      ) {
-        points { location { name country lat lng code } shippingType provider }
-        general {
-          shipmentId validityFrom validityTo individual
-          totalPrice totalCurrency totalTransitTime
-          totalCo2 { amount price }
-          alternative expired spaceGuarantee spot indicative queryShippingType
-        }
+
+    // Geocode fallback per doc: if coordinates fail → return fallback object
+    const coordinatesFrom = body.coordinatesFrom ?? await geocodeLocation(body.origin, env.GOOGLE_MAPS_API_KEY);
+    const coordinatesTo = body.coordinatesTo ?? await geocodeLocation(body.destination, env.GOOGLE_MAPS_API_KEY);
+
+    if (!coordinatesFrom || !coordinatesTo) {
+      return { rates: [], fallback: true, error: `Could not resolve coordinates for ${body.origin} or ${body.destination}` };
+    }
+
+    const date = body.date || new Date().toISOString().slice(0, 10);
+    const weight = body.weight
+    const volume = body.volume
+
+    
+    // ✅ Inline values — no variables, no dot notation
+    const query = `{
+            rates(
+                shippingType: ${type}
+                truckType: CTLT
+                coordinatesFrom: [${coordinatesFrom}]
+                coordinatesTo: [${coordinatesTo}]
+                date: "${date}"
+                weight: ${weight}
+                volume: ${volume}
+            ) {
+                points { location { name country lat lng code } shippingType provider }
+                general {
+                    shipmentId validityFrom validityTo individual
+                    totalPrice totalCurrency totalTransitTime
+                    totalCo2 { amount price }
+                    alternative expired spaceGuarantee spot indicative queryShippingType
+                }
+            }
+        }`;
+
+    const res = await axios.post(
+      'https://rates.searates.com/graphql',
+      { query },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // SeaRates is slow
       }
-    }`;
-    const variables = {
-      input: {
-        coordinatesFrom: body.coordinatesFrom,
-        coordinatesTo: body.coordinatesTo,
-        date: body.date,
-        weight: body.weight || 500,
-        volume: body.volume || 5
-      }
-    };
-    const res = await axios.post('https://rates.searates.com/graphql', {
-      query,
-      variables
-    }, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000
-    });
+    );
+
+    if (res.data.errors?.length) {
+      console.error(`SeaRates ${type} GraphQL error:`, res.data.errors[0]);
+      return [];
+    }
+
     const rates = (res.data?.data?.rates || []).map((r: any) => {
       const g = r.general;
       const points = r.points || [];
       return {
         shipmentId: g.shipmentId,
         shippingType: type,
-        provider: points[0]?.provider || 'SeaRates Land',
+        // ✅ first points[].provider with a value — same pattern as air/sea
+        provider: points.find((p: any) => p?.provider)?.provider || 'SeaRates Land',
         totalPrice: g.totalPrice,
         totalCurrency: g.totalCurrency,
         totalTransitTime: g.totalTransitTime,
         validityFrom: g.validityFrom,
         validityTo: g.validityTo,
         originName: points[0]?.location?.name,
-        destinationName: points[points.length-1]?.location?.name,
+        destinationName: points[points.length - 1]?.location?.name,
         expired: g.expired,
         indicative: g.indicative,
         spaceGuarantee: g.spaceGuarantee,
@@ -69,9 +84,12 @@ export async function getSeaRatesLandRates(body: any, type: 'FTL' | 'LTL') {
         modeGroup: 'land'
       };
     });
+
+    console.log({ [`${type} rates`]: rates.length });
     return rates;
+
   } catch (error: any) {
-    // If geocoding fails or no rates, return fallback
+    // ✅ Per doc: geocoding failure returns fallback object, not empty array
     return { rates: [], fallback: true, error: error?.message || 'SeaRates land rates failed' };
   }
 }

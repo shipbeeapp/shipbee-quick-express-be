@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { generateSeabaySignature, getSeabayTimestamp, extractIATACode, getSeaRatesToken } from '../utils.js';
+import { generateSeabaySignature, getSeabayTimestamp, extractIATACode, getSeaRatesToken, geocodeLocation, geocodeAir } from '../utils.js';
 import { env } from '../../../config/environment.js';
 
 // Seabay Air API integration
@@ -12,23 +12,19 @@ export async function getSeabayAirRates(body: any) {
         const toIATA = extractIATACode(body.destination || '');
         const timestamp = getSeabayTimestamp();
         const sign = generateSeabaySignature(env.SEABAY_APP_KEY, env.SEABAY_APP_SECRET, timestamp);
-        console.log({ sign });
-
         const payload = {
             request: {
-                From: fromIATA,
+                From: 'PVG',
                 To: toIATA,
                 Currency: 'USD',
-                Volume: String(volume),
-                Weight: String(weight)
+                Volume: volume,
+                Weight: weight
             },
             app_key: env.SEABAY_APP_KEY,
             timestamp,
             sign
         };
-        console.log({ url: 'https://api.seabay.cn/api/AirFreightPrice/queryIATANew' });
 
-        console.log({ payload });
         console.log(`SIGN STRING: app_key=${env.SEABAY_APP_KEY}&timestamp=${timestamp}&app_secret=${env.SEABAY_APP_SECRET}`);
         const res = await axios.post('https://api.seabay.cn/api/AirFreightPrice/queryIATANew', payload, {
             headers: {
@@ -84,45 +80,46 @@ function parseSeabayDate(str: string) {
 
 export async function getSeaRatesAirRates(body: any) {
     try {
-        console.log({ body });
-
         const token = await getSeaRatesToken(env);
         const query = `
-query Rates(
-    $coordinatesFrom: [Float]
-    $coordinatesTo: [Float]
-    $date: Date
-    $weight: Float!
-    $volume: Float!
-) {
-    rates(
-        shippingType: AIR
-        coordinatesFrom: $coordinatesFrom
-        coordinatesTo: $coordinatesTo
-        date: $date
-        weight: $weight
-        volume: $volume
-    ) {
-        points { 
-            location { name country lat lng code } 
-            shippingType provider 
-        }
-        general {
-            shipmentId validityFrom validityTo individual
-            totalPrice totalCurrency totalTransitTime
-            totalCo2 { amount price }
-            alternative expired spaceGuarantee spot indicative queryShippingType
-        }
-    }
-}`;
-
+            query Rates(
+                $coordinatesFrom: [Float]
+                $coordinatesTo: [Float]
+                $date: Date
+                $weight: Float!
+                $volume: Float!
+            ) {
+                rates(
+                    shippingType: AIR
+                    coordinatesFrom: $coordinatesFrom
+                    coordinatesTo: $coordinatesTo
+                    date: $date
+                    weight: $weight
+                    volume: $volume
+                ) {
+                    points { 
+                        location { name country lat lng code } 
+                        shippingType provider 
+                    }
+                    general {
+                        shipmentId validityFrom validityTo individual
+                        totalPrice totalCurrency totalTransitTime
+                        totalCo2 { amount price }
+                        alternative expired spaceGuarantee spot indicative queryShippingType
+                    }
+                }
+            }`;
+        const coordinatesFrom = body.coordinatesFrom ?? await geocodeAir(body.origin, env.GOOGLE_MAPS_API_KEY);
+        const coordinatesTo = body.coordinatesTo ?? await geocodeAir(body.destination, env.GOOGLE_MAPS_API_KEY);
         const variables = {
-            coordinatesFrom: body.coordinatesFrom,
-            coordinatesTo: body.coordinatesTo,
+            coordinatesFrom,
+            coordinatesTo,
             date: body.date,
-            weight: body.weight || 100,
-            volume: body.volume || 1
+            weight: body.weight,
+            volume: body.volume
         };
+        // console.log({ variables });
+
         const res = await axios.post(
             'https://rates.searates.com/graphql',
             { query, variables },
@@ -145,7 +142,7 @@ query Rates(
             const g = r.general;
             const points = r.points || [];
             return {
-                shipmentId: g.shipmentId,
+                shipmentId: `searates-air-${g.shipmentId}-${Date.now()}`,
                 shippingType: 'AIR',
                 provider: points[0]?.provider || 'SeaRates AIR',
                 totalPrice: g.totalPrice,

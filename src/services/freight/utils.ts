@@ -146,3 +146,73 @@ export function getLocode(displayName: string): string {
     console.warn(`No LOCODE found for: "${displayName}"`);
     return '';
 }
+
+// geocode.ts
+
+export async function geocodeLocation(
+    searchTerm: string,
+    googleMapsKey: string
+): Promise<[number, number] | null> {
+    try {
+        const res = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+            params: { address: searchTerm, key: googleMapsKey }
+        });
+        const loc = res.data?.results?.[0]?.geometry?.location;
+        if (loc) return [loc.lat, loc.lng];
+    } catch (_) { }
+    return null;
+}
+
+// ✅ Per doc: "{city} port seaport" → "{city} port" → "{city}"
+export async function geocodeSea(
+    displayName: string,
+    googleMapsKey: string
+): Promise<[number, number] | null> {
+    // Strip suffix like "Dubai - DXB" or "Shanghai - SGH" → "Dubai"
+    const city = displayName.replace(/\s*-\s*\S+\s*$/, '').trim();
+
+    const attempts = [
+        `${city} port seaport`,  // doc primary
+        `${city} port`,          // fallback 1
+        city                     // fallback 2
+    ];
+
+    for (const term of attempts) {
+        const coords = await geocodeLocation(term, googleMapsKey);
+        if (coords) {
+            console.log(`Geocoded sea "${displayName}" via "${term}":`, coords);
+            return coords;
+        }
+    }
+
+    console.error(`Could not geocode sea location: "${displayName}"`);
+    return null;
+}
+
+// ✅ Per doc: "{IATA} airport" → "{city} airport" → "{city}"
+export async function geocodeAir(
+    displayName: string,
+    googleMapsKey: string
+): Promise<[number, number] | null> {
+    // Extract IATA: "Dubai Intl - DXB" → "DXB"
+    const iataMatch = displayName.match(/-\s*([A-Z]{3})\s*$/);
+    const iata = iataMatch?.[1];
+    const city = displayName.replace(/\s*-\s*\S+\s*$/, '').trim();
+
+    const attempts = [
+        iata ? `${iata} airport` : null,   // doc primary (only if IATA found)
+        `${city} airport`,                  // fallback 1
+        city                                // fallback 2
+    ].filter(Boolean) as string[];
+
+    for (const term of attempts) {
+        const coords = await geocodeLocation(term, googleMapsKey);
+        if (coords) {
+            console.log(`Geocoded air "${displayName}" via "${term}":`, coords);
+            return coords;
+        }
+    }
+
+    console.error(`Could not geocode air location: "${displayName}"`);
+    return null;
+}

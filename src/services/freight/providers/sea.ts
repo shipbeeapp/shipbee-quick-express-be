@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { generateSeabaySignature, getSeabayTimestamp, getLocode } from '../utils.js';
+import { generateSeabaySignature, getSeabayTimestamp, getLocode, geocodeSea } from '../utils.js';
 import { getSeaRatesToken } from '../utils.js';
 import { env } from '../../../config/environment.js';
 
@@ -22,7 +22,7 @@ export async function getSeabayFCLRates(body: any) {
             timestamp,
             sign
         };
-        // console.log({ payload });
+        console.log({ payload });
 
         const res = await axios.post('https://api.seabay.cn/api/CabinGuarantee/FCLPriceOne', payload, {
             headers: {
@@ -33,7 +33,7 @@ export async function getSeabayFCLRates(body: any) {
             timeout: 10000
         });
         // succeded but empty response
-        // console.log({ res: res.data });
+        console.log({ ress: res.data });
 
         const rates = (res.data?.response || []).flatMap((r: any) => {
             // Each rate object expands to up to 4 cards (one per container size)
@@ -91,8 +91,6 @@ export async function getSeabayEAI(body: any) {
             timestamp,
             sign
         };
-        console.log('seaaaaaaaaaaaaaaaa');
-
         const res = await axios.post('https://api.seabay.cn/api/FCLPriceEAI/PriceOne', payload, {
             headers: {
                 'Content-Type': 'application/json',
@@ -101,9 +99,9 @@ export async function getSeabayEAI(body: any) {
             },
             timeout: 10000
         });
-        // console.log({ payload });
+        console.log({ payload });
 
-        // console.log({ res: res.data });
+        console.log({ res: res.data });
 
         const rates = (res.data?.response || []).flatMap((r: any) => {
             // lowercase price fields
@@ -213,75 +211,121 @@ export async function getSeabayLCLRates(body: any) {
 export async function getSeaRatesSeaRates(body: any) {
     try {
         const token = await getSeaRatesToken(env);
-        // Run FCL and LCL queries in parallel
-        const makeQuery = (shippingType: 'FCL' | 'LCL') => ({
-            query: `query Rates($input: RatesInput!) {
-        rates(
-          shippingType: ${shippingType}
-          coordinatesFrom: $input.coordinatesFrom
-          coordinatesTo: $input.coordinatesTo
-          date: $input.date
-          ${shippingType === 'FCL' ? 'container: $input.container' : ''}
-          ${shippingType === 'LCL' ? 'weight: $input.weight volume: $input.volume' : ''}
-        ) {
-          points { location { name country lat lng code } shippingType provider }
-          general {
-            shipmentId validityFrom validityTo individual
-            totalPrice totalCurrency totalTransitTime
-            totalCo2 { amount price }
-            alternative expired spaceGuarantee spot indicative queryShippingType
-          }
+
+        // ✅ Clean — no double geocode
+        const coordinatesFrom = body.coordinatesFrom ?? await geocodeSea(body.origin, env.GOOGLE_MAPS_API_KEY);
+        const coordinatesTo = body.coordinatesTo ?? await geocodeSea(body.destination, env.GOOGLE_MAPS_API_KEY);
+
+        if (!coordinatesFrom || !coordinatesTo) {
+            console.error('SeaRates sea: could not resolve coordinates', {
+                origin: body.origin, coordinatesFrom,
+                destination: body.destination, coordinatesTo
+            });
+            return [];
         }
-      }`,
-            variables: {
-                input: {
-                    coordinatesFrom: body.coordinatesFrom,
-                    coordinatesTo: body.coordinatesTo,
-                    date: body.date,
-                    container: body.container,
-                    weight: body.weight || 100,
-                    volume: body.volume || 1
+
+        const date = body.date || new Date().toISOString().slice(0, 10);
+        const weight = body.weight || 100;
+        const volume = body.volume || 1;
+        const container = body.container || 'ST20';
+
+        const containerSizeMap: Record<string, string> = {
+            ST20: '20ft Std',
+            ST40: '40ft Std',
+            HC40: '40ft HC',
+            HC45: '45ft HC'
+        };
+
+        const fclQuery = `{
+            rates(
+                shippingType: FCL
+                coordinatesFrom: [${coordinatesFrom}]
+                coordinatesTo: [${coordinatesTo}]
+                date: "${date}"
+                container: ${container}
+            ) {
+                points { location { name country lat lng code } shippingType provider }
+                general {
+                    shipmentId validityFrom validityTo individual
+                    totalPrice totalCurrency totalTransitTime
+                    totalCo2 { amount price }
+                    alternative expired spaceGuarantee spot indicative queryShippingType
                 }
             }
-        });
+        }`;
+
+        const lclQuery = `{
+            rates(
+                shippingType: LCL
+                coordinatesFrom: [${coordinatesFrom}]
+                coordinatesTo: [${coordinatesTo}]
+                date: "${date}"
+                weight: ${weight}
+                volume: ${volume}
+            ) {
+                points { location { name country lat lng code } shippingType provider }
+                general {
+                    shipmentId validityFrom validityTo individual
+                    totalPrice totalCurrency totalTransitTime
+                    totalCo2 { amount price }
+                    alternative expired spaceGuarantee spot indicative queryShippingType
+                }
+            }
+        }`;
+
+        console.log({ coordinatesFrom, coordinatesTo, date, container });
+
+        const headers = {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
         const [fclRes, lclRes] = await Promise.all([
-            axios.post('https://rates.searates.com/graphql', makeQuery('FCL'), {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 10000
-            }),
-            axios.post('https://rates.searates.com/graphql', makeQuery('LCL'), {
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 10000
-            })
+            axios.post('https://rates.searates.com/graphql', { query: fclQuery }, { headers, timeout: 30000 }),
+            axios.post('https://rates.searates.com/graphql', { query: lclQuery }, { headers, timeout: 30000 })
         ]);
-        const normalize = (res: any, shippingType: string) => (res.data?.data?.rates || []).map((r: any) => {
-            const g = r.general;
-            const points = r.points || [];
-            return {
-                shipmentId: g.shipmentId,
-                shippingType,
-                provider: points[0]?.provider || 'SeaRates',
-                totalPrice: g.totalPrice,
-                totalCurrency: g.totalCurrency,
-                totalTransitTime: g.totalTransitTime,
-                validityFrom: g.validityFrom,
-                validityTo: g.validityTo,
-                originName: points[0]?.location?.name,
-                destinationName: points[points.length - 1]?.location?.name,
-                expired: g.expired,
-                indicative: g.indicative,
-                spaceGuarantee: g.spaceGuarantee,
-                spot: g.spot,
-                individual: g.individual,
-                alternative: g.alternative,
-                co2Amount: g.totalCo2?.amount || null,
-                containerSize: g.containerSize || null,
-                modeGroup: 'sea'
-            };
-        });
-        return [
+
+        if (fclRes.data.errors?.length) console.error('FCL GraphQL error:', fclRes.data.errors[0]);
+        if (lclRes.data.errors?.length) console.error('LCL GraphQL error:', lclRes.data.errors[0]);
+
+        const normalize = (res: any, shippingType: 'FCL' | 'LCL') =>
+            (res.data?.data?.rates || []).map((r: any) => {
+                const g = r.general;
+                const points = r.points || [];
+                return {
+                    shipmentId: g.shipmentId,
+                    shippingType,
+                    provider: points.find((p: any) => p?.provider)?.provider || 'SeaRates',
+                    totalPrice: g.totalPrice,
+                    totalCurrency: g.totalCurrency,
+                    totalTransitTime: g.totalTransitTime,
+                    validityFrom: g.validityFrom,
+                    validityTo: g.validityTo,
+                    originName: points[0]?.location?.name,
+                    destinationName: points[points.length - 1]?.location?.name,
+                    expired: g.expired,
+                    indicative: g.indicative,
+                    spaceGuarantee: g.spaceGuarantee,
+                    spot: g.spot,
+                    individual: g.individual,
+                    alternative: g.alternative,
+                    co2Amount: g.totalCo2?.amount || null,
+                    containerSize: shippingType === 'FCL'
+                        ? (containerSizeMap[container] || container)
+                        : null,
+                    modeGroup: 'sea'
+                };
+            });
+
+        const rates = [
             ...normalize(fclRes, 'FCL'),
             ...normalize(lclRes, 'LCL')
         ];
+
+        return rates;
+
     } catch (error: any) {
+        console.error('SeaRates sea failed:', error.message);
         return [];
     }
 }

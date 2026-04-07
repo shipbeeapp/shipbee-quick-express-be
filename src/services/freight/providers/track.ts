@@ -54,15 +54,19 @@ export async function trackUnified(query: any) {
     const mode = (query.mode || '').toLowerCase();
     if (!mode) return { found: false, error: 'Missing mode param' };
     // 1. Air tracking
+    console.log({ query });
+
     if (mode === 'air') {
       const res = await axios.get('https://tracking.searates.com/air', {
         params: {
           api_key: env.SEARATES_API_KEY,
-          number: query.number,
+          number: String(query.number),
           path: false
         },
         timeout: 10000
       });
+      console.log({ res: res.data });
+
       return normalizeTracking(res.data, 'air');
     }
     // 2. Sea tracking
@@ -77,6 +81,7 @@ export async function trackUnified(query: any) {
         },
         timeout: 10000
       });
+      console.log({ res: JSON.stringify(res.data) });
       return normalizeTracking(res.data, 'sea');
     }
     // 3. Land/parcel tracking (17track)
