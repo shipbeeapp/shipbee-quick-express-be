@@ -45,7 +45,7 @@ export class OrderController {
     const upload = multer({ storage });
     this.router.post(
       "/orders/analytics",
-      // authenticationMiddleware,
+      authenticationMiddleware,
       this.getCompletedOrdersByDateRange.bind(this)
     )
     /**
