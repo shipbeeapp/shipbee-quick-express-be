@@ -130,7 +130,6 @@ const swaggerDefinition = {
                     },
                     pickUpDate: { type: "string", format: "date-time", nullable: true },
                     lifters: { type: "number", nullable: true },
-                    distance: { type: "number", default: 10 },
                     fromAddress: { $ref: "#/components/schemas/AddressDto" },
                     paymentMethod: {
                         type: "string",
