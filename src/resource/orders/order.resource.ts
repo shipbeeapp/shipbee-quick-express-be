@@ -3,7 +3,6 @@ import { env } from '../../config/environment.js';
 import { VehicleType } from '../../utils/enums/vehicleType.enum.js';
 import { CancelRequestStatus } from '../../utils/enums/cancelRequestStatus.enum.js';
 import { Payer } from '../../utils/enums/payer.enum.js';
-import { itemType } from '../../utils/enums/itemType.enum.js';
 import { OrderStatus } from '../../utils/enums/orderStatus.enum.js';
 import { OrderType } from '../../utils/enums/orderType.enum.js';
 import { generatePhotoLink } from '../../utils/global.utils.js';
@@ -15,8 +14,6 @@ export class OrderResponseDto {
     id: string;
     pickUpDate: Date;
     type: OrderType;
-    // itemType: string;
-    // itemDescription: string | null;
     lifters: number;
     distance: number;
     totalCost: number;
@@ -106,7 +103,7 @@ export class OrderResponseDto {
       isReturned?: boolean;
       proofOfReturn?: string | null;
       distance?: number;
-      itemType?: itemType;
+      itemType?: string;
       status: OrderStatus;
       proofOfOrder?: string | null;
       items?: any;
@@ -293,8 +290,6 @@ export class OrderResponseDto {
       orderNo: order.orderNo,
       pickUpDate: order.pickUpDate,
       type: order.type,
-      // itemType: order.itemType,
-      // itemDescription: itemDescription,
       lifters: order.lifters,
       distance: order.distance,
       totalCost: order.totalCost ? Number(order.totalCost) : null,
@@ -339,18 +334,6 @@ export class OrderResponseDto {
         landmarks: order.fromAddress.landmarks,
         coordinates: order.fromAddress.coordinates,
       },
-      // toAddress: {
-      //   country: order.toAddress.country,
-      //   city: order.toAddress.city,
-      //   district: order.toAddress.district,
-      //   street: order.toAddress.street,
-      //   buildingNumber: order.toAddress.buildingNumber,
-      //   floor: order.toAddress.floor,
-      //   apartmentNumber: order.toAddress.apartmentNumber,
-      //   zone: order.toAddress.zone,
-      //   landmarks: order.toAddress.landmarks,
-      //   coordinates: order.toAddress.coordinates,
-      // },
       statusHistory: order.orderStatusHistory?.map(status => ({
         status: status.status,
         reason: status.cancellationReason,
