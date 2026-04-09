@@ -63,6 +63,8 @@ class App {
       'https://trucks.shipbee.io',
       'https://logistics.shipbee.io',
       'https://www.logistics.shipbee.io',
+      'https://lighthouse.shipbee.io',
+      'https://www.lighthouse.shipbee.io',
       'http://localhost:3000',
       'http://localhost:3010',
       'http://localhost:8080'

@@ -1,8 +1,7 @@
-import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf, IsBoolean } from "class-validator";
+import { IsString, IsNumber, IsOptional, IsEnum, IsEmail, IsDateString, ValidateNested, ValidateIf, IsBoolean, IsDefined } from "class-validator";
 import { Type, Transform, plainToInstance } from "class-transformer";   
 import { itemType } from "../../utils/enums/itemType.enum.js";
 import { ServiceSubcategoryName } from "../../utils/enums/serviceSubcategory.enum.js";
-import { furnitureRequests } from "../../utils/enums/furnitureRequests.enum.js";
 import { VehicleType } from "../../utils/enums/vehicleType.enum.js";
 import { PaymentMethod } from "../../utils/enums/paymentMethod.enum.js";
 import { PaymentStatus } from "../../utils/enums/paymentStatus.enum.js";
@@ -193,8 +192,13 @@ export class OrderStop {
   @IsString()
   itemDescription?: string;
 
-  @IsEnum(itemType)
-  itemType: itemType;
+  @ValidateIf(o => o._isQuick === true) // itemType is required for quick stops only
+  @IsDefined()
+  @IsEnum(itemType, {
+    message: 'itemType must be a valid item type',
+  })
+
+  itemType?: string;
 
   @IsString()
   receiverName: string;
