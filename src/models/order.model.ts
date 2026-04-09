@@ -2,7 +2,6 @@ import { Entity, Column, ManyToOne, JoinColumn, OneToMany, Relation, OneToOne } 
 import { User } from "./user.model.js";
 import { ServiceSubcategory } from "./serviceSubcategory.model.js";
 import { Address } from "./address.model.js";
-import { itemType } from "../utils/enums/itemType.enum.js";
 import { OrderStatus } from "../utils/enums/orderStatus.enum.js";
 import BaseEntity from "./baseEntity.js";
 import { OrderStatusHistory } from "./orderStatusHistory.model.js";
@@ -41,19 +40,9 @@ export class Order extends BaseEntity {
   @Column({ type: "timestamptz", nullable: true })
   pickUpDate: Date;
 
-  // @Column({type: "enum", enum: itemType, nullable: true})
-  // itemType: itemType;
-
   @ManyToOne(() => Address, address => address.sentOrders)
   @JoinColumn({ name: "fromAddressId" })
   fromAddress: Address;
-
-  // @ManyToOne(() => Address, address => address.receivedOrders)
-  // @JoinColumn({ name: "toAddressId" })
-  // toAddress: Address;
-
-  // @Column("text", { nullable: true })
-  // itemDescription: string;
 
   @Column({ nullable: true, type: "int" })
   lifters: number;

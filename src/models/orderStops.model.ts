@@ -29,8 +29,8 @@ export class OrderStop extends BaseEntity {
   @Column({ type: "text", nullable: true })
   itemDescription: string;
 
-  @Column({ type: "enum", enum: itemType, nullable: true })
-  itemType: itemType;
+  @Column({ type: "text", nullable: true })
+  itemType: string;
 
   @Column({type: "float", nullable: true})
   distance: number;

@@ -120,6 +120,7 @@ import { AddFlagForGoodsAndDeliveryView1773050413585 } from "../migrations/17730
 import { AddOrderEventTypesAndRequestStatus1773406453482 } from "../migrations/1773406453482-AddOrderEventTypesAndRequestStatus.js";
 import {AddIncomeAndCashBalanceLastResolvedAt1773540629338} from "../migrations/1773540629338-AddIncomeAndCashBalanceLastResolvedAt.js"; // Import the migration for adding incomeLastResolvedAt and cashBalanceLastResolvedAt in Driver
 import {AddCardOnDeliveryEnabledForUser1773866017933} from "../migrations/1773866017933-AddCardOnDeliveryEnabledForUser.js"; // Import the migration for adding cardOnDeliveryEnabled in User
+import {UpdateItemTypeToTakeAnyString1775732438903} from "../migrations/1775732438903-UpdateItemTypeToTakeAnyString.js"; // Import the migration for updating itemType to take any string
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -252,6 +253,7 @@ export const AppDataSource = new DataSource({
     AddOrderEventTypesAndRequestStatus1773406453482,
     AddIncomeAndCashBalanceLastResolvedAt1773540629338,
     AddCardOnDeliveryEnabledForUser1773866017933,
+    UpdateItemTypeToTakeAnyString1775732438903,
   ], // ✅ Path to migrations
   ssl: false,
   synchronize: false, // Always false in production!

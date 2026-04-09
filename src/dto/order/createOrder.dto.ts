@@ -198,7 +198,7 @@ export class OrderStop {
     message: 'itemType must be a valid item type',
   })
 
-  itemType?: string;
+  itemType?: string | itemType;
 
   @IsString()
   receiverName: string;
@@ -258,15 +258,6 @@ export class CreateOrderDto {
   @IsEnum(ServiceSubcategoryName)
   serviceSubcategory: ServiceSubcategoryName;
 
-  // @IsEnum(furnitureRequests)
-  // @IsOptional()
-  // type: furnitureRequests;
-
-  @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.INTERNATIONAL)
-  @IsOptional()
-  @IsEnum(itemType)
-  itemType?: itemType;
-
   @ValidateNested() // ✅ Ensure validation of nested object
   @Type(() => AddressDto)
   @Transform(({ value, obj }) => {
@@ -281,18 +272,9 @@ export class CreateOrderDto {
   @Type(() => AddressDto)
   toAddress?: AddressDto
 
-  // @IsOptional()
-  // @IsString()
-  // itemDescription?: string;
-
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @IsDateString()
   pickUpDate: string;
-
-  // @IsOptional()
-  // @IsNumber()
-  // @Transform(({ value }) => (value ? Number(value) : value))
-  // lifters?: number;
 
   @ValidateIf(o => o.serviceSubcategory === ServiceSubcategoryName.PERSONAL_QUICK)
   @Transform(({ value }) => (value ? Number(value) : value))
