@@ -18,7 +18,7 @@ import { VehicleType } from '../utils/enums/vehicleType.enum.js';
 import { DriverType } from '../utils/enums/driverType.enum.js';
 import { broadcastNewDriver } from './user.controller.js';
 import { ServiceSubcategoryName } from '../utils/enums/serviceSubcategory.enum.js';
-import { DriverStatus } from '../utils/enums/driverStatus.enum.js';
+import jwt from 'jsonwebtoken';
 
 export class DriverController {
     public router: Router = Router();
@@ -400,7 +400,18 @@ export class DriverController {
                 return res.status(400).json({ success: false, message: "Invalid OTP." });
             }
             const driver = await this.driverService.findDriverByPhone(phoneNumber);
-            res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver?.type, invitedByBusiness: driver?.businessOwner ? true : false, businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null });
+            const driverData = {
+                driverId: driver?.id, 
+                type: driver?.type,
+                invitedByBusiness: driver?.businessOwner ? true : false, 
+                businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null,
+                name: driver?.name
+            }
+            const token = jwt.sign(
+                driverData,
+                env.JWT_SECRET,
+            );
+            res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver?.type, invitedByBusiness: driver?.businessOwner ? true : false, businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null, token });
         } catch (error) {
             console.error("Error verifying OTP:", error.message);
             res.status(500).json({ success: false, message: error.message });
@@ -779,7 +790,7 @@ export class DriverController {
 
     private getDriverBusinesses = async (req: AuthenticatedRequest, res: Response) => {
          try {
-            if (req.email !== env.ADMIN.EMAIL) {
+            if (req.email !== env.ADMIN.EMAIL && !req.driverId) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
 
