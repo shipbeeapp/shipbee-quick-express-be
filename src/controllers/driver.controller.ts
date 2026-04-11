@@ -400,15 +400,10 @@ export class DriverController {
                 return res.status(400).json({ success: false, message: "Invalid OTP." });
             }
             const driver = await this.driverService.findDriverByPhone(phoneNumber);
-            const driverData = {
-                driverId: driver?.id, 
-                type: driver?.type,
-                invitedByBusiness: driver?.businessOwner ? true : false, 
-                businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null,
-                name: driver?.name
-            }
             const token = jwt.sign(
-                driverData,
+                {
+                    driverId: driver?.id ?? phoneNumber
+                },
                 env.JWT_SECRET,
             );
             res.status(200).json({ success: true, message: "OTP verified successfully.", type: driver?.type, invitedByBusiness: driver?.businessOwner ? true : false, businessOwnerId: driver?.businessOwner ? driver?.businessOwner?.id : null, token });
